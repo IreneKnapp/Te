@@ -18,4 +18,9 @@ char **argv;
     hs_exit();
 }
 
+
+- (void) applicationDidFinishLaunching: (NSNotification *) notification {
+    [metaProjectWindow makeKeyAndOrderFront: self];
+}
+
 @end
