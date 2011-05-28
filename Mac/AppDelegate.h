@@ -4,4 +4,6 @@
 {
 }
 
+- (void) applicationWillFinishLaunching: (NSNotification *) notification;
+- (void) applicationWillTerminate: (NSNotification *) notification;
 @end

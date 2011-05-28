@@ -29,7 +29,7 @@
 			<object class="NSCustomObject" id="1050">
 				<string key="NSClassName">NSApplication</string>
 			</object>
-			<object class="NSCustomObject" id="901063208">
+			<object class="NSCustomObject" id="986802837">
 				<string key="NSClassName">AppDelegate</string>
 			</object>
 			<object class="NSMenu" id="649796088">
@@ -37,7 +37,7 @@
 				<array class="NSMutableArray" key="NSMenuItems">
 					<object class="NSMenuItem" id="694149608">
 						<reference key="NSMenu" ref="649796088"/>
-						<string key="NSTitle">TE</string>
+						<string key="NSTitle">Te</string>
 						<string key="NSKeyEquiv"/>
 						<int key="NSMnemonicLoc">2147483647</int>
 						<object class="NSCustomResource" key="NSOnImage" id="353210768">
@@ -50,11 +50,11 @@
 						</object>
 						<string key="NSAction">submenuAction:</string>
 						<object class="NSMenu" key="NSSubmenu" id="110575045">
-							<string key="NSTitle">TE</string>
+							<string key="NSTitle">Te</string>
 							<array class="NSMutableArray" key="NSMenuItems">
 								<object class="NSMenuItem" id="238522557">
 									<reference key="NSMenu" ref="110575045"/>
-									<string key="NSTitle">About TE</string>
+									<string key="NSTitle">About Te</string>
 									<string key="NSKeyEquiv"/>
 									<int key="NSMnemonicLoc">2147483647</int>
 									<reference key="NSOnImage" ref="353210768"/>
@@ -115,7 +115,7 @@
 								</object>
 								<object class="NSMenuItem" id="755159360">
 									<reference key="NSMenu" ref="110575045"/>
-									<string key="NSTitle">Hide TE</string>
+									<string key="NSTitle">Hide Te</string>
 									<string key="NSKeyEquiv">h</string>
 									<int key="NSKeyEquivModMask">1048576</int>
 									<int key="NSMnemonicLoc">2147483647</int>
@@ -151,7 +151,7 @@
 								</object>
 								<object class="NSMenuItem" id="632727374">
 									<reference key="NSMenu" ref="110575045"/>
-									<string key="NSTitle">Quit TE</string>
+									<string key="NSTitle">Quit Te</string>
 									<string key="NSKeyEquiv">q</string>
 									<int key="NSKeyEquivModMask">1048576</int>
 									<int key="NSMnemonicLoc">2147483647</int>
@@ -458,14 +458,6 @@
 							<string key="NSName">_NSWindowsMenu</string>
 						</object>
 					</object>
-					<object class="NSMenuItem" id="391199113">
-						<reference key="NSMenu" ref="649796088"/>
-						<string key="NSTitle">Help</string>
-						<string key="NSKeyEquiv"/>
-						<int key="NSMnemonicLoc">2147483647</int>
-						<reference key="NSOnImage" ref="353210768"/>
-						<reference key="NSMixedImage" ref="549394948"/>
-					</object>
 				</array>
 				<string key="NSName">_NSMainMenu</string>
 			</object>
@@ -668,7 +660,7 @@
 					<object class="IBOutletConnection" key="connection">
 						<string key="label">delegate</string>
 						<reference key="source" ref="1050"/>
-						<reference key="destination" ref="901063208"/>
+						<reference key="destination" ref="986802837"/>
 					</object>
 					<int key="connectionID">822</int>
 				</object>
@@ -705,7 +697,6 @@
 						<array class="NSMutableArray" key="children">
 							<reference ref="713487014"/>
 							<reference ref="694149608"/>
-							<reference ref="391199113"/>
 							<reference ref="379814623"/>
 							<reference ref="586577488"/>
 							<reference ref="725688984"/>
@@ -727,12 +718,6 @@
 						<array class="NSMutableArray" key="children">
 							<reference ref="110575045"/>
 						</array>
-						<reference key="parent" ref="649796088"/>
-					</object>
-					<object class="IBObjectRecord">
-						<int key="objectID">103</int>
-						<reference key="object" ref="391199113"/>
-						<array class="NSMutableArray" key="children"/>
 						<reference key="parent" ref="649796088"/>
 					</object>
 					<object class="IBObjectRecord">
@@ -1036,7 +1021,7 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">821</int>
-						<reference key="object" ref="901063208"/>
+						<reference key="object" ref="986802837"/>
 						<reference key="parent" ref="0"/>
 					</object>
 				</array>
@@ -1045,8 +1030,6 @@
 				<string key="-1.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="-2.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="-3.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
-				<string key="103.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
-				<integer value="1" key="103.ImportedFromIB2"/>
 				<string key="112.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<integer value="1" key="112.ImportedFromIB2"/>
 				<string key="124.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
