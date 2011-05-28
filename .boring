@@ -50,6 +50,8 @@
 \.revdep-rebuild.*
 # generated dependencies
 ^\.depend$
+# XCode 4
+\.xcworkspace/xcuserdata($|/)
 
 ### version control systems
 # cvs
