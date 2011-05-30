@@ -44,7 +44,7 @@ Executable Te
   x-app-resource-dir: Mac/Resources
   x-app-xibs: MainMenu.xib
   x-app-other-resources: Application.icns,
-                         Document.icns,
+                         Project.icns,
                          Te.png,
                          FirstRunAttentionArrow.png,
                          File.png,

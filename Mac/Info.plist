@@ -55,7 +55,7 @@
 			<key>UTTypeDescription</key>
 			<string>TE Project</string>
 			<key>UTTypeIconFile</key>
-			<string>Document.icns</string>
+			<string>Project.icns</string>
 			<key>UTTypeIdentifier</key>
 			<string>com.dankna.te.project</string>
 			<key>UTTypeReferenceURL</key>

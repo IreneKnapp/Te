@@ -77,7 +77,7 @@ char **argv;
             }
         } else {
             if([tableColumn isEqual: metaProjectRecentListIconColumn]) {
-                return [NSImage imageNamed: @"Document"];
+                return [NSImage imageNamed: @"Project"];
             } else if([tableColumn isEqual: metaProjectRecentListTextColumn]) {
                 return @"Foo";
             } else {
