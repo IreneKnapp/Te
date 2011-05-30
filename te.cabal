@@ -48,4 +48,7 @@ Executable Te
                          Te.png,
                          FirstRunAttentionArrow.png,
                          File.png,
-                         Folder.png
+                         Folder.png,
+                         BadgeNew.png,
+                         BadgeChanged.png,
+                         BadgeMoved.png
