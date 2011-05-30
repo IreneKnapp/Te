@@ -5,6 +5,18 @@
       location = "group:Resources/MainMenu.xib">
    </FileRef>
    <FileRef
+      location = "group:Resources/FirstRunAttentionArrow.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Te.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Application.icns">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Document.icns">
+   </FileRef>
+   <FileRef
       location = "group:AppDelegate.h">
    </FileRef>
 </Workspace>
