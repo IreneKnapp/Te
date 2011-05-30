@@ -13,7 +13,8 @@ char **argv;
     argv[0] = "Te";
     hs_init(&argc, &argv);
     
-    applicationState = application_init();
+    applicationState = application_init((HsFunPtr) exception,
+                                        (HsFunPtr) noteRecentProjectsChanged);
     
     char *versionLabelCString = version_string();
     NSString *versionLabelString
@@ -22,6 +23,8 @@ char **argv;
     [metaProjectVersionLabel setStringValue: versionLabelString];
     
     [metaProjectRecentList setIntercellSpacing: NSMakeSize(0.0, 0.0)];
+    [metaProjectRecentList setTarget: self];
+    [metaProjectRecentList setDoubleAction: @selector(openRecentProject:)];
 }
 
 
@@ -38,7 +41,7 @@ char **argv;
 
 - (NSInteger) numberOfRowsInTableView: (NSTableView *) tableView {
     if([tableView isEqual: metaProjectRecentList]) {
-        uint64_t count = application_recent_project_count(applicationState)
+        uint64_t count = application_recent_project_count(applicationState);
         if(count == 0) {
             return 1;
         } else {
@@ -102,6 +105,48 @@ char **argv;
     } else {
         return YES;
     }
+}
+
+
+- (IBAction) newProject: (id) sender {
+  application_new_project(applicationState);
+}
+
+
+- (IBAction) openProject: (id) sender {
+  application_open_project(applicationState, "/nonexistent/fooze.te");
+}
+
+
+- (IBAction) openRecentProject: (id) sender {
+    if([sender isEqual: metaProjectRecentList]) {
+        NSInteger row = [metaProjectRecentList clickedRow];
+        if(-1 != row) {
+            uint64_t index = (uint64_t) row;
+            application_open_recent_project(applicationState, index);
+        }
+    }
+}
+
+
+- (void) exception: (NSString *) string {
+    NSLog(@"Exception: %@", string);
+}
+
+
+void exception(char *cString) {
+    NSString *string = [NSString stringWithUTF8String: cString];
+    [(AppDelegate *) [NSApp delegate] exception: string];
+}
+
+
+- (void) noteRecentProjectsChanged {
+    [metaProjectRecentList reloadData];
+}
+
+
+void noteRecentProjectsChanged() {
+    [(AppDelegate *) [NSApp delegate] noteRecentProjectsChanged];
 }
 
 @end

@@ -21,4 +21,11 @@
                         row: (NSInteger) rowIndex;
 - (BOOL) tableView: (NSTableView *) tableView
    shouldSelectRow: (NSInteger) rowIndex;
+- (IBAction) newProject: (id) sender;
+- (IBAction) openProject: (id) sender;
+- (IBAction) openRecentProject: (id) sender;
+- (void) exception: (NSString *) string;
+void exception(char *cString);
+- (void) noteRecentProjectsChanged;
+void noteRecentProjectsChanged();
 @end

@@ -2,6 +2,24 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:Resources/BadgeChanged.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/BadgeMoved.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/BadgeNew.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/File.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Folder.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Project.icns">
+   </FileRef>
+   <FileRef
       location = "group:Resources/MainMenu.xib">
    </FileRef>
    <FileRef
@@ -12,9 +30,6 @@
    </FileRef>
    <FileRef
       location = "group:Resources/Application.icns">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/Document.icns">
    </FileRef>
    <FileRef
       location = "group:AppDelegate.h">

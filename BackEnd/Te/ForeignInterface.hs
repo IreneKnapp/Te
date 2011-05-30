@@ -8,16 +8,26 @@ import Data.Word
 import Foreign
 import Foreign.C
 
-import Te (ApplicationState(..), RecentProject(..))
+import Te (ApplicationState, Project)
 import qualified Te as Te
+
+
+foreign import ccall "dynamic" mkVoidCallback
+    :: FunPtr (IO ()) -> IO ()
+foreign import ccall "dynamic" mkVoidStringCallback
+    :: FunPtr (CString -> IO ()) -> (CString -> IO ())
 
 
 foreign export ccall "string_free" stringFree
     :: CString -> IO ()
 foreign export ccall "version_string" versionString
     :: IO CString
+foreign export ccall "timestamp_to_string" timestampToString
+    :: Word64 -> IO CString
 foreign export ccall "application_init" applicationInit
-    :: IO (StablePtr (MVar ApplicationState))
+    :: FunPtr (CString -> IO ())
+    -> FunPtr (IO ())
+    -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "application_exit" applicationExit
     :: StablePtr (MVar ApplicationState) -> IO ()
 foreign export ccall "application_recent_project_count"
@@ -29,8 +39,15 @@ foreign export ccall "application_recent_project_name"
 foreign export ccall "application_recent_project_timestamp"
                      applicationRecentProjectTimestamp
     :: StablePtr (MVar ApplicationState) -> Word64 -> IO Word64
-foreign export ccall "timestamp_to_string" timestampToString
-    :: Word64 -> IO CString
+foreign export ccall "application_new_project" applicationNewProject
+    :: StablePtr (MVar ApplicationState) -> IO (StablePtr Project)
+foreign export ccall "application_open_project" applicationOpenProject
+    :: StablePtr (MVar ApplicationState) -> CString -> IO (StablePtr Project)
+foreign export ccall "application_open_recent_project"
+                     applicationOpenRecentProject
+    :: StablePtr (MVar ApplicationState) -> Word64 -> IO (StablePtr Project)
+foreign export ccall "project_close" projectClose
+    :: StablePtr Project -> IO ()
 
 
 stringNew :: String -> IO CString
@@ -56,9 +73,25 @@ versionString = do
   stringNew Te.versionString
 
 
-applicationInit :: IO (StablePtr (MVar ApplicationState))
-applicationInit = do
-  applicationStateMVar <- Te.applicationInit
+timestampToString :: Word64 -> IO CString
+timestampToString timestamp = do
+  result <- Te.timestampToString timestamp
+  stringNew result
+
+
+applicationInit
+    :: FunPtr (CString -> IO ())
+    -> FunPtr (IO ())
+    -> IO (StablePtr (MVar ApplicationState))
+applicationInit foreignException foreignNoteRecentProjectsChanged = do
+  let callbackException string = do
+        withCString string (\cString -> callbackException' cString)
+      callbackException' =
+        mkVoidStringCallback foreignException
+      callbackNoteRecentProjectsChanged =
+        mkVoidCallback foreignNoteRecentProjectsChanged
+  applicationStateMVar <- Te.applicationInit callbackException
+                                             callbackNoteRecentProjectsChanged
   newStablePtr applicationStateMVar
 
 
@@ -97,7 +130,38 @@ applicationRecentProjectTimestamp applicationStateMVarStablePtr index = do
     Nothing -> return 0
 
 
-timestampToString :: Word64 -> IO CString
-timestampToString timestamp = do
-  result <- Te.timestampToString timestamp
-  stringNew result
+applicationNewProject
+    :: StablePtr (MVar ApplicationState) -> IO (StablePtr Project)
+applicationNewProject applicationStateMVarStablePtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  maybeResult <- Te.applicationNewProject applicationStateMVar
+  case maybeResult of
+    Just result -> newStablePtr result
+    Nothing -> return $ castPtrToStablePtr nullPtr
+
+
+applicationOpenProject
+    :: StablePtr (MVar ApplicationState) -> CString -> IO (StablePtr Project)
+applicationOpenProject applicationStateMVarStablePtr filePathCString = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  filePath <- peekCString filePathCString
+  maybeResult <- Te.applicationOpenProject applicationStateMVar filePath
+  case maybeResult of
+    Just result -> newStablePtr result
+    Nothing -> return $ castPtrToStablePtr nullPtr
+
+
+applicationOpenRecentProject
+    :: StablePtr (MVar ApplicationState) -> Word64 -> IO (StablePtr Project)
+applicationOpenRecentProject applicationStateMVarStablePtr index = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  maybeResult <- Te.applicationOpenRecentProject applicationStateMVar index
+  case maybeResult of
+    Just result -> newStablePtr result
+    Nothing -> return $ castPtrToStablePtr nullPtr
+
+
+projectClose :: StablePtr Project -> IO ()
+projectClose projectStablePtr = do
+  project <- deRefStablePtr projectStablePtr
+  Te.projectClose project
