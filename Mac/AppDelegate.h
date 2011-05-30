@@ -24,8 +24,9 @@
 - (IBAction) newProject: (id) sender;
 - (IBAction) openProject: (id) sender;
 - (IBAction) openRecentProject: (id) sender;
-- (void) exception: (NSString *) string;
-void exception(char *cString);
+- (void) exceptionWithMessage: (NSString *) messageString
+                      details: (NSString *) detailsString;
+void exception(char *messageCString, char *detailsCString);
 - (void) noteRecentProjectsChanged;
 void noteRecentProjectsChanged();
 @end

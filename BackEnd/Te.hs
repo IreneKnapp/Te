@@ -27,6 +27,7 @@ import Prelude hiding (catch)
 
 import Data.Timestamp
 import Te.Database
+import Te.Exceptions
 import Te.Identifiers
 import Te.Types
 import Paths_te
@@ -42,7 +43,7 @@ timestampToString timestamp = do
 
 
 applicationInit
-    :: (String -> IO ())
+    :: (String -> String -> IO ())
     -> (IO ())
     -> IO (MVar ApplicationState)
 applicationInit
@@ -72,10 +73,11 @@ catchTe applicationStateMVar default' action = do
   catch (action)
         (\e -> do
            applicationState <- readMVar applicationStateMVar
-           let string = show (e :: TeException)
+           let messageString = show (e :: TeException)
+               detailsString = exceptionDetails e
                callbacks = applicationStateFrontEndCallbacks applicationState
                callback = frontEndCallbacksException callbacks
-           callback string
+           callback messageString detailsString
            return default')
 
 

@@ -14,8 +14,8 @@ import qualified Te as Te
 
 foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
-foreign import ccall "dynamic" mkVoidStringCallback
-    :: FunPtr (CString -> IO ()) -> (CString -> IO ())
+foreign import ccall "dynamic" mkVoidStringStringCallback
+    :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
 
 
 foreign export ccall "string_free" stringFree
@@ -25,7 +25,7 @@ foreign export ccall "version_string" versionString
 foreign export ccall "timestamp_to_string" timestampToString
     :: Word64 -> IO CString
 foreign export ccall "application_init" applicationInit
-    :: FunPtr (CString -> IO ())
+    :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "application_exit" applicationExit
@@ -80,14 +80,19 @@ timestampToString timestamp = do
 
 
 applicationInit
-    :: FunPtr (CString -> IO ())
+    :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
     -> IO (StablePtr (MVar ApplicationState))
 applicationInit foreignException foreignNoteRecentProjectsChanged = do
-  let callbackException string = do
-        withCString string (\cString -> callbackException' cString)
+  let callbackException messageString detailsString = do
+        withCString messageString
+                    (\messageCString -> do
+                       withCString detailsString
+                                   (\detailsCString -> do
+                                      callbackException' messageCString
+                                                         detailsCString))
       callbackException' =
-        mkVoidStringCallback foreignException
+        mkVoidStringStringCallback foreignException
       callbackNoteRecentProjectsChanged =
         mkVoidCallback foreignNoteRecentProjectsChanged
   applicationStateMVar <- Te.applicationInit callbackException

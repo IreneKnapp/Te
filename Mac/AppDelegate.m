@@ -129,14 +129,19 @@ char **argv;
 }
 
 
-- (void) exception: (NSString *) string {
-    NSLog(@"Exception: %@", string);
+- (void) exceptionWithMessage: (NSString *) messageString
+                      details: (NSString *) detailsString
+{
+    //NSAlert *alert = [[NSAlert alloc] init];
+    NSLog(@"Exception: %@\n%@", messageString, detailsString);
 }
 
 
-void exception(char *cString) {
-    NSString *string = [NSString stringWithUTF8String: cString];
-    [(AppDelegate *) [NSApp delegate] exception: string];
+void exception(char *messageCString, char *detailsCString) {
+    NSString *messageString = [NSString stringWithUTF8String: messageCString];
+    NSString *detailsString = [NSString stringWithUTF8String: detailsCString];
+    [(AppDelegate *) [NSApp delegate] exceptionWithMessage: messageString
+                                      details: detailsString];
 }
 
 

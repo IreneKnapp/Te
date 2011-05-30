@@ -1,16 +1,12 @@
-{-# LANGUAGE DeriveDataTypeable #-}
 module Te.Types
   (ApplicationState(..),
    FrontEndCallbacks(..),
    RecentProject(..),
-   Project(..),
-   TeException(..))
+   Project(..))
   where
 
 import Control.Concurrent.MVar
-import Control.Exception
 import Data.Map (Map)
-import Data.Typeable
 import Data.Word
 import Database.SQLite3 (Database)
 
@@ -27,7 +23,7 @@ data ApplicationState =
 
 data FrontEndCallbacks =
   FrontEndCallbacks {
-      frontEndCallbacksException :: String -> IO (),
+      frontEndCallbacksException :: String -> String -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO ()
     }
 
@@ -47,22 +43,3 @@ data Project =
       projectDatabase :: Database,
       projectFilePath :: MVar (Maybe FilePath)
     }
-
-
-data TeException
-  = TeExceptionFileCreatedByNewerVersion FilePath
-  | TeExceptionFileNotInRecognizedFormat FilePath
-  | TeExceptionFileDoesNotExist FilePath
-  deriving (Typeable)
-
-
-instance Show TeException where
-  show (TeExceptionFileCreatedByNewerVersion _) =
-    "File created by a newer version."
-  show (TeExceptionFileNotInRecognizedFormat _) =
-    "File not in recognized format."
-  show (TeExceptionFileDoesNotExist _) =
-    "File does not exist."
-
-
-instance Exception TeException
