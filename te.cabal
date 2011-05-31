@@ -29,10 +29,10 @@ Executable Te
   c-source-dirs: Mac
   main-is: main.m
   includes: AppDelegate.h,
-            Project.h,
+            BrowserWindow.h,
             Utilities.h
   c-sources: AppDelegate.m,
-             Project.m,
+             BrowserWindow.m,
              Utilities.m
   hs-source-dirs: BackEnd
   other-modules: Data.Timestamp,
@@ -64,7 +64,8 @@ Executable Te
   ghc-options: -threaded
   x-app-info-plist: Mac/Info.plist
   x-app-resource-dir: Mac/Resources
-  x-app-xibs: MainMenu.xib
+  x-app-xibs: MainMenu.xib,
+              BrowserWindow.xib
   x-app-other-resources: Application.icns,
                          Project.icns,
                          Te.png,

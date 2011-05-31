@@ -1,9 +1,9 @@
 module Te
   (FrontEndCallbacks(..),
    ApplicationState(..),
-   Project(..),
    BrowserWindow(..),
    catchTe,
+   frontEndInternalFailure,
    versionString,
    timestampToString,
    uuidHash,
@@ -53,6 +53,13 @@ catchTe applicationStateMVar default' action = do
                callback = frontEndCallbacksException callbacks
            callback messageString detailsString
            return default')
+
+
+frontEndInternalFailure :: MVar ApplicationState -> String -> Word64 -> IO ()
+frontEndInternalFailure applicationStateMVar filename lineNumber =
+  catchTe applicationStateMVar () $ do
+    let lineNumber' = fromIntegral lineNumber
+    throwIO $ TeExceptionInternal filename lineNumber'
 
 
 versionString :: String
@@ -148,7 +155,6 @@ applicationNewProject applicationStateMVar =
                          projectBrowserWindows = browserWindowsMVar
                        }
     addProjectToApplicationState applicationStateMVar newProject
-    noteNewProject newProject
     restoreProjectWindows newProject
 
 
@@ -188,7 +194,6 @@ applicationOpenProject' applicationStateMVar filePath = do
                                  }
               addProjectToApplicationState applicationStateMVar newProject
               updateProjectInRecentProjects applicationStateMVar newProject
-              noteNewProject newProject
               restoreProjectWindows newProject
             Just _ -> do
               closeProjectDatabase database
@@ -291,5 +296,5 @@ newBrowserWindow project = do
                                    newBrowserWindow'
                                    browserWindows
   putMVar (projectBrowserWindows project) browserWindows'
-  recordNewBrowserWindow project newBrowserWindow'
-  noteNewBrowserWindow project newBrowserWindow'
+  recordNewBrowserWindow newBrowserWindow'
+  noteNewBrowserWindow newBrowserWindow'

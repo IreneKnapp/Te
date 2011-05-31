@@ -75,7 +75,7 @@ initProjectDatabaseSchema database = do
   return ()
 
 
-recordNewBrowserWindow :: Project -> BrowserWindow -> IO ()
-recordNewBrowserWindow project browserWindow = do
+recordNewBrowserWindow :: BrowserWindow -> IO ()
+recordNewBrowserWindow browserWindow = do
   -- TODO
   return ()

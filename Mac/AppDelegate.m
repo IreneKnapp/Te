@@ -1,7 +1,7 @@
 #import "AppDelegate.h"
 #import <HsFFI.h>
 #import "Te/ForeignInterface_stub.h"
-#import "Project.h"
+#import "BrowserWindow.h"
 
 @implementation AppDelegate
 @synthesize applicationState;
@@ -14,8 +14,6 @@
     
     applicationState = teApplicationInit((HsFunPtr) exception,
                                          (HsFunPtr) noteRecentProjectsChanged,
-                                         (HsFunPtr) noteNewProject,
-                                         (HsFunPtr) noteDeletedProject,
                                          (HsFunPtr) noteNewBrowserWindow,
                                          (HsFunPtr) noteDeletedBrowserWindow);
     
@@ -35,10 +33,10 @@
             pointerFunctionsWithOptions: NSMapTableStrongMemory
                                          | NSMapTableObjectPointerPersonality];
     
-    projects = [[NSMapTable alloc]
-                initWithKeyPointerFunctions: keyFunctions
-                valuePointerFunctions: valueFunctions
-                capacity: 1024];
+    browserWindows = [[NSMapTable alloc]
+                      initWithKeyPointerFunctions: keyFunctions
+                      valuePointerFunctions: valueFunctions
+                      capacity: 1024];
     
     char *versionLabelCString = teVersionString();
     NSString *versionLabelString
@@ -209,41 +207,27 @@ void noteRecentProjectsChanged() {
 }
 
 
-- (void) noteNewProject: (uuid_t *) projectID {
-    Project *projectObject = [[Project alloc] initWithProjectID: projectID];
-    if(projectObject)
-        [projects setObject: projectObject forKey: (void *) projectID];
+- (void) noteNewBrowserWindow: (uuid_t *) browserWindowID {
+    BrowserWindow *browserWindowObject
+        = [[BrowserWindow alloc] initWithBrowserWindowID: browserWindowID];
+    if(browserWindowObject)
+        [browserWindows setObject: browserWindowObject
+                        forKey: (void *) browserWindowID];
 }
 
 
-void noteNewProject(uuid_t *projectID) {
-    [(AppDelegate *) [NSApp delegate] noteNewProject: projectID];
-}
-
-
-- (void) noteDeletedProject: (uuid_t *) projectID {
-}
-
-
-void noteDeletedProject(uuid_t *projectID) {
-    [(AppDelegate *) [NSApp delegate] noteDeletedProject: projectID];
-}
-
-
-- (void) noteNewBrowserWindow: (uuid_t *) browserWindowID
-                   forProject: (uuid_t *) projectID
-{
-    NSLog(@"Mm-hm.  (I'll get right on that.)");
-}
-
-
-void noteNewBrowserWindow(uuid_t *projectID, uuid_t *browserWindowID) {
-    [(AppDelegate *) [NSApp delegate] noteNewBrowserWindow: browserWindowID
-                                      forProject: projectID];
+void noteNewBrowserWindow(uuid_t *browserWindowID) {
+    [(AppDelegate *) [NSApp delegate] noteNewBrowserWindow: browserWindowID];
 }
 
 
 - (void) noteDeletedBrowserWindow: (uuid_t *) browserWindowID {
+    BrowserWindow *browserWindowObject
+        = [browserWindows objectForKey: (void *) browserWindowID];
+    if(browserWindowObject) {
+        [browserWindowObject close];
+        [browserWindows removeObjectForKey: (void *) browserWindowID];
+    }
 }
 
 

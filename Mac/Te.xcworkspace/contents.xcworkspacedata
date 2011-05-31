@@ -2,6 +2,36 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:AppDelegate.h">
+   </FileRef>
+   <FileRef
+      location = "group:AppDelegate.m">
+   </FileRef>
+   <FileRef
+      location = "group:BrowserWindow.h">
+   </FileRef>
+   <FileRef
+      location = "group:BrowserWindow.m">
+   </FileRef>
+   <FileRef
+      location = "group:Utilities.h">
+   </FileRef>
+   <FileRef
+      location = "group:Utilities.m">
+   </FileRef>
+   <FileRef
+      location = "group:main.m">
+   </FileRef>
+   <FileRef
+      location = "group:Info.plist">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Application.icns">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Project.icns">
+   </FileRef>
+   <FileRef
       location = "group:Resources/BadgeChanged.png">
    </FileRef>
    <FileRef
@@ -14,24 +44,18 @@
       location = "group:Resources/File.png">
    </FileRef>
    <FileRef
-      location = "group:Resources/Folder.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/Project.icns">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/MainMenu.xib">
-   </FileRef>
-   <FileRef
       location = "group:Resources/FirstRunAttentionArrow.png">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/Folder.png">
    </FileRef>
    <FileRef
       location = "group:Resources/Te.png">
    </FileRef>
    <FileRef
-      location = "group:Resources/Application.icns">
+      location = "group:Resources/MainMenu.xib">
    </FileRef>
    <FileRef
-      location = "group:AppDelegate.h">
+      location = "group:Resources/BrowserWindow.xib">
    </FileRef>
 </Workspace>

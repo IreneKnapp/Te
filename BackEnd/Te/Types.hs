@@ -26,12 +26,8 @@ data FrontEndCallbacks =
   FrontEndCallbacks {
       frontEndCallbacksException :: String -> String -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO (),
-      frontEndCallbacksNoteNewProject :: Project -> IO (),
-      frontEndCallbacksNoteDeletedProject :: Project -> IO (),
-      frontEndCallbacksNoteNewBrowserWindow
-        :: Project -> BrowserWindow -> IO (),
-      frontEndCallbacksNoteDeletedBrowserWindow
-        :: BrowserWindow -> IO ()
+      frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
+      frontEndCallbacksNoteDeletedBrowserWindow :: BrowserWindow -> IO ()
     }
 
 

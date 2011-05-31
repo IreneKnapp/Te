@@ -13,7 +13,7 @@
     NSOpenPanel *openPanel;
     
     void *applicationState;
-    NSMapTable *projects;
+    NSMapTable *browserWindows;
     
     int hsArgc;
     char **hsArgv;
@@ -38,13 +38,8 @@
 void exception(char *messageCString, char *detailsCString);
 - (void) noteRecentProjectsChanged;
 void noteRecentProjectsChanged();
-- (void) noteNewProject: (uuid_t *) projectID;
-void noteNewProject(uuid_t *projectID);
-- (void) noteDeletedProject: (uuid_t *) projectID;
-void noteDeletedProject(uuid_t *projectID);
-- (void) noteNewBrowserWindow: (uuid_t *) browserWindowID
-                   forProject: (uuid_t *) projectID;
-void noteNewBrowserWindow(uuid_t *projectID, uuid_t *browserWindowID);
+- (void) noteNewBrowserWindow: (uuid_t *) browserWindowID;
+void noteNewBrowserWindow(uuid_t *browserWindowID);
 - (void) noteDeletedBrowserWindow: (uuid_t *) browserWindowID;
 void noteDeletedBrowserWindow(uuid_t *browserWindowID);
 @end

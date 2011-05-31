@@ -12,7 +12,7 @@ import Data.Word
 import Foreign
 import Foreign.C
 
-import Te (ApplicationState, Project)
+import Te (ApplicationState, BrowserWindow)
 import qualified Te as Te
 import Te.Exceptions
 import Te.Identifiers (ProjectID, BrowserWindowID)
@@ -23,15 +23,12 @@ foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
 foreign import ccall "dynamic" mkVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
-foreign import ccall "dynamic" mkVoidProjectIDPtrCallback
-    :: FunPtr (Ptr ProjectID -> IO ()) -> (Ptr ProjectID -> IO ())
-foreign import ccall "dynamic" mkVoidProjectIDPtrBrowserWindowIDPtrCallback
-    :: FunPtr (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
-    -> (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
 foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrCallback
     :: FunPtr (Ptr BrowserWindowID -> IO ()) -> (Ptr BrowserWindowID -> IO ())
 
 
+foreign export ccall "teFrontEndInternalFailure" frontEndInternalFailure
+    :: StablePtr (MVar ApplicationState) -> CString -> Word64 -> IO ()
 foreign export ccall "teStringFree" stringFree
     :: CString -> IO ()
 foreign export ccall "teVersionString" versionString
@@ -47,9 +44,7 @@ foreign export ccall "teUUIDShow" uuidShow
 foreign export ccall "teApplicationInit" applicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
-    -> FunPtr (Ptr ProjectID -> IO ())
-    -> FunPtr (Ptr ProjectID -> IO ())
-    -> FunPtr (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit" applicationExit
@@ -72,6 +67,16 @@ foreign export ccall "teApplicationOpenRecentProject"
     :: StablePtr (MVar ApplicationState) -> Word64 -> IO ()
 foreign export ccall "teProjectClose" projectClose
     :: StablePtr (MVar ApplicationState) -> Ptr ProjectID -> IO ()
+
+
+frontEndInternalFailure
+    :: StablePtr (MVar ApplicationState) -> CString -> Word64 -> IO ()
+frontEndInternalFailure applicationStateMVarStablePtr
+                        filenameCString
+                        lineNumber = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  filename <- peekCString filenameCString
+  Te.frontEndInternalFailure applicationStateMVar filename lineNumber
 
 
 stringNew :: String -> IO CString
@@ -126,69 +131,65 @@ uuidShow uuidPtr = do
   stringNew string
 
 
+wrapVoidCallback
+    :: FunPtr (IO ())
+    -> (IO ())
+wrapVoidCallback foreignCallback =
+  let lowLevelCallback = mkVoidCallback foreignCallback
+      highLevelCallback = do
+        lowLevelCallback
+  in highLevelCallback
+
+
+wrapVoidStringStringCallback
+    :: FunPtr (CString -> CString -> IO ())
+    -> (String -> String -> IO ())
+wrapVoidStringStringCallback foreignCallback =
+  let lowLevelCallback = mkVoidStringStringCallback foreignCallback
+      highLevelCallback stringA stringB = do
+        withCString stringA
+                    (\cStringA -> do
+                       withCString stringB
+                                   (\cStringB -> do
+                                      lowLevelCallback cStringA cStringB))
+  in highLevelCallback
+
+
+wrapVoidBrowserWindowCallback
+    :: FunPtr (Ptr BrowserWindowID -> IO ())
+    -> (BrowserWindow -> IO ())
+wrapVoidBrowserWindowCallback foreignCallback =
+  let lowLevelCallback = mkVoidBrowserWindowIDPtrCallback foreignCallback
+      highLevelCallback browserWindow = do
+        alloca (\browserWindowIDPtr -> do
+                  poke browserWindowIDPtr $ Te.browserWindowID browserWindow
+                  lowLevelCallback browserWindowIDPtr)
+  in highLevelCallback
+
+
 applicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
-    -> FunPtr (Ptr ProjectID -> IO ())
-    -> FunPtr (Ptr ProjectID -> IO ())
-    -> FunPtr (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 applicationInit foreignException
                 foreignNoteRecentProjectsChanged
-                foreignNoteNewProject
-                foreignNoteDeletedProject
                 foreignNoteNewBrowserWindow
                 foreignNoteDeletedBrowserWindow = do
-  let callbackException messageString detailsString = do
-        withCString messageString
-                    (\messageCString -> do
-                       withCString detailsString
-                                   (\detailsCString -> do
-                                      callbackException' messageCString
-                                                         detailsCString))
-      callbackException' =
-        mkVoidStringStringCallback foreignException
+  let callbackException =
+        wrapVoidStringStringCallback foreignException
       callbackNoteRecentProjectsChanged =
-        mkVoidCallback foreignNoteRecentProjectsChanged
-      callbackNoteNewProject project = do
-        alloca (\projectIDPtr -> do
-                  poke projectIDPtr $ Te.projectID project
-                  callbackNoteNewProject' projectIDPtr)
-      callbackNoteNewProject' =
-        mkVoidProjectIDPtrCallback foreignNoteNewProject
-      callbackNoteDeletedProject project = do
-        alloca (\projectIDPtr -> do
-                  poke projectIDPtr $ Te.projectID project
-                  callbackNoteDeletedProject' projectIDPtr)
-      callbackNoteDeletedProject' =
-        mkVoidProjectIDPtrCallback foreignNoteNewProject
-      callbackNoteNewBrowserWindow project browserWindow = do
-        alloca (\projectIDPtr -> do
-                  poke projectIDPtr $ Te.projectID project
-                  alloca (\browserWindowIDPtr -> do
-                            poke browserWindowIDPtr
-                                 $ Te.browserWindowID browserWindow
-                            callbackNoteNewBrowserWindow' projectIDPtr
-                                                          browserWindowIDPtr))
-      callbackNoteNewBrowserWindow' =
-        mkVoidProjectIDPtrBrowserWindowIDPtrCallback
-         foreignNoteNewBrowserWindow
-      callbackNoteDeletedBrowserWindow browserWindow = do
-        alloca (\browserWindowIDPtr -> do
-                  poke browserWindowIDPtr $ Te.browserWindowID browserWindow
-                  callbackNoteDeletedBrowserWindow' browserWindowIDPtr)
-      callbackNoteDeletedBrowserWindow' =
-        mkVoidBrowserWindowIDPtrCallback foreignNoteDeletedBrowserWindow
+        wrapVoidCallback foreignNoteRecentProjectsChanged
+      callbackNoteNewBrowserWindow =
+        wrapVoidBrowserWindowCallback foreignNoteNewBrowserWindow
+      callbackNoteDeletedBrowserWindow =
+        wrapVoidBrowserWindowCallback foreignNoteDeletedBrowserWindow
       callbacks = Te.FrontEndCallbacks {
                       Te.frontEndCallbacksException =
                         callbackException,
                       Te.frontEndCallbacksNoteRecentProjectsChanged =
                         callbackNoteRecentProjectsChanged,
-                      Te.frontEndCallbacksNoteNewProject =
-                        callbackNoteNewProject,
-                      Te.frontEndCallbacksNoteDeletedProject =
-                        callbackNoteDeletedProject,
                       Te.frontEndCallbacksNoteNewBrowserWindow =
                         callbackNoteNewBrowserWindow,
                       Te.frontEndCallbacksNoteDeletedBrowserWindow =
