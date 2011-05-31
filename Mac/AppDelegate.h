@@ -1,7 +1,8 @@
 #import <Cocoa/Cocoa.h>
+#import "Utilities.h"
 
-@interface AppDelegate : NSObject
-<NSApplicationDelegate,NSTableViewDataSource, NSTableViewDelegate>
+@interface AppDelegate : NSDocumentController
+<NSApplicationDelegate, NSTableViewDataSource, NSTableViewDelegate>
 {
     IBOutlet NSWindow *metaProjectWindow;
     IBOutlet NSTextField *metaProjectVersionLabel;
@@ -9,12 +10,20 @@
     IBOutlet NSTableColumn *metaProjectRecentListIconColumn;
     IBOutlet NSTableColumn *metaProjectRecentListTextColumn;
     
+    NSOpenPanel *openPanel;
+    
     void *applicationState;
+    NSMapTable *projects;
+    
+    int hsArgc;
+    char **hsArgv;
 }
+@property (assign) void *applicationState;
 
 - (void) applicationWillFinishLaunching: (NSNotification *) notification;
 - (void) applicationWillTerminate: (NSNotification *) notification;
 - (void) applicationDidFinishLaunching: (NSNotification *) notification;
+- (BOOL) applicationShouldOpenUntitledFile: (NSApplication *) sender;
 - (NSInteger) numberOfRowsInTableView: (NSTableView *) tableView;
 - (id)            tableView: (NSTableView *) tableView
   objectValueForTableColumn: (NSTableColumn *) tableColumn
@@ -29,4 +38,9 @@
 void exception(char *messageCString, char *detailsCString);
 - (void) noteRecentProjectsChanged;
 void noteRecentProjectsChanged();
+- (void) noteNewProject: (uuid_t *) project;
+void noteNewProject(uuid_t *project);
+- (void) openBrowserWindow: (uuid_t *) browserWindow
+                forProject: (uuid_t *) project;
+void openBrowserWindow(uuid_t *project, uuid_t *browserWindow);
 @end

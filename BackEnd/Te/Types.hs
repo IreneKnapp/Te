@@ -2,7 +2,8 @@ module Te.Types
   (ApplicationState(..),
    FrontEndCallbacks(..),
    RecentProject(..),
-   Project(..))
+   Project(..),
+   BrowserWindow(..))
   where
 
 import Control.Concurrent.MVar
@@ -24,7 +25,8 @@ data ApplicationState =
 data FrontEndCallbacks =
   FrontEndCallbacks {
       frontEndCallbacksException :: String -> String -> IO (),
-      frontEndCallbacksNoteRecentProjectsChanged :: IO ()
+      frontEndCallbacksNoteRecentProjectsChanged :: IO (),
+      frontEndCallbacksNoteNewProject :: Project -> IO ()
     }
 
 
@@ -41,5 +43,14 @@ data Project =
       projectID :: ProjectID,
       projectApplicationState :: MVar ApplicationState,
       projectDatabase :: Database,
-      projectFilePath :: MVar (Maybe FilePath)
+      projectFilePath :: MVar (Maybe FilePath),
+      projectBrowserWindows
+          :: MVar (Map BrowserWindowID BrowserWindow)
+    }
+
+
+data BrowserWindow =
+  BrowserWindow {
+      browserWindowID :: BrowserWindowID,
+      browserWindowProject :: Project
     }

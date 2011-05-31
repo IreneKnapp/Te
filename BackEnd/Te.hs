@@ -1,8 +1,13 @@
 module Te
-  (ApplicationState,
-   Project,
+  (ApplicationState(..),
+   Project(..),
+   BrowserWindow(..),
+   catchTe,
    versionString,
    timestampToString,
+   uuidHash,
+   uuidEqual,
+   uuidShow,
    applicationInit,
    applicationExit,
    applicationRecentProjectCount,
@@ -16,9 +21,11 @@ module Te
 
 import Control.Concurrent.MVar
 import Control.Exception
+import Data.Digest.Murmur64
 import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.UUID
 import Data.Version
 import Data.Word
 import System.Directory
@@ -31,41 +38,6 @@ import Te.Exceptions
 import Te.Identifiers
 import Te.Types
 import Paths_te
-
-
-versionString :: String
-versionString = showVersion version
-
-
-timestampToString :: Word64 -> IO String
-timestampToString timestamp = do
-  describeTimestamp timestamp
-
-
-applicationInit
-    :: (String -> String -> IO ())
-    -> (IO ())
-    -> IO (MVar ApplicationState)
-applicationInit
-    exception'
-    noteRecentProjectsChanged' = do
-  let callbacks = FrontEndCallbacks {
-                      frontEndCallbacksException =
-                        exception',
-                      frontEndCallbacksNoteRecentProjectsChanged =
-                        noteRecentProjectsChanged'
-                    }
-      applicationState = ApplicationState {
-                             applicationStateRecentProjects = [],
-                             applicationStateProjects = Map.empty,
-                             applicationStateFrontEndCallbacks = callbacks
-                           }
-  newMVar applicationState
-
-
-applicationExit :: MVar ApplicationState -> IO ()
-applicationExit applicationStateMVar = do
-  return ()
 
 
 catchTe :: MVar ApplicationState -> a -> IO a -> IO a
@@ -81,12 +53,74 @@ catchTe applicationStateMVar default' action = do
            return default')
 
 
+versionString :: String
+versionString = showVersion version
+
+
+timestampToString :: Word64 -> IO String
+timestampToString timestamp = do
+  describeTimestamp timestamp
+
+
+uuidHash :: UUID -> IO Word64
+uuidHash uuid = do
+  return $ asWord64 $ hash64 uuid
+
+
+uuidEqual :: UUID -> UUID -> IO Bool
+uuidEqual uuidA uuidB = do
+  return $ uuidA == uuidB
+
+
+uuidShow :: UUID -> IO String
+uuidShow uuid = do
+  return $ show uuid
+
+
+applicationInit
+    :: (String -> String -> IO ())
+    -> (IO ())
+    -> (Project -> IO ())
+    -> IO (MVar ApplicationState)
+applicationInit
+    exception'
+    noteRecentProjectsChanged'
+    noteNewProject' = do
+  let callbacks = FrontEndCallbacks {
+                      frontEndCallbacksException =
+                        exception',
+                      frontEndCallbacksNoteRecentProjectsChanged =
+                        noteRecentProjectsChanged',
+                      frontEndCallbacksNoteNewProject =
+                        noteNewProject'
+                    }
+      applicationState = ApplicationState {
+                             applicationStateRecentProjects = [],
+                             applicationStateProjects = Map.empty,
+                             applicationStateFrontEndCallbacks = callbacks
+                           }
+  newMVar applicationState
+
+
+applicationExit :: MVar ApplicationState -> IO ()
+applicationExit applicationStateMVar = do
+  return ()
+
+
 noteRecentProjectsChanged :: MVar ApplicationState -> IO ()
 noteRecentProjectsChanged applicationStateMVar = do
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteRecentProjectsChanged callbacks
   callback
+
+
+noteNewProject :: Project -> IO ()
+noteNewProject project = do
+  applicationState <- readMVar $ projectApplicationState project
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksNoteNewProject callbacks
+  callback project
 
 
 applicationRecentProjectCount :: MVar ApplicationState -> IO Word64
@@ -127,32 +161,35 @@ applicationRecentProjectTimestamp applicationStateMVar index =
       else return Nothing
 
 
-applicationNewProject :: MVar ApplicationState -> IO (Maybe Project)
+applicationNewProject :: MVar ApplicationState -> IO ()
 applicationNewProject applicationStateMVar =
-  catchTe applicationStateMVar Nothing $ do
+  catchTe applicationStateMVar () $ do
     projectID <- newProjectID
     database <- newProjectDatabase
     initProjectDatabaseSchema database
     filePathMVar <- newMVar Nothing
+    browserWindowsMVar <- newMVar Map.empty
     let newProject = Project {
                          projectID = projectID,
                          projectApplicationState = applicationStateMVar,
                          projectDatabase = database,
-                         projectFilePath = filePathMVar
+                         projectFilePath = filePathMVar,
+                         projectBrowserWindows = browserWindowsMVar
                        }
     addProjectToApplicationState applicationStateMVar newProject
-    return $ Just newProject
+    noteNewProject newProject
+    restoreProjectWindows newProject
 
 
 applicationOpenProject
-    :: MVar ApplicationState -> FilePath -> IO (Maybe Project)
+    :: MVar ApplicationState -> FilePath -> IO ()
 applicationOpenProject applicationStateMVar filePath =
-  catchTe applicationStateMVar Nothing $ do
+  catchTe applicationStateMVar () $ do
     applicationOpenProject' applicationStateMVar filePath
 
 
 applicationOpenProject'
-    :: MVar ApplicationState -> FilePath -> IO (Maybe Project)
+    :: MVar ApplicationState -> FilePath -> IO ()
 applicationOpenProject' applicationStateMVar filePath = do
   exists <- doesFileExist filePath
   if not exists
@@ -167,16 +204,20 @@ applicationOpenProject' applicationStateMVar filePath = do
             Just 1 -> do
               projectID <- newProjectID
               filePathMVar <- newMVar $ Just filePath
+              browserWindowsMVar <- newMVar Map.empty
               let newProject = Project {
                                    projectID = projectID,
                                    projectApplicationState =
                                      applicationStateMVar,
                                    projectDatabase = database,
-                                   projectFilePath = filePathMVar
+                                   projectFilePath = filePathMVar,
+                                   projectBrowserWindows =
+                                     browserWindowsMVar
                                  }
               addProjectToApplicationState applicationStateMVar newProject
               updateProjectInRecentProjects applicationStateMVar newProject
-              return $ Just newProject
+              noteNewProject newProject
+              restoreProjectWindows newProject
             Just _ -> do
               closeProjectDatabase database
               throwIO $ TeExceptionFileCreatedByNewerVersion filePath
@@ -189,9 +230,9 @@ applicationOpenProject' applicationStateMVar filePath = do
 
 
 applicationOpenRecentProject
-    :: MVar ApplicationState -> Word64 -> IO (Maybe Project)
+    :: MVar ApplicationState -> Word64 -> IO ()
 applicationOpenRecentProject applicationStateMVar index =
-  catchTe applicationStateMVar Nothing $ do
+  catchTe applicationStateMVar () $ do
     applicationState <- readMVar applicationStateMVar
     let recentProjects = applicationStateRecentProjects applicationState
         index' = fromIntegral index
@@ -200,7 +241,7 @@ applicationOpenRecentProject applicationStateMVar index =
         applicationOpenProject' applicationStateMVar
                                 $ recentProjectFilePath
                                    $ recentProjects !! index'
-      else return Nothing
+      else return ()
 
 
 projectClose :: Project -> IO ()
@@ -256,3 +297,8 @@ updateProjectInRecentProjects applicationStateMVar project = do
                                   applicationStateRecentProjects = recentProjects'
                                 }
       putMVar applicationStateMVar applicationState'
+
+
+restoreProjectWindows :: Project -> IO ()
+restoreProjectWindows project = do
+  return () -- TODO

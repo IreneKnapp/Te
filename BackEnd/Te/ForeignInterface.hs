@@ -1,53 +1,69 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE ForeignFunctionInterface, TemplateHaskell #-}
 module Te.ForeignInterface () where
 
 import Control.Concurrent.MVar
+import Control.Exception
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.UTF8 as UTF8
+import Data.Map (Map)
+import qualified Data.Map as Map
+import Data.UUID
 import Data.Word
 import Foreign
 import Foreign.C
 
 import Te (ApplicationState, Project)
 import qualified Te as Te
+import Te.Exceptions
+import Te.Identifiers (ProjectID, BrowserWindowID)
+import qualified Te.Identifiers as Te
 
 
 foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
 foreign import ccall "dynamic" mkVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
+foreign import ccall "dynamic" mkVoidProjectIDPtrCallback
+    :: FunPtr (Ptr ProjectID -> IO ()) -> (Ptr ProjectID -> IO ())
 
 
-foreign export ccall "string_free" stringFree
+foreign export ccall "teStringFree" stringFree
     :: CString -> IO ()
-foreign export ccall "version_string" versionString
+foreign export ccall "teVersionString" versionString
     :: IO CString
-foreign export ccall "timestamp_to_string" timestampToString
+foreign export ccall "teTimestampToString" timestampToString
     :: Word64 -> IO CString
-foreign export ccall "application_init" applicationInit
+foreign export ccall "teUUIDHash" uuidHash
+    :: Ptr UUID -> IO Word64
+foreign export ccall "teUUIDEqual" uuidEqual
+    :: Ptr UUID -> Ptr UUID -> IO CInt
+foreign export ccall "teUUIDShow" uuidShow
+    :: Ptr UUID -> IO CString
+foreign export ccall "teApplicationInit" applicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
+    -> FunPtr (Ptr ProjectID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
-foreign export ccall "application_exit" applicationExit
+foreign export ccall "teApplicationExit" applicationExit
     :: StablePtr (MVar ApplicationState) -> IO ()
-foreign export ccall "application_recent_project_count"
+foreign export ccall "teApplicationRecentProjectCount"
                      applicationRecentProjectCount
     :: StablePtr (MVar ApplicationState) -> IO Word64
-foreign export ccall "application_recent_project_name"
+foreign export ccall "teApplicationRecentProjectName"
                      applicationRecentProjectName
     :: StablePtr (MVar ApplicationState) -> Word64 -> IO CString
-foreign export ccall "application_recent_project_timestamp"
+foreign export ccall "teApplicationRecentProjectTimestamp"
                      applicationRecentProjectTimestamp
     :: StablePtr (MVar ApplicationState) -> Word64 -> IO Word64
-foreign export ccall "application_new_project" applicationNewProject
-    :: StablePtr (MVar ApplicationState) -> IO (StablePtr Project)
-foreign export ccall "application_open_project" applicationOpenProject
-    :: StablePtr (MVar ApplicationState) -> CString -> IO (StablePtr Project)
-foreign export ccall "application_open_recent_project"
+foreign export ccall "teApplicationNewProject" applicationNewProject
+    :: StablePtr (MVar ApplicationState) -> IO ()
+foreign export ccall "teApplicationOpenProject" applicationOpenProject
+    :: StablePtr (MVar ApplicationState) -> CString -> IO ()
+foreign export ccall "teApplicationOpenRecentProject"
                      applicationOpenRecentProject
-    :: StablePtr (MVar ApplicationState) -> Word64 -> IO (StablePtr Project)
-foreign export ccall "project_close" projectClose
-    :: StablePtr Project -> IO ()
+    :: StablePtr (MVar ApplicationState) -> Word64 -> IO ()
+foreign export ccall "teProjectClose" projectClose
+    :: StablePtr (MVar ApplicationState) -> Ptr ProjectID -> IO ()
 
 
 stringNew :: String -> IO CString
@@ -79,11 +95,37 @@ timestampToString timestamp = do
   stringNew result
 
 
+uuidHash :: Ptr UUID -> IO Word64
+uuidHash uuidPtr = do
+  uuid <- peek uuidPtr
+  Te.uuidHash uuid
+
+
+uuidEqual :: Ptr UUID -> Ptr UUID -> IO CInt
+uuidEqual uuidPtrA uuidPtrB = do
+  uuidA <- peek uuidPtrA
+  uuidB <- peek uuidPtrB
+  result <- Te.uuidEqual uuidA uuidB
+  if result
+    then return 1
+    else return 0
+
+
+uuidShow :: Ptr UUID -> IO CString
+uuidShow uuidPtr = do
+  uuid <- peek uuidPtr
+  string <- Te.uuidShow uuid
+  stringNew string
+
+
 applicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
+    -> FunPtr (Ptr ProjectID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
-applicationInit foreignException foreignNoteRecentProjectsChanged = do
+applicationInit foreignException
+                foreignNoteRecentProjectsChanged
+                foreignNoteNewProject = do
   let callbackException messageString detailsString = do
         withCString messageString
                     (\messageCString -> do
@@ -95,8 +137,15 @@ applicationInit foreignException foreignNoteRecentProjectsChanged = do
         mkVoidStringStringCallback foreignException
       callbackNoteRecentProjectsChanged =
         mkVoidCallback foreignNoteRecentProjectsChanged
+      callbackNoteNewProject project = do
+        alloca (\projectIDPtr -> do
+                  poke projectIDPtr $ Te.projectID project
+                  callbackNoteNewProject' projectIDPtr)
+      callbackNoteNewProject' =
+        mkVoidProjectIDPtrCallback foreignNoteNewProject
   applicationStateMVar <- Te.applicationInit callbackException
                                              callbackNoteRecentProjectsChanged
+                                             callbackNoteNewProject
   newStablePtr applicationStateMVar
 
 
@@ -136,37 +185,35 @@ applicationRecentProjectTimestamp applicationStateMVarStablePtr index = do
 
 
 applicationNewProject
-    :: StablePtr (MVar ApplicationState) -> IO (StablePtr Project)
+    :: StablePtr (MVar ApplicationState) -> IO ()
 applicationNewProject applicationStateMVarStablePtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  maybeResult <- Te.applicationNewProject applicationStateMVar
-  case maybeResult of
-    Just result -> newStablePtr result
-    Nothing -> return $ castPtrToStablePtr nullPtr
+  Te.applicationNewProject applicationStateMVar
 
 
 applicationOpenProject
-    :: StablePtr (MVar ApplicationState) -> CString -> IO (StablePtr Project)
-applicationOpenProject applicationStateMVarStablePtr filePathCString = do
+    :: StablePtr (MVar ApplicationState) -> CString -> IO ()
+applicationOpenProject applicationStateMVarStablePtr
+                       filePathCString = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
   filePath <- peekCString filePathCString
-  maybeResult <- Te.applicationOpenProject applicationStateMVar filePath
-  case maybeResult of
-    Just result -> newStablePtr result
-    Nothing -> return $ castPtrToStablePtr nullPtr
+  Te.applicationOpenProject applicationStateMVar filePath
 
 
 applicationOpenRecentProject
-    :: StablePtr (MVar ApplicationState) -> Word64 -> IO (StablePtr Project)
-applicationOpenRecentProject applicationStateMVarStablePtr index = do
+    :: StablePtr (MVar ApplicationState) -> Word64 -> IO ()
+applicationOpenRecentProject applicationStateMVarStablePtr
+                             index = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  maybeResult <- Te.applicationOpenRecentProject applicationStateMVar index
-  case maybeResult of
-    Just result -> newStablePtr result
-    Nothing -> return $ castPtrToStablePtr nullPtr
+  Te.applicationOpenRecentProject applicationStateMVar index
 
 
-projectClose :: StablePtr Project -> IO ()
-projectClose projectStablePtr = do
-  project <- deRefStablePtr projectStablePtr
-  Te.projectClose project
+projectClose :: StablePtr (MVar ApplicationState) -> Ptr ProjectID -> IO ()
+projectClose applicationStateMVarStablePtr projectIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  Te.catchTe applicationStateMVar () $ do
+    applicationState <- readMVar applicationStateMVar
+    projectID <- peek projectIDPtr
+    case Map.lookup projectID $ Te.applicationStateProjects applicationState of
+      Just project -> Te.projectClose project
+      Nothing -> throwIO $(internalFailure)

@@ -19,15 +19,21 @@ Source-Repository head
   type: darcs
   location: http://dankna.com/software/darcs/te/
 
+Flag debug
+  manual: True
+  default: False
+
 Executable Te
   hs-source-dirs: Mac
   include-dirs: Mac
   c-source-dirs: Mac
   main-is: main.m
   includes: AppDelegate.h,
-            Project.h
+            Project.h,
+            Utilities.h
   c-sources: AppDelegate.m,
-             Project.m
+             Project.m,
+             Utilities.m
   hs-source-dirs: BackEnd
   other-modules: Data.Timestamp,
                  Te,
@@ -35,6 +41,7 @@ Executable Te
                  Te.Identifiers,
                  Te.Types
   build-depends: base >= 4.1 && < 5,
+                 template-haskell >= 2.5.0.0 && < 3,
                  time >= 1.2.0.4 && < 2,
                  old-locale >= 1.0.0.2 && < 2,
                  filepath >= 1.2.0.0 && < 2,
@@ -42,12 +49,18 @@ Executable Te
                  bytestring >= 0.9.1.4 && < 1,
                  utf8-string >= 0.3.6 && < 1,
                  system-uuid >= 2.1.0 && < 3,
+                 murmur-hash >= 0.1.0.2 && < 1,
                  direct-sqlite >= 1.1 && < 2,
                  containers >= 0.4.0.0 && < 1,
                  binary >= 0.5.0.2 && < 1,
                  cabal-app >= 1.0 && < 2
   frameworks: Cocoa
-  ld-options: -fobjc-gc-only
+  objc-gc: Mandatory
+  if flag(debug)
+    ghc-options: -debug
+    cc-options: -g3 -O0
+  cc-options: -std=c99
+  ghc-options: -threaded
   x-app-info-plist: Mac/Info.plist
   x-app-resource-dir: Mac/Resources
   x-app-xibs: MainMenu.xib

@@ -7,16 +7,20 @@
 	<key>CFBundleDocumentTypes</key>
 	<array>
 		<dict>
+			<key>NSExportableTypes</key>
+			<array/>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
 			<key>CFBundleTypeName</key>
 			<string>Project</string>
+			<key>LSItemContentTypes</key>
+			<array>
+				<string>com.dankna.te.project</string>
+			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
 			<key>NSDocumentClass</key>
 			<string>Project</string>
-			<key>NSExportableTypes</key>
-			<array>
-				<string>com.dankna.te.project</string>
-			</array>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>

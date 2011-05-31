@@ -1,35 +1,65 @@
 #import "AppDelegate.h"
 #import <HsFFI.h>
 #import "Te/ForeignInterface_stub.h"
+#import "Project.h"
 
 @implementation AppDelegate
-
-int argc;
-char **argv;
+@synthesize applicationState;
 
 - (void) applicationWillFinishLaunching: (NSNotification *) notification {
-    argc = 1;
-    argv = malloc(sizeof(char *));
-    argv[0] = "Te";
-    hs_init(&argc, &argv);
+    hsArgc = 1;
+    hsArgv = malloc(sizeof(char *));
+    hsArgv[0] = "Te";
+    hs_init(&hsArgc, &hsArgv);
     
-    applicationState = application_init((HsFunPtr) exception,
-                                        (HsFunPtr) noteRecentProjectsChanged);
+    applicationState = teApplicationInit((HsFunPtr) exception,
+                                         (HsFunPtr) noteRecentProjectsChanged,
+                                         (HsFunPtr) noteNewProject);
     
-    char *versionLabelCString = version_string();
+    NSPointerFunctions *keyFunctions
+        = [NSPointerFunctions
+            pointerFunctionsWithOptions: NSMapTableCopyIn
+                                         | NSMapTableStrongMemory];
+    [keyFunctions setHashFunction: uuidHashPointerFunction];
+    [keyFunctions setIsEqualFunction: uuidIsEqualPointerFunction];
+    [keyFunctions setSizeFunction: uuidSizePointerFunction];
+    [keyFunctions setDescriptionFunction: uuidDescriptionPointerFunction];
+    [keyFunctions setAcquireFunction: opaqueAcquirePointerFunction];
+    [keyFunctions setRelinquishFunction: opaqueRelinquishPointerFunction];
+    
+    NSPointerFunctions *valueFunctions
+        = [NSPointerFunctions
+            pointerFunctionsWithOptions: NSMapTableStrongMemory
+                                         | NSMapTableObjectPointerPersonality];
+    
+    projects = [[NSMapTable alloc]
+                initWithKeyPointerFunctions: keyFunctions
+                valuePointerFunctions: valueFunctions
+                capacity: 1024];
+    
+    char *versionLabelCString = teVersionString();
     NSString *versionLabelString
         = [NSString stringWithUTF8String: versionLabelCString];
-    string_free(versionLabelCString);
+    teStringFree(versionLabelCString);
     [metaProjectVersionLabel setStringValue: versionLabelString];
     
     [metaProjectRecentList setIntercellSpacing: NSMakeSize(0.0, 0.0)];
     [metaProjectRecentList setTarget: self];
     [metaProjectRecentList setDoubleAction: @selector(openRecentProject:)];
+    
+    openPanel = [NSOpenPanel openPanel];
+    NSMutableArray *fileTypes = [NSMutableArray arrayWithCapacity: 1];
+    [fileTypes addObject: @"com.dankna.te.project"];
+    [openPanel setAllowedFileTypes: fileTypes];
+    [openPanel setCanChooseFiles: YES];
+    [openPanel setCanChooseDirectories: NO];
+    [openPanel setAllowsMultipleSelection: YES];
+    [openPanel setResolvesAliases: YES];
 }
 
 
 - (void) applicationWillTerminate: (NSNotification *) notification {
-    application_exit(applicationState);
+    teApplicationExit(applicationState);
     hs_exit();
 }
 
@@ -39,9 +69,14 @@ char **argv;
 }
 
 
+- (BOOL) applicationShouldOpenUntitledFile: (NSApplication *) sender {
+    return NO;
+}
+
+
 - (NSInteger) numberOfRowsInTableView: (NSTableView *) tableView {
     if([tableView isEqual: metaProjectRecentList]) {
-        uint64_t count = application_recent_project_count(applicationState);
+        uint64_t count = teApplicationRecentProjectCount(applicationState);
         if(count == 0) {
             return 1;
         } else {
@@ -58,7 +93,7 @@ char **argv;
                         row: (NSInteger) rowIndex
 {
     if([tableView isEqual: metaProjectRecentList]) {
-        if(application_recent_project_count(applicationState) == 0) {
+        if(teApplicationRecentProjectCount(applicationState) == 0) {
             if([tableColumn isEqual: metaProjectRecentListIconColumn]) {
                 return [NSImage imageNamed: @"FirstRunAttentionArrow"];
             } else if([tableColumn isEqual: metaProjectRecentListTextColumn]) {
@@ -109,12 +144,25 @@ char **argv;
 
 
 - (IBAction) newProject: (id) sender {
-  application_new_project(applicationState);
+    teApplicationNewProject(applicationState);
 }
 
 
 - (IBAction) openProject: (id) sender {
-  application_open_project(applicationState, "/nonexistent/fooze.te");
+    [openPanel beginWithCompletionHandler:
+        ^(NSInteger result) {
+            if(result != NSFileHandlingPanelOKButton) 
+                return;
+            
+            for(NSURL *url in [openPanel URLs]) {
+                if(![url isFileURL])
+                    continue;
+                
+                NSString *path = [url path];
+                char *pathCString = (char *) [path UTF8String];
+                teApplicationOpenProject(applicationState, pathCString);
+            }
+        }];
 }
 
 
@@ -123,7 +171,7 @@ char **argv;
         NSInteger row = [metaProjectRecentList clickedRow];
         if(-1 != row) {
             uint64_t index = (uint64_t) row;
-            application_open_recent_project(applicationState, index);
+            teApplicationOpenRecentProject(applicationState, index);
         }
     }
 }
@@ -155,6 +203,31 @@ void exception(char *messageCString, char *detailsCString) {
 
 void noteRecentProjectsChanged() {
     [(AppDelegate *) [NSApp delegate] noteRecentProjectsChanged];
+}
+
+
+- (void) noteNewProject: (uuid_t *) projectID {
+    Project *projectObject = [[Project alloc] initWithProjectID: projectID];
+    if(projectObject)
+        [projects setObject: projectObject forKey: (void *) projectID];
+}
+
+
+void noteNewProject(uuid_t *projectID) {
+    [(AppDelegate *) [NSApp delegate] noteNewProject: projectID];
+}
+
+
+- (void) openBrowserWindow: (uuid_t *) browserWindow
+                forProject: (uuid_t *) project
+{
+    NSLog(@"Mm-hm.  (I'll get right on that.)");
+}
+
+
+void openBrowserWindow(uuid_t *project, uuid_t *browserWindow) {
+    [(AppDelegate *) [NSApp delegate] openBrowserWindow: browserWindow
+                                      forProject: project];
 }
 
 @end
