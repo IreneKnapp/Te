@@ -1,5 +1,6 @@
 module Te
-  (ApplicationState(..),
+  (FrontEndCallbacks(..),
+   ApplicationState(..),
    Project(..),
    BrowserWindow(..),
    catchTe,
@@ -35,6 +36,7 @@ import Prelude hiding (catch)
 import Data.Timestamp
 import Te.Database
 import Te.Exceptions
+import Te.FrontEndCallbacks
 import Te.Identifiers
 import Te.Types
 import Paths_te
@@ -77,24 +79,9 @@ uuidShow uuid = do
   return $ show uuid
 
 
-applicationInit
-    :: (String -> String -> IO ())
-    -> (IO ())
-    -> (Project -> IO ())
-    -> IO (MVar ApplicationState)
-applicationInit
-    exception'
-    noteRecentProjectsChanged'
-    noteNewProject' = do
-  let callbacks = FrontEndCallbacks {
-                      frontEndCallbacksException =
-                        exception',
-                      frontEndCallbacksNoteRecentProjectsChanged =
-                        noteRecentProjectsChanged',
-                      frontEndCallbacksNoteNewProject =
-                        noteNewProject'
-                    }
-      applicationState = ApplicationState {
+applicationInit :: FrontEndCallbacks -> IO (MVar ApplicationState)
+applicationInit callbacks = do
+  let applicationState = ApplicationState {
                              applicationStateRecentProjects = [],
                              applicationStateProjects = Map.empty,
                              applicationStateFrontEndCallbacks = callbacks
@@ -105,22 +92,6 @@ applicationInit
 applicationExit :: MVar ApplicationState -> IO ()
 applicationExit applicationStateMVar = do
   return ()
-
-
-noteRecentProjectsChanged :: MVar ApplicationState -> IO ()
-noteRecentProjectsChanged applicationStateMVar = do
-  applicationState <- readMVar applicationStateMVar
-  let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksNoteRecentProjectsChanged callbacks
-  callback
-
-
-noteNewProject :: Project -> IO ()
-noteNewProject project = do
-  applicationState <- readMVar $ projectApplicationState project
-  let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksNoteNewProject callbacks
-  callback project
 
 
 applicationRecentProjectCount :: MVar ApplicationState -> IO Word64
@@ -199,7 +170,8 @@ applicationOpenProject' applicationStateMVar filePath = do
       attachSucceeded <- attachFileToProjectDatabase database filePath
       if attachSucceeded
         then do
-          maybeSchemaVersion <- getProjectDatabaseSchemaVersion database
+          maybeSchemaVersion <-
+            getProjectDatabaseSchemaVersion database
           case maybeSchemaVersion of
             Just 1 -> do
               projectID <- newProjectID
@@ -301,4 +273,23 @@ updateProjectInRecentProjects applicationStateMVar project = do
 
 restoreProjectWindows :: Project -> IO ()
 restoreProjectWindows project = do
-  return () -- TODO
+  browserWindows <- readMVar $ projectBrowserWindows project
+  if Map.null browserWindows
+    then newBrowserWindow project
+    else return ()
+
+
+newBrowserWindow :: Project -> IO ()
+newBrowserWindow project = do
+  newBrowserWindowID <- newBrowserWindowID
+  let newBrowserWindow' = BrowserWindow {
+                              browserWindowID = newBrowserWindowID,
+                              browserWindowProject = project
+                            }
+  browserWindows <- takeMVar $ projectBrowserWindows project
+  let browserWindows' = Map.insert newBrowserWindowID
+                                   newBrowserWindow'
+                                   browserWindows
+  putMVar (projectBrowserWindows project) browserWindows'
+  recordNewBrowserWindow project newBrowserWindow'
+  noteNewBrowserWindow project newBrowserWindow'

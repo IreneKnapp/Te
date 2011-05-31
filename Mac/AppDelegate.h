@@ -38,9 +38,13 @@
 void exception(char *messageCString, char *detailsCString);
 - (void) noteRecentProjectsChanged;
 void noteRecentProjectsChanged();
-- (void) noteNewProject: (uuid_t *) project;
-void noteNewProject(uuid_t *project);
-- (void) openBrowserWindow: (uuid_t *) browserWindow
-                forProject: (uuid_t *) project;
-void openBrowserWindow(uuid_t *project, uuid_t *browserWindow);
+- (void) noteNewProject: (uuid_t *) projectID;
+void noteNewProject(uuid_t *projectID);
+- (void) noteDeletedProject: (uuid_t *) projectID;
+void noteDeletedProject(uuid_t *projectID);
+- (void) noteNewBrowserWindow: (uuid_t *) browserWindowID
+                   forProject: (uuid_t *) projectID;
+void noteNewBrowserWindow(uuid_t *projectID, uuid_t *browserWindowID);
+- (void) noteDeletedBrowserWindow: (uuid_t *) browserWindowID;
+void noteDeletedBrowserWindow(uuid_t *browserWindowID);
 @end

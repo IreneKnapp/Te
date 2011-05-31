@@ -4,7 +4,8 @@ module Te.Database
    closeProjectDatabase,
    attachFileToProjectDatabase,
    getProjectDatabaseSchemaVersion,
-   initProjectDatabaseSchema)
+   initProjectDatabaseSchema,
+   recordNewBrowserWindow)
   where
 
 import Control.Exception
@@ -13,6 +14,31 @@ import qualified Database.SQLite3 as SQL
 import Prelude hiding (catch)
 
 import Te.Identifiers
+import Te.Types
+
+
+query :: Database -> String -> [SQLData] -> IO [[SQLData]]
+query database queryText bindings = do
+  statement <- SQL.prepare database queryText
+  catch (do
+          SQL.bind statement bindings
+          result <- query' statement
+          SQL.finalize statement
+          return result)
+        (\e -> do
+          catch (SQL.finalize statement)
+                (\e -> do
+                   return (e :: SomeException)
+                   return ())
+          throwIO (e :: SomeException))
+  where query' statement = do
+          stepResult <- SQL.step statement
+          case stepResult of
+            Row -> do
+              row <- SQL.columns statement
+              remainder <- query' statement
+              return $ [row] ++ remainder
+            Done -> return []
 
 
 newProjectDatabase :: IO Database
@@ -49,25 +75,7 @@ initProjectDatabaseSchema database = do
   return ()
 
 
-query :: Database -> String -> [SQLData] -> IO [[SQLData]]
-query database queryText bindings = do
-  statement <- SQL.prepare database queryText
-  catch (do
-          SQL.bind statement bindings
-          result <- query' statement
-          SQL.finalize statement
-          return result)
-        (\e -> do
-          catch (SQL.finalize statement)
-                (\e -> do
-                   return (e :: SomeException)
-                   return ())
-          throwIO (e :: SomeException))
-  where query' statement = do
-          stepResult <- SQL.step statement
-          case stepResult of
-            Row -> do
-              row <- SQL.columns statement
-              remainder <- query' statement
-              return $ [row] ++ remainder
-            Done -> return []
+recordNewBrowserWindow :: Project -> BrowserWindow -> IO ()
+recordNewBrowserWindow project browserWindow = do
+  -- TODO
+  return ()

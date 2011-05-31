@@ -30,12 +30,7 @@ int uuidIsNull(uuid_t *uuid) {
 NSUInteger uuidHashPointerFunction(const void *item,
                                    NSUInteger (*size)(const void *item))
 {
-    NSLog(@"0x%016llX eh?", (unsigned long long) item);
     uint64_t result = teUUIDHash((void *) item);
-    NSLog(@"0x%016llX = %@ and hashes to 0x%016llX",
-          (unsigned long long) item,
-          uuidDescriptionPointerFunction(item),
-          (unsigned long long) result);
     return result;
 }
 

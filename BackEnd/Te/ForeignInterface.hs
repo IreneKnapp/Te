@@ -25,6 +25,11 @@ foreign import ccall "dynamic" mkVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
 foreign import ccall "dynamic" mkVoidProjectIDPtrCallback
     :: FunPtr (Ptr ProjectID -> IO ()) -> (Ptr ProjectID -> IO ())
+foreign import ccall "dynamic" mkVoidProjectIDPtrBrowserWindowIDPtrCallback
+    :: FunPtr (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
+    -> (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
+foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrCallback
+    :: FunPtr (Ptr BrowserWindowID -> IO ()) -> (Ptr BrowserWindowID -> IO ())
 
 
 foreign export ccall "teStringFree" stringFree
@@ -43,6 +48,9 @@ foreign export ccall "teApplicationInit" applicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr ProjectID -> IO ())
+    -> FunPtr (Ptr ProjectID -> IO ())
+    -> FunPtr (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit" applicationExit
     :: StablePtr (MVar ApplicationState) -> IO ()
@@ -122,10 +130,16 @@ applicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr ProjectID -> IO ())
+    -> FunPtr (Ptr ProjectID -> IO ())
+    -> FunPtr (Ptr ProjectID -> Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 applicationInit foreignException
                 foreignNoteRecentProjectsChanged
-                foreignNoteNewProject = do
+                foreignNoteNewProject
+                foreignNoteDeletedProject
+                foreignNoteNewBrowserWindow
+                foreignNoteDeletedBrowserWindow = do
   let callbackException messageString detailsString = do
         withCString messageString
                     (\messageCString -> do
@@ -143,9 +157,44 @@ applicationInit foreignException
                   callbackNoteNewProject' projectIDPtr)
       callbackNoteNewProject' =
         mkVoidProjectIDPtrCallback foreignNoteNewProject
-  applicationStateMVar <- Te.applicationInit callbackException
-                                             callbackNoteRecentProjectsChanged
-                                             callbackNoteNewProject
+      callbackNoteDeletedProject project = do
+        alloca (\projectIDPtr -> do
+                  poke projectIDPtr $ Te.projectID project
+                  callbackNoteDeletedProject' projectIDPtr)
+      callbackNoteDeletedProject' =
+        mkVoidProjectIDPtrCallback foreignNoteNewProject
+      callbackNoteNewBrowserWindow project browserWindow = do
+        alloca (\projectIDPtr -> do
+                  poke projectIDPtr $ Te.projectID project
+                  alloca (\browserWindowIDPtr -> do
+                            poke browserWindowIDPtr
+                                 $ Te.browserWindowID browserWindow
+                            callbackNoteNewBrowserWindow' projectIDPtr
+                                                          browserWindowIDPtr))
+      callbackNoteNewBrowserWindow' =
+        mkVoidProjectIDPtrBrowserWindowIDPtrCallback
+         foreignNoteNewBrowserWindow
+      callbackNoteDeletedBrowserWindow browserWindow = do
+        alloca (\browserWindowIDPtr -> do
+                  poke browserWindowIDPtr $ Te.browserWindowID browserWindow
+                  callbackNoteDeletedBrowserWindow' browserWindowIDPtr)
+      callbackNoteDeletedBrowserWindow' =
+        mkVoidBrowserWindowIDPtrCallback foreignNoteDeletedBrowserWindow
+      callbacks = Te.FrontEndCallbacks {
+                      Te.frontEndCallbacksException =
+                        callbackException,
+                      Te.frontEndCallbacksNoteRecentProjectsChanged =
+                        callbackNoteRecentProjectsChanged,
+                      Te.frontEndCallbacksNoteNewProject =
+                        callbackNoteNewProject,
+                      Te.frontEndCallbacksNoteDeletedProject =
+                        callbackNoteDeletedProject,
+                      Te.frontEndCallbacksNoteNewBrowserWindow =
+                        callbackNoteNewBrowserWindow,
+                      Te.frontEndCallbacksNoteDeletedBrowserWindow =
+                        callbackNoteDeletedBrowserWindow
+                    }
+  applicationStateMVar <- Te.applicationInit callbacks
   newStablePtr applicationStateMVar
 
 

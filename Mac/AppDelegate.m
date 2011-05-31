@@ -14,7 +14,10 @@
     
     applicationState = teApplicationInit((HsFunPtr) exception,
                                          (HsFunPtr) noteRecentProjectsChanged,
-                                         (HsFunPtr) noteNewProject);
+                                         (HsFunPtr) noteNewProject,
+                                         (HsFunPtr) noteDeletedProject,
+                                         (HsFunPtr) noteNewBrowserWindow,
+                                         (HsFunPtr) noteDeletedBrowserWindow);
     
     NSPointerFunctions *keyFunctions
         = [NSPointerFunctions
@@ -218,16 +221,35 @@ void noteNewProject(uuid_t *projectID) {
 }
 
 
-- (void) openBrowserWindow: (uuid_t *) browserWindow
-                forProject: (uuid_t *) project
+- (void) noteDeletedProject: (uuid_t *) projectID {
+}
+
+
+void noteDeletedProject(uuid_t *projectID) {
+    [(AppDelegate *) [NSApp delegate] noteDeletedProject: projectID];
+}
+
+
+- (void) noteNewBrowserWindow: (uuid_t *) browserWindowID
+                   forProject: (uuid_t *) projectID
 {
     NSLog(@"Mm-hm.  (I'll get right on that.)");
 }
 
 
-void openBrowserWindow(uuid_t *project, uuid_t *browserWindow) {
-    [(AppDelegate *) [NSApp delegate] openBrowserWindow: browserWindow
-                                      forProject: project];
+void noteNewBrowserWindow(uuid_t *projectID, uuid_t *browserWindowID) {
+    [(AppDelegate *) [NSApp delegate] noteNewBrowserWindow: browserWindowID
+                                      forProject: projectID];
+}
+
+
+- (void) noteDeletedBrowserWindow: (uuid_t *) browserWindowID {
+}
+
+
+void noteDeletedBrowserWindow(uuid_t *browserWindowID) {
+    [(AppDelegate *) [NSApp delegate] noteDeletedBrowserWindow:
+                                       browserWindowID];
 }
 
 @end
