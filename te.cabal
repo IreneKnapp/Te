@@ -47,6 +47,7 @@ Executable Te
                  binary >= 0.5.0.2 && < 1,
                  cabal-app >= 1.0 && < 2
   frameworks: Cocoa
+  ld-options: -fobjc-gc-only
   x-app-info-plist: Mac/Info.plist
   x-app-resource-dir: Mac/Resources
   x-app-xibs: MainMenu.xib

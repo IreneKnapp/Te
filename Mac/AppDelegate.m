@@ -132,8 +132,11 @@ char **argv;
 - (void) exceptionWithMessage: (NSString *) messageString
                       details: (NSString *) detailsString
 {
-    //NSAlert *alert = [[NSAlert alloc] init];
-    NSLog(@"Exception: %@\n%@", messageString, detailsString);
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText: messageString];
+    [alert setInformativeText: detailsString];
+    [alert addButtonWithTitle: NSLocalizedString(@"Okay", @"Okay")];
+    [alert runModal];
 }
 
 
