@@ -6,6 +6,35 @@
 @implementation AppDelegate
 @synthesize applicationState;
 
+- (NSMapTable *) newMapTable {
+    if(!keyFunctions) {
+        keyFunctions
+            = [NSPointerFunctions
+                pointerFunctionsWithOptions: NSMapTableCopyIn
+                                             | NSMapTableStrongMemory];
+        [keyFunctions setHashFunction: uuidHashPointerFunction];
+        [keyFunctions setIsEqualFunction: uuidIsEqualPointerFunction];
+        [keyFunctions setSizeFunction: uuidSizePointerFunction];
+        [keyFunctions setDescriptionFunction: uuidDescriptionPointerFunction];
+        [keyFunctions setAcquireFunction: opaqueAcquirePointerFunction];
+        [keyFunctions setRelinquishFunction: opaqueRelinquishPointerFunction];
+    }
+    
+    if(!valueFunctions) {
+        valueFunctions
+            = [NSPointerFunctions
+                pointerFunctionsWithOptions:
+                 NSMapTableStrongMemory
+                 | NSMapTableObjectPointerPersonality];
+    }
+    
+    return [[NSMapTable alloc]
+            initWithKeyPointerFunctions: keyFunctions
+            valuePointerFunctions: valueFunctions
+            capacity: 1024];
+}
+
+
 - (void) applicationWillFinishLaunching: (NSNotification *) notification {
     hsArgc = 1;
     hsArgv = malloc(sizeof(char *));
@@ -15,33 +44,21 @@
     applicationState = teApplicationInit((HsFunPtr) exception,
                                          (HsFunPtr) noteRecentProjectsChanged,
                                          (HsFunPtr) noteNewBrowserWindow,
-                                         (HsFunPtr) noteDeletedBrowserWindow);
+                                         (HsFunPtr) noteDeletedBrowserWindow,
+                                         (HsFunPtr) noteBrowserItemsChanged,
+                                         (HsFunPtr) editBrowserItemName);
     
-    NSPointerFunctions *keyFunctions
-        = [NSPointerFunctions
-            pointerFunctionsWithOptions: NSMapTableCopyIn
-                                         | NSMapTableStrongMemory];
-    [keyFunctions setHashFunction: uuidHashPointerFunction];
-    [keyFunctions setIsEqualFunction: uuidIsEqualPointerFunction];
-    [keyFunctions setSizeFunction: uuidSizePointerFunction];
-    [keyFunctions setDescriptionFunction: uuidDescriptionPointerFunction];
-    [keyFunctions setAcquireFunction: opaqueAcquirePointerFunction];
-    [keyFunctions setRelinquishFunction: opaqueRelinquishPointerFunction];
-    
-    NSPointerFunctions *valueFunctions
-        = [NSPointerFunctions
-            pointerFunctionsWithOptions: NSMapTableStrongMemory
-                                         | NSMapTableObjectPointerPersonality];
-    
-    browserWindows = [[NSMapTable alloc]
-                      initWithKeyPointerFunctions: keyFunctions
-                      valuePointerFunctions: valueFunctions
-                      capacity: 1024];
+    keyFunctions = nil;
+    valueFunctions = nil;
+    browserWindows = [self newMapTable];
     
     char *versionLabelCString = teVersionString();
-    NSString *versionLabelString
-        = [NSString stringWithUTF8String: versionLabelCString];
-    teStringFree(versionLabelCString);
+    NSString *versionLabelString = @"";
+    if(versionLabelCString) {
+        versionLabelString
+            = [NSString stringWithUTF8String: versionLabelCString];
+        teStringFree(versionLabelCString);
+    }
     [metaProjectVersionLabel setStringValue: versionLabelString];
     
     [metaProjectRecentList setIntercellSpacing: NSMakeSize(0.0, 0.0)];
@@ -62,6 +79,7 @@
 - (void) applicationWillTerminate: (NSNotification *) notification {
     teApplicationExit(applicationState);
     hs_exit();
+    applicationState = NULL;
 }
 
 
@@ -77,6 +95,9 @@
 
 - (NSInteger) numberOfRowsInTableView: (NSTableView *) tableView {
     if([tableView isEqual: metaProjectRecentList]) {
+        if(!applicationState)
+            return 0;
+        
         uint64_t count = teApplicationRecentProjectCount(applicationState);
         if(count == 0) {
             return 1;
@@ -94,6 +115,9 @@
                         row: (NSInteger) rowIndex
 {
     if([tableView isEqual: metaProjectRecentList]) {
+        if(!applicationState)
+            return nil;
+        
         if(teApplicationRecentProjectCount(applicationState) == 0) {
             if([tableColumn isEqual: metaProjectRecentListIconColumn]) {
                 return [NSImage imageNamed: @"FirstRunAttentionArrow"];
@@ -145,11 +169,17 @@
 
 
 - (IBAction) newProject: (id) sender {
+    if(!applicationState)
+        return;
+    
     teApplicationNewProject(applicationState);
 }
 
 
 - (IBAction) openProject: (id) sender {
+    if(!applicationState)
+        return;
+    
     [openPanel beginWithCompletionHandler:
         ^(NSInteger result) {
             if(result != NSFileHandlingPanelOKButton) 
@@ -168,6 +198,9 @@
 
 
 - (IBAction) openRecentProject: (id) sender {
+    if(!applicationState)
+        return;
+    
     if([sender isEqual: metaProjectRecentList]) {
         NSInteger row = [metaProjectRecentList clickedRow];
         if(-1 != row) {
@@ -225,7 +258,7 @@ void noteNewBrowserWindow(uuid_t *browserWindowID) {
     BrowserWindow *browserWindowObject
         = [browserWindows objectForKey: (void *) browserWindowID];
     if(browserWindowObject) {
-        [browserWindowObject close];
+        [browserWindowObject forceClose];
         [browserWindows removeObjectForKey: (void *) browserWindowID];
     }
 }
@@ -234,6 +267,38 @@ void noteNewBrowserWindow(uuid_t *browserWindowID) {
 void noteDeletedBrowserWindow(uuid_t *browserWindowID) {
     [(AppDelegate *) [NSApp delegate] noteDeletedBrowserWindow:
                                        browserWindowID];
+}
+
+
+- (void) noteBrowserItemsChangedInBrowserWindow: (uuid_t *) browserWindowID {
+    BrowserWindow *browserWindowObject
+        = [browserWindows objectForKey: (void *) browserWindowID];
+    if(browserWindowObject) {
+        [browserWindowObject noteItemsChanged];
+    }
+}
+
+
+void noteBrowserItemsChanged(uuid_t *browserWindowID) {
+    [(AppDelegate *) [NSApp delegate]
+     noteBrowserItemsChangedInBrowserWindow: browserWindowID];
+}
+
+
+- (void) editBrowserItemNameInBrowserWindow: (uuid_t *) browserWindowID
+                                      inode: (uuid_t *) inodeID
+{
+    BrowserWindow *browserWindowObject
+        = [browserWindows objectForKey: (void *) browserWindowID];
+    if(browserWindowObject) {
+        [browserWindowObject editItemName: inodeID];
+    }
+}
+
+
+void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID) {
+    [(AppDelegate *) [NSApp delegate]
+     editBrowserItemNameInBrowserWindow: browserWindowID inode: inodeID];
 }
 
 @end

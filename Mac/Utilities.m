@@ -1,6 +1,12 @@
 #import "Utilities.h"
 #import <HsFFI.h>
 #import "Te/ForeignInterface_stub.h"
+#import "AppDelegate.h"
+
+
+void *getApplicationState() {
+    return [(AppDelegate *) [NSApp delegate] applicationState];
+}
 
 
 void setUUIDNull(uuid_t *destination) {

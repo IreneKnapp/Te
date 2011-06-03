@@ -1,8 +1,9 @@
-#import <Foundation/Foundation.h>
+#import <Cocoa/Cocoa.h>
 
 typedef uint8_t uuid_t[16];
 
 
+extern void *getApplicationState();
 extern void setUUIDNull(uuid_t *destination);
 extern void copyUUID(uuid_t *destination, uuid_t *source);
 extern int uuidIsNull(uuid_t *uuid);

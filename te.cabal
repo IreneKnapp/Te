@@ -29,14 +29,20 @@ Executable Te
   c-source-dirs: Mac
   main-is: main.m
   includes: AppDelegate.h,
+            BrowserItem.h,
             BrowserWindow.h,
             Utilities.h
   c-sources: AppDelegate.m,
+             BrowserItem.m,
              BrowserWindow.m,
              Utilities.m
   hs-source-dirs: BackEnd
-  other-modules: Data.Timestamp,
+  other-modules: Data.Bitfield,
+                 Data.SQLable,
+                 Data.Timestamp,
                  Te,
+                 Te.Database,
+                 Te.Exceptions,
                  Te.ForeignInterface,
                  Te.FrontEndCallbacks,
                  Te.Identifiers,

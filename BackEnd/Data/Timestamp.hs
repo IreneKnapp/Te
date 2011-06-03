@@ -1,20 +1,42 @@
+{-# LANGUAGE GeneralizedNewtypeDeriving, DeriveDataTypeable #-}
 module Data.Timestamp
-  (getTimestamp,
+  (Timestamp(..),
+   getTimestamp,
    describeTimestamp)
   where
 
+import Data.Bits
+import Data.Data
+import Data.Ix
 import Data.Maybe
 import Data.Time
 import Data.Time.Clock.POSIX
 import Data.Word
+import Database.SQLite3 (SQLData(..))
+import Foreign.Storable
 import System.Locale
+import Text.Printf
+
+import Data.SQLable
 
 
-getTimestamp :: IO Word64
+newtype Timestamp = Timestamp Word64
+                  deriving (Bounded, Enum, Eq, Integral, Data, Num, Ord,
+                            Read, Real, Show, Ix, Typeable, Bits, Storable,
+                            PrintfArg)
+
+
+instance SQLable Timestamp where
+  toSQL timestamp = SQLInteger $ fromIntegral timestamp
+  fromSQL (SQLInteger timestamp) = Just $ fromIntegral timestamp
+  fromSQL _ = Nothing
+
+
+getTimestamp :: IO Timestamp
 getTimestamp = getPOSIXTime >>= return . floor
 
 
-describeTimestamp :: Word64 -> IO String
+describeTimestamp :: Timestamp -> IO String
 describeTimestamp timestamp = do
   now <- getTimestamp
   let timeAgo = now - timestamp

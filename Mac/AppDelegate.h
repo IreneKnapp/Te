@@ -13,6 +13,8 @@
     NSOpenPanel *openPanel;
     
     void *applicationState;
+    NSPointerFunctions *keyFunctions;
+    NSPointerFunctions *valueFunctions;
     NSMapTable *browserWindows;
     
     int hsArgc;
@@ -20,6 +22,7 @@
 }
 @property (assign) void *applicationState;
 
+- (NSMapTable *) newMapTable;
 - (void) applicationWillFinishLaunching: (NSNotification *) notification;
 - (void) applicationWillTerminate: (NSNotification *) notification;
 - (void) applicationDidFinishLaunching: (NSNotification *) notification;
@@ -42,4 +45,9 @@ void noteRecentProjectsChanged();
 void noteNewBrowserWindow(uuid_t *browserWindowID);
 - (void) noteDeletedBrowserWindow: (uuid_t *) browserWindowID;
 void noteDeletedBrowserWindow(uuid_t *browserWindowID);
+- (void) noteBrowserItemsChangedInBrowserWindow: (uuid_t *) browserWindowID;
+void noteBrowserItemsChanged(uuid_t *browserWindowID);
+- (void) editBrowserItemNameInBrowserWindow: (uuid_t *) browserWindowID
+                                      inode: (uuid_t *) inodeID;
+void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID);
 @end

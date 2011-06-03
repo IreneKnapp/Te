@@ -1,7 +1,9 @@
 module Te.FrontEndCallbacks
   (noteRecentProjectsChanged,
    noteNewBrowserWindow,
-   noteDeletedBrowserWindow)
+   noteDeletedBrowserWindow,
+   noteBrowserItemsChanged,
+   editBrowserItemName)
   where
 
 import Control.Concurrent.MVar
@@ -19,8 +21,9 @@ noteRecentProjectsChanged applicationStateMVar = do
 
 noteNewBrowserWindow :: BrowserWindow -> IO ()
 noteNewBrowserWindow browserWindow = do
-  applicationState <- readMVar $ projectApplicationState
-                                  $ browserWindowProject browserWindow
+  let project = browserWindowProject browserWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteNewBrowserWindow callbacks
   callback browserWindow
@@ -28,8 +31,30 @@ noteNewBrowserWindow browserWindow = do
 
 noteDeletedBrowserWindow :: BrowserWindow -> IO ()
 noteDeletedBrowserWindow browserWindow = do
-  applicationState <- readMVar $ projectApplicationState
-                                  $ browserWindowProject browserWindow
+  let project = browserWindowProject browserWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteDeletedBrowserWindow callbacks
   callback browserWindow
+
+
+noteBrowserItemsChanged :: BrowserWindow -> IO ()
+noteBrowserItemsChanged browserWindow = do
+  let project = browserWindowProject browserWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksNoteBrowserItemsChanged callbacks
+  callback browserWindow
+
+
+editBrowserItemName :: BrowserItem -> IO ()
+editBrowserItemName browserItem = do
+  let browserWindow = browserItemBrowserWindow browserItem
+      project = browserWindowProject browserWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksEditBrowserItemName callbacks
+  callback browserItem
