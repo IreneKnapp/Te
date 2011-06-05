@@ -645,7 +645,11 @@ inodeRename inode newName = do
   catchTe applicationStateMVar () $ do
     maybeParent <- lookupInodeParent inode
     case maybeParent of
-      Just parent -> recordMovedInode inode newName parent
+      Just parent -> do
+        recordMovedInode inode newName parent
+        browserWindowsMap <- readMVar $ projectBrowserWindows project
+        let browserWindows = Map.elems browserWindowsMap
+        mapM_ noteBrowserItemsChanged browserWindows
       Nothing -> throwIO $(internalFailure)
 
 
