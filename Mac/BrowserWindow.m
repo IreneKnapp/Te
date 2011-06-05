@@ -45,6 +45,24 @@
         [[window standardWindowButton: NSWindowDocumentIconButton]
          setImage: [NSImage imageNamed: titleIcon]];
         
+        NSMutableArray *draggedTypes = [NSMutableArray arrayWithCapacity: 1];
+        [draggedTypes addObject: @"com.dankna.te.datatypes.browser-items"];
+        [filesOutlineView registerForDraggedTypes: draggedTypes];
+        
+        uint64_t localOperations
+            = teBrowserWindowDraggingSourceIntraApplicationOperations();
+        NSDragOperation localOperationMask
+            = dragOperationsToOperationMask(localOperations);
+        [filesOutlineView setDraggingSourceOperationMask: localOperationMask
+                          forLocal: YES];
+        
+        uint64_t remoteOperations
+            = teBrowserWindowDraggingSourceInterApplicationOperations();
+        NSDragOperation remoteOperationMask
+            = dragOperationsToOperationMask(remoteOperations);
+        [filesOutlineView setDraggingSourceOperationMask: remoteOperationMask
+                          forLocal: NO];
+        
         [filesOutlineView reloadData];
     } else {
         teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
@@ -431,6 +449,141 @@
                               newNameCString);
             }
         }
+    }
+}
+
+
+- (BOOL) outlineView: (NSOutlineView *) outlineView
+          writeItems: (NSArray *) items
+        toPasteboard: (NSPasteboard *) pasteboard
+{
+    if(alreadyClosing)
+        return NO;
+    
+    if([outlineView isEqual: filesOutlineView]) {
+        void *applicationState = getApplicationState();
+        if(!applicationState)
+            return NO;
+        
+        NSMutableArray *declaredTypes = [NSMutableArray arrayWithCapacity: 1];
+        [declaredTypes addObject: @"com.dankna.te.datatypes.browser-items"];
+        [pasteboard declareTypes: declaredTypes owner: self];
+        
+        BOOL result = YES;
+        
+        if(result) {
+            NSMutableData *data = [NSMutableData data];
+            
+            result = [pasteboard
+                       setData: data
+                       forType: @"com.dankna.te.datatypes.browser-items"];
+        }
+        
+        return result;
+    } else {
+        return NO;
+    }
+}
+
+
+- (NSDragOperation) outlineView: (NSOutlineView *) outlineView
+                   validateDrop: (id <NSDraggingInfo>) info
+                   proposedItem: (id) item
+             proposedChildIndex: (NSInteger) index
+{
+    if(alreadyClosing)
+        return NSDragOperationNone;
+    
+    if([outlineView isEqual: filesOutlineView]) {
+        void *applicationState = getApplicationState();
+        if(!applicationState)
+            return NSDragOperationNone;
+        
+        uuid_t rootInodeID;
+        teBrowserWindowRoot(applicationState, &browserWindowID, &rootInodeID);
+        
+        uuid_t inodeID;
+        if([item isKindOfClass: [BrowserItem class]]) {
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            uuid_t *result = [browserItemObject inodeID];
+            copyUUID(&inodeID, result);
+        } else {
+            copyUUID(&inodeID, &rootInodeID);
+        }
+        
+        NSPasteboard *pasteboard = [info draggingPasteboard];
+        
+        NSString *usedType = nil;
+        for(NSString *foundType in [pasteboard types]) {
+            if([foundType isEqualToString:
+                           @"com.dankna.te.datatypes.browser-items"])
+            {
+                usedType = foundType;
+                break;
+            }
+        }
+        if(!usedType)
+            return NSDragOperationNone;
+        
+        NSDragOperation allowedDragOperationMask
+            = [info draggingSourceOperationMask];
+        uint64_t allowedDragOperations
+            = dragOperationMaskToOperations(allowedDragOperationMask);
+        
+        void *dragInformation = NULL;
+        if([usedType isEqualToString:
+                      @"com.dankna.te.datatypes.browser-items"])
+        {
+            uint64_t inodeIDCount = 0;
+            uuid_t *inodeIDs = NULL;
+            
+            dragInformation
+                = teBrowserItemDragInformationNew(applicationState,
+                                                  allowedDragOperations,
+                                                  &browserWindowID,
+                                                  inodeIDCount,
+                                                  inodeIDs);
+        }
+        if(!dragInformation)
+            return NSDragOperationNone;
+        
+        uuid_t resultInodeID;
+        uint64_t resultChildIndex;
+        uint64_t resultDragOperation;
+        uint64_t resultType = teInodeValidateDrop(applicationState,
+                                                  &browserWindowID,
+                                                  &inodeID,
+                                                  dragInformation,
+                                                  &resultInodeID,
+                                                  &resultChildIndex,
+                                                  &resultDragOperation);
+        
+        teDragInformationFree(dragInformation);
+        
+        NSInteger dropChildIndex;
+        switch(resultType) {
+        case 0:
+        default:
+            return NSDragOperationNone;
+        case 1:
+            dropChildIndex = NSOutlineViewDropOnItemIndex;
+            break;
+        case 2:
+            dropChildIndex = resultChildIndex;
+            break;
+        }
+        BrowserItem *browserItem = nil;
+        if(!teUUIDEqual(&resultInodeID, &rootInodeID))
+            browserItem = [self getBrowserItemWithInodeID: &resultInodeID];
+        [filesOutlineView setDropItem: browserItem
+                          dropChildIndex: dropChildIndex];
+        
+        NSDragOperation resultDragOperationMask
+            = dragOperationsToOperationMask(resultDragOperation);
+        return resultDragOperationMask;
+    } else {
+        return NSDragOperationNone;
     }
 }
 

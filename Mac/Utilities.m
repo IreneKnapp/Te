@@ -80,3 +80,35 @@ void opaqueRelinquishPointerFunction(const void *item,
 {
     free((void *) item);
 }
+
+
+uint64_t dragOperationMaskToOperations(NSDragOperation operationMask) {
+    uint64_t operations = 0;
+    if(operationMask & NSDragOperationCopy)
+        operations |= teDragOperationCopy();
+    if(operationMask & NSDragOperationLink)
+        operations |= teDragOperationLink();
+    if(operationMask & NSDragOperationGeneric)
+        operations |= teDragOperationGeneric();
+    if(operationMask & NSDragOperationMove)
+        operations |= teDragOperationMove();
+    if(operationMask & NSDragOperationDelete)
+        operations |= teDragOperationDelete();
+    return operations;
+}
+
+
+NSDragOperation dragOperationsToOperationMask(uint64_t operations) {
+    NSDragOperation operationMask = 0;
+    if(operations & teDragOperationCopy())
+        operationMask |= NSDragOperationCopy;
+    if(operations & teDragOperationLink())
+        operationMask |= NSDragOperationLink;
+    if(operations & teDragOperationGeneric())
+        operationMask |= NSDragOperationGeneric;
+    if(operations & teDragOperationMove())
+        operationMask |= NSDragOperationMove;
+    if(operations & teDragOperationDelete())
+        operationMask |= NSDragOperationDelete;
+    return operationMask;
+}

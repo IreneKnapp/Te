@@ -44,7 +44,9 @@ module Te
    inodeRename,
    inodesDelete,
    inodeValidateDrop,
-   inodeAcceptDrop)
+   inodeAcceptDrop,
+   browserWindowDraggingSourceIntraApplicationOperations,
+   browserWindowDraggingSourceInterApplicationOperations)
   where
 
 import Control.Concurrent.MVar
@@ -55,6 +57,8 @@ import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Set (Set)
+import qualified Data.Set as Set
 import Data.UUID
 import Data.Version
 import Data.Word
@@ -675,12 +679,12 @@ inodesDelete inodes = do
 inodeValidateDrop
     :: Inode
     -> DragInformation
-    -> IO (Maybe (Inode, DragOperation))
+    -> IO (Maybe (Inode, Maybe Word64, DragOperation))
 inodeValidateDrop inode dragInformation = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar Nothing $ do
-    throwIO $(internalFailure) -- TODO
+    return $ Just (inode, Nothing, DragOperationCopy)
 
 
 inodeAcceptDrop :: Inode -> DragInformation -> IO ()
@@ -689,3 +693,17 @@ inodeAcceptDrop inode dragInformation = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar () $ do
     throwIO $(internalFailure) -- TODO
+
+
+browserWindowDraggingSourceIntraApplicationOperations :: Set DragOperation
+browserWindowDraggingSourceIntraApplicationOperations =
+  Set.union browserWindowDraggingSourceInterApplicationOperations
+            $ Set.fromList [DragOperationLink,
+                            DragOperationMove]
+
+
+browserWindowDraggingSourceInterApplicationOperations :: Set DragOperation
+browserWindowDraggingSourceInterApplicationOperations =
+  Set.fromList [DragOperationCopy,
+                DragOperationGeneric,
+                DragOperationDelete]

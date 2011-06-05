@@ -52,4 +52,11 @@
       setObjectValue: (id) object
       forTableColumn: (NSTableColumn *) tableColumn
               byItem: (id) item;
+- (BOOL) outlineView: (NSOutlineView *) outlineView
+          writeItems: (NSArray *) items
+        toPasteboard: (NSPasteboard *) pasteboard;
+- (NSDragOperation) outlineView: (NSOutlineView *) outlineView
+                   validateDrop: (id <NSDraggingInfo>) info
+                   proposedItem: (id) item
+             proposedChildIndex: (NSInteger) index;
 @end

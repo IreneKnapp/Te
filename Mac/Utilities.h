@@ -20,3 +20,5 @@ extern void *opaqueAcquirePointerFunction(const void *src,
 extern void opaqueRelinquishPointerFunction(const void *item,
                                             NSUInteger
                                              (*size)(const void *item));
+extern uint64_t dragOperationMaskToOperations(NSDragOperation operationMask);
+extern NSDragOperation dragOperationsToOperationMask(uint64_t operations);

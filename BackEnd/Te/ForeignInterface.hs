@@ -217,6 +217,7 @@ foreign export ccall "teInodeValidateDrop"
     -> StablePtr DragInformation
     -> Ptr InodeID
     -> Ptr Word64
+    -> Ptr Word64
     -> IO Word64
 foreign export ccall "teInodeAcceptDrop"
                      foreignInodeAcceptDrop
@@ -225,6 +226,29 @@ foreign export ccall "teInodeAcceptDrop"
     -> Ptr InodeID
     -> StablePtr DragInformation
     -> IO ()
+foreign export ccall
+    "teBrowserWindowDraggingSourceIntraApplicationOperations"
+    foreignBrowserWindowDraggingSourceIntraApplicationOperations
+    :: Bitfield DragOperation
+foreign export ccall
+    "teBrowserWindowDraggingSourceInterApplicationOperations"
+    foreignBrowserWindowDraggingSourceInterApplicationOperations
+    :: Bitfield DragOperation
+foreign export ccall "teDragOperationCopy"
+                     foreignDragOperationCopy
+    :: Word64
+foreign export ccall "teDragOperationLink"
+                     foreignDragOperationLink
+    :: Word64
+foreign export ccall "teDragOperationGeneric"
+                     foreignDragOperationGeneric
+    :: Word64
+foreign export ccall "teDragOperationMove"
+                     foreignDragOperationMove
+    :: Word64
+foreign export ccall "teDragOperationDelete"
+                     foreignDragOperationDelete
+    :: Word64
 foreign export ccall "teBrowserItemDragInformationNew"
                      foreignBrowserItemDragInformationNew
     :: StablePtr (MVar ApplicationState)
@@ -1082,12 +1106,14 @@ foreignInodeValidateDrop
     -> StablePtr DragInformation
     -> Ptr InodeID
     -> Ptr Word64
+    -> Ptr Word64
     -> IO Word64
 foreignInodeValidateDrop applicationStateMVarStablePtr
                          browserWindowIDPtr
                          inodeIDPtr
                          dragInformationStablePtr
                          resultInodeIDPtr
+                         resultChildIndexPtr
                          resultDragOperationPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
   browserWindowID <- peek browserWindowIDPtr
@@ -1105,11 +1131,18 @@ foreignInodeValidateDrop applicationStateMVarStablePtr
       result <- inodeValidateDrop inode dragInformation
       case result of
         Nothing -> return 0
-        Just (resultInode, resultDragOperation) -> do
+        Just (resultInode, Nothing, resultDragOperation) -> do
           poke resultInodeIDPtr $ inodeID resultInode
+          poke resultChildIndexPtr 0
           let resultDragOperationBit = valueToBit resultDragOperation
           poke resultDragOperationPtr resultDragOperationBit
           return 1
+        Just (resultInode, Just resultChildIndex, resultDragOperation) -> do
+          poke resultInodeIDPtr $ inodeID resultInode
+          poke resultChildIndexPtr resultChildIndex
+          let resultDragOperationBit = valueToBit resultDragOperation
+          poke resultDragOperationPtr resultDragOperationBit
+          return 2
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return 0
@@ -1142,6 +1175,38 @@ foreignInodeAcceptDrop applicationStateMVarStablePtr
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return ()
+
+
+foreignBrowserWindowDraggingSourceIntraApplicationOperations
+    :: Bitfield DragOperation
+foreignBrowserWindowDraggingSourceIntraApplicationOperations =
+  setToBitfield browserWindowDraggingSourceIntraApplicationOperations
+
+
+foreignBrowserWindowDraggingSourceInterApplicationOperations
+    :: Bitfield DragOperation
+foreignBrowserWindowDraggingSourceInterApplicationOperations =
+  setToBitfield browserWindowDraggingSourceInterApplicationOperations
+
+
+foreignDragOperationCopy :: Word64
+foreignDragOperationCopy = valueToBit DragOperationCopy
+
+
+foreignDragOperationLink :: Word64
+foreignDragOperationLink = valueToBit DragOperationLink
+
+
+foreignDragOperationGeneric :: Word64
+foreignDragOperationGeneric = valueToBit DragOperationGeneric
+
+
+foreignDragOperationMove :: Word64
+foreignDragOperationMove = valueToBit DragOperationMove
+
+
+foreignDragOperationDelete :: Word64
+foreignDragOperationDelete = valueToBit DragOperationDelete
 
 
 foreignBrowserItemDragInformationNew
