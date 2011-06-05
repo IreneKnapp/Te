@@ -190,9 +190,12 @@
                                  inTextContainer: textContainer];
             
             CGFloat textWidth = textRect.origin.x + textRect.size.width;
+            CGFloat textHeight = textRect.origin.y + textRect.size.height;
             
             if(cellFrame.size.width > textWidth)
                 cellFrame.size.width = textWidth;
+            if(cellFrame.size.height < textHeight)
+                cellFrame.size.height = textHeight;
         }
     }
     
