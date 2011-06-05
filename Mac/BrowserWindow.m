@@ -153,6 +153,9 @@
              child: (NSInteger) index
             ofItem: (id) item
 {
+    if(alreadyClosing)
+        return nil;
+    
     if([outlineView isEqual: filesOutlineView]) {
         void *applicationState = getApplicationState();
         if(!applicationState)
@@ -195,6 +198,9 @@
 - (BOOL) outlineView: (NSOutlineView *) outlineView
     isItemExpandable: (id) item
 {
+    if(alreadyClosing)
+        return NO;
+    
     if([outlineView isEqual: filesOutlineView]) {
         void *applicationState = getApplicationState();
         if(!applicationState)
@@ -224,6 +230,9 @@
 - (NSInteger) outlineView: (NSOutlineView *) outlineView
    numberOfChildrenOfItem: (id) item
 {
+    if(alreadyClosing)
+        return 0;
+    
     if([outlineView isEqual: filesOutlineView]) {
         void *applicationState = getApplicationState();
         if(!applicationState)
@@ -262,8 +271,11 @@
   objectValueForTableColumn: (NSTableColumn *) tableColumn
                      byItem: (id) item
 {
+    if(alreadyClosing)
+        return nil;
+    
     if([outlineView isEqual: filesOutlineView]) {
-        if([item isKindOfClass: [BrowserItem class]]) {
+        if([item isKindOfClass: [BrowserItem class]]) {            
             void *applicationState = getApplicationState();
             if(!applicationState)
                 return nil;
@@ -326,6 +338,9 @@
       forTableColumn: (NSTableColumn *) tableColumn
                 item: (id) item
 {
+    if(alreadyClosing)
+        return;
+    
     if([outlineView isEqual: filesOutlineView]) {
         if([tableColumn isEqual: filesOutlineViewNameColumn]) {
             if([item isKindOfClass: [BrowserItem class]]
@@ -375,6 +390,9 @@
       forTableColumn: (NSTableColumn *) tableColumn
               byItem: (id) item
 {
+    if(alreadyClosing)
+        return;
+    
     if([outlineView isEqual: filesOutlineView]) {
         if([tableColumn isEqual: filesOutlineViewNameColumn]) {
             if([item isKindOfClass: [BrowserItem class]] &&
