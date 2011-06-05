@@ -9,7 +9,7 @@
 - (void) initHelper {
     windowFieldEditors = [NSMapTable mapTableWithWeakToStrongObjects];
     
-    textAttributes = [NSMutableDictionary dictionaryWithCapacity: 1];
+    textAttributes = [NSMutableDictionary dictionaryWithCapacity: 2];
     [textAttributes setObject: [NSFont controlContentFontOfSize: 0.0]
                     forKey: NSFontAttributeName];
 }
@@ -65,6 +65,14 @@
         NSRect textFrame = cellFrame;
         textFrame.size.width -= textFrame.size.height;
         textFrame.origin.x += textFrame.size.height;
+        
+        NSColor *foregroundColor = nil;
+        if([self backgroundStyle] == NSBackgroundStyleDark)
+            foregroundColor = [NSColor whiteColor];
+        else
+            foregroundColor = [NSColor blackColor];
+        [textAttributes setObject: foregroundColor
+                        forKey: NSForegroundColorAttributeName];
         
         [text drawInRect: textFrame withAttributes: textAttributes];
     }
