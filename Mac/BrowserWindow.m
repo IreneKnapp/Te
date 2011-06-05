@@ -377,6 +377,25 @@
 {
     if([outlineView isEqual: filesOutlineView]) {
         if([tableColumn isEqual: filesOutlineViewNameColumn]) {
+            if([item isKindOfClass: [BrowserItem class]] &&
+               [object isKindOfClass: [NSString class]])
+            {
+                void *applicationState = getApplicationState();
+                if(!applicationState)
+                    return;
+                
+                BrowserItem *browserItemObject = (BrowserItem *) item;
+                NSString *newName = (NSString *) object;
+                
+                uuid_t *inodeID = [browserItemObject inodeID];
+                
+                char *newNameCString = (char *) [newName UTF8String];
+                
+                teInodeRename(applicationState,
+                              &browserWindowID,
+                              inodeID,
+                              newNameCString);
+            }
         }
     }
 }

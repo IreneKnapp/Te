@@ -174,14 +174,18 @@
         [textContainer setContainerSize: NSMakeSize(maxSize.width, INFINITY)];
         [textContainer setLineFragmentPadding: 0.0];
         
-        NSRange allGlyphs = NSMakeRange(0, [layoutManager numberOfGlyphs]);
-        NSRect textRect = [layoutManager boundingRectForGlyphRange: allGlyphs
-                                         inTextContainer: textContainer];
-        
-        CGFloat textWidth = textRect.origin.x + textRect.size.width;
-        
-        if(cellFrame.size.width > textWidth)
-            cellFrame.size.width = textWidth;
+        NSUInteger numberOfGlyphs = [layoutManager numberOfGlyphs];
+        if(numberOfGlyphs > 0) {
+            NSRange allGlyphs = NSMakeRange(0, numberOfGlyphs);
+            NSRect textRect
+                = [layoutManager boundingRectForGlyphRange: allGlyphs
+                                 inTextContainer: textContainer];
+            
+            CGFloat textWidth = textRect.origin.x + textRect.size.width;
+            
+            if(cellFrame.size.width > textWidth)
+                cellFrame.size.width = textWidth;
+        }
     }
     
     CGFloat horizontalOffset = textContainerInset.width;
@@ -199,6 +203,7 @@
     
     maxSize.height = INFINITY;
     
+    [self setUpFieldEditorAttributes: fieldEditor];
     [fieldEditor setMinSize: cellFrame.size];
     [fieldEditor setMaxSize: maxSize];
     
@@ -208,7 +213,6 @@
     [controlView addSubview: fieldEditor];
     [fieldEditor setFrame: cellFrame];
     [fieldEditor setDelegate: delegate];
-    [self setUpFieldEditorAttributes: fieldEditor];
     [[controlView window] makeFirstResponder: fieldEditor];
 }
 

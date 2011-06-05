@@ -51,11 +51,14 @@
     previousFrameValid = YES;
     
     NSLayoutManager *layoutManager = [self layoutManager];
-    NSRange allGlyphs = NSMakeRange(0, [layoutManager numberOfGlyphs]);
-    
-    NSPoint origin = [self textContainerOrigin];
-    [layoutManager drawBackgroundForGlyphRange: allGlyphs atPoint: origin];
-    [layoutManager drawGlyphsForGlyphRange: allGlyphs atPoint: origin];
+    NSUInteger numberOfGlyphs = [layoutManager numberOfGlyphs];
+    if(numberOfGlyphs > 0) {
+        NSRange allGlyphs = NSMakeRange(0, numberOfGlyphs);
+        
+        NSPoint origin = [self textContainerOrigin];
+        [layoutManager drawBackgroundForGlyphRange: allGlyphs atPoint: origin];
+        [layoutManager drawGlyphsForGlyphRange: allGlyphs atPoint: origin];
+    }
 }
 
 @end
