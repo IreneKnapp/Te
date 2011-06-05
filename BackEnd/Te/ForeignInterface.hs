@@ -124,6 +124,13 @@ foreign export ccall "teBrowserItemSetExpanded"
     -> Ptr InodeID
     -> Word64
     -> IO ()
+foreign export ccall "teInodeParent"
+                     foreignInodeParent
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Ptr InodeID
+    -> Ptr InodeID
+    -> IO Word64
 foreign export ccall "teInodeExpandable"
                      foreignInodeExpandable
     :: StablePtr (MVar ApplicationState)
@@ -174,6 +181,12 @@ foreign export ccall "teInodeModificationTimestamp"
     -> Ptr BrowserWindowID
     -> Ptr InodeID
     -> IO Word64
+foreign export ccall "teInodeIcon"
+                     foreignInodeIcon
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Ptr InodeID
+    -> IO CString
 foreign export ccall "teInodeRename"
                      foreignInodeRename
     :: StablePtr (MVar ApplicationState)
@@ -601,7 +614,7 @@ foreignBrowserItemNewFileInside applicationStateMVarStablePtr
                                                  browserItemBrowserWindow =
                                                    browserWindow
                                                }
-                           browserItemNewFolderInside browserItem)
+                           browserItemNewFileInside browserItem)
 
 
 foreignBrowserItemExpanded
@@ -664,6 +677,35 @@ foreignBrowserItemSetExpanded applicationStateMVarStablePtr
                            browserItemSetExpanded browserItem expanded')
 
 
+foreignInodeParent
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Ptr InodeID
+    -> Ptr InodeID
+    -> IO Word64
+foreignInodeParent applicationStateMVarStablePtr
+                   browserWindowIDPtr
+                   inodeIDPtr
+                   resultInodeIDPtr = do
+  findBrowserWindowByID applicationStateMVarStablePtr
+                        browserWindowIDPtr
+                        0
+                        (\browserWindow -> do
+                           inodeID' <- peek inodeIDPtr
+                           let project = browserWindowProject browserWindow
+                               inode = Inode {
+                                           inodeID = inodeID',
+                                           inodeProject = project
+                                         }
+                           maybeParentInode <- inodeParent inode
+                           case maybeParentInode of
+                             Just parentInode -> do
+                               poke resultInodeIDPtr $ inodeID parentInode
+                               return 1
+                             Nothing -> do
+                               return 0)
+
+
 foreignInodeExpandable
     :: StablePtr (MVar ApplicationState)
     -> Ptr BrowserWindowID
@@ -676,10 +718,10 @@ foreignInodeExpandable applicationStateMVarStablePtr
                         browserWindowIDPtr
                         0
                         (\browserWindow -> do
-                           inodeID <- peek inodeIDPtr
+                           inodeID' <- peek inodeIDPtr
                            let project = browserWindowProject browserWindow
                                inode = Inode {
-                                           inodeID = inodeID,
+                                           inodeID = inodeID',
                                            inodeProject = project
                                          }
                            result <- inodeExpandable inode
@@ -700,10 +742,10 @@ foreignInodeChildCount applicationStateMVarStablePtr
                         browserWindowIDPtr
                         0
                         (\browserWindow -> do
-                           inodeID <- peek inodeIDPtr
+                           inodeID' <- peek inodeIDPtr
                            let project = browserWindowProject browserWindow
                                inode = Inode {
-                                           inodeID = inodeID,
+                                           inodeID = inodeID',
                                            inodeProject = project
                                          }
                            inodeChildCount inode)
@@ -732,11 +774,8 @@ foreignInodeChild applicationStateMVarStablePtr
                                              inodeID = inodeID',
                                              inodeProject = project
                                            }
-                             maybeInodeChild <-
-                               inodeChild inode index
-                             case maybeInodeChild of
-                               Just inodeChild -> return $ inodeID inodeChild
-                               Nothing -> return nullInodeID)
+                             inodeChild' <- inodeChild inode index
+                             return $ inodeID inodeChild')
   poke inodeChildIDPtr inodeChildID
 
 
@@ -850,6 +889,28 @@ foreignInodeModificationTimestamp applicationStateMVarStablePtr
                                          }
                            result <- inodeModificationTimestamp inode
                            return $ fromIntegral result)
+
+
+foreignInodeIcon
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Ptr InodeID
+    -> IO CString
+foreignInodeIcon applicationStateMVarStablePtr
+                 browserWindowIDPtr
+                 inodeIDPtr = do
+  findBrowserWindowByID applicationStateMVarStablePtr
+                        browserWindowIDPtr
+                        nullPtr
+                        (\browserWindow -> do
+                           inodeID' <- peek inodeIDPtr
+                           let project = browserWindowProject browserWindow
+                               inode = Inode {
+                                           inodeID = inodeID',
+                                           inodeProject = project
+                                         }
+                           icon <- inodeIcon inode
+                           stringNew icon)
 
 
 foreignInodeRename

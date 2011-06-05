@@ -211,6 +211,58 @@
 }
 
 
+- (IBAction) newFolder: (id) sender {
+    if(!applicationState)
+        return;
+    
+    NSWindow *window = [NSApp mainWindow];
+    if(!window)
+        return;
+    
+    NSWindowController *windowController = [window windowController];
+    if(!windowController)
+        return;
+    
+    if([windowController isKindOfClass: [BrowserWindow class]]) {
+        BrowserWindow *browserWindowObject
+            = (BrowserWindow *) windowController;
+        uuid_t *browserWindowID = [browserWindowObject browserWindowID];
+        uuid_t inodeID;
+        if([browserWindowObject getCurrentFolderInodeID: &inodeID]) {
+            teBrowserItemNewFolderInside(applicationState,
+                                         browserWindowID,
+                                         inodeID);
+        }
+    }
+}
+
+
+- (IBAction) newHaskellModule: (id) sender {
+    if(!applicationState)
+        return;
+    
+    NSWindow *window = [NSApp mainWindow];
+    if(!window)
+        return;
+    
+    NSWindowController *windowController = [window windowController];
+    if(!windowController)
+        return;
+    
+    if([windowController isKindOfClass: [BrowserWindow class]]) {
+        BrowserWindow *browserWindowObject
+            = (BrowserWindow *) windowController;
+        uuid_t *browserWindowID = [browserWindowObject browserWindowID];
+        uuid_t inodeID;
+        if([browserWindowObject getCurrentFolderInodeID: &inodeID]) {
+            teBrowserItemNewFileInside(applicationState,
+                                       browserWindowID,
+                                       inodeID);
+        }
+    }
+}
+
+
 - (void) exceptionWithMessage: (NSString *) messageString
                       details: (NSString *) detailsString
 {
@@ -223,10 +275,14 @@
 
 
 void exception(char *messageCString, char *detailsCString) {
-    NSString *messageString = [NSString stringWithUTF8String: messageCString];
-    NSString *detailsString = [NSString stringWithUTF8String: detailsCString];
-    [(AppDelegate *) [NSApp delegate] exceptionWithMessage: messageString
-                                      details: detailsString];
+    if(messageCString && detailsCString) {
+        NSString *messageString
+            = [NSString stringWithUTF8String: messageCString];
+        NSString *detailsString
+            = [NSString stringWithUTF8String: detailsCString];
+        [(AppDelegate *) [NSApp delegate] exceptionWithMessage: messageString
+                                          details: detailsString];
+    }
 }
 
 

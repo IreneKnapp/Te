@@ -3,6 +3,7 @@
 #import "Te/ForeignInterface_stub.h"
 #import "AppDelegate.h"
 #import "BrowserItem.h"
+#import "FileNameCell.h"
 #import "Utilities.h"
 
 
@@ -44,12 +45,47 @@
         [[window standardWindowButton: NSWindowDocumentIconButton]
          setImage: [NSImage imageNamed: titleIcon]];
         
-        [filesOutlineViewNameColumn setDataCell: [[NSBrowserCell alloc] init]];
         [filesOutlineView reloadData];
     } else {
         teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
     }
     return self;
+}
+
+
+- (uuid_t *) browserWindowID {
+    return &browserWindowID;
+}
+
+
+- (BOOL) getCurrentFolderInodeID: (uuid_t *) result {
+    void *applicationState = getApplicationState();
+    if(!applicationState)
+        return NO;
+    
+    NSIndexSet *rowIndices = [filesOutlineView selectedRowIndexes];
+    if([rowIndices count] == 0) {
+        teBrowserWindowRoot(applicationState, &browserWindowID, result);
+        return YES;
+    } else {
+        NSUInteger firstRow = [rowIndices firstIndex];
+        id item = [filesOutlineView itemAtRow: firstRow];
+        if([item isKindOfClass: [BrowserItem class]]) {
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            uuid_t *inodeID = [browserItemObject inodeID];
+            if(!teInodeParent(applicationState,
+                              &browserWindowID,
+                              inodeID,
+                              result))
+            {
+                copyUUID(result, inodeID);
+            }
+            return YES;
+        } else {
+            return NO;
+        }
+    }
 }
 
 
@@ -227,14 +263,55 @@
                      byItem: (id) item
 {
     if([outlineView isEqual: filesOutlineView]) {
-        if([tableColumn isEqual: filesOutlineViewNameColumn]) {
-            return @"Foo.";
-        } else if([tableColumn isEqual: filesOutlineViewDateModifiedColumn]) {
-            return @"5 seconds ago";
-        } else if([tableColumn isEqual: filesOutlineViewSizeColumn]) {
-            return @"32KiB";
-        } else if([tableColumn isEqual: filesOutlineViewKindColumn]) {
-            return @"Haskell";
+        if([item isKindOfClass: [BrowserItem class]]) {
+            void *applicationState = getApplicationState();
+            if(!applicationState)
+                return nil;
+            
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            uuid_t *inodeID = [browserItemObject inodeID];
+            
+            if([tableColumn isEqual: filesOutlineViewNameColumn]) {
+                char *nameCString = teInodeName(applicationState,
+                                                &browserWindowID,
+                                                inodeID);
+                NSString *name = nil;
+                if(nameCString) {
+                    name = [NSString stringWithUTF8String: nameCString];
+                    teStringFree(nameCString);
+                }
+                return name;
+            } else if([tableColumn isEqual:
+                                    filesOutlineViewDateModifiedColumn])
+            {
+                uint64_t timestamp
+                    = teInodeModificationTimestamp(applicationState,
+                                                   &browserWindowID,
+                                                   inodeID);
+                char *timestampCString = teTimestampToString(timestamp);
+                NSString *timestampString = nil;
+                if(timestampCString) {
+                    timestampString
+                        = [NSString stringWithUTF8String: timestampCString];
+                    teStringFree(timestampCString);
+                }
+                return timestampString;
+            } else if([tableColumn isEqual: filesOutlineViewSizeColumn]) {
+                // TODO
+                return @"32KiB";
+            } else if([tableColumn isEqual: filesOutlineViewKindColumn]) {
+                char *kindCString = teInodeKind(applicationState,
+                                                &browserWindowID,
+                                                inodeID);
+                NSString *kind = nil;
+                if(kindCString) {
+                    kind = [NSString stringWithUTF8String: kindCString];
+                    teStringFree(kindCString);
+                }
+                return kind;
+            } else {
+                return nil;
+            }
         } else {
             return nil;
         }
@@ -251,7 +328,43 @@
 {
     if([outlineView isEqual: filesOutlineView]) {
         if([tableColumn isEqual: filesOutlineViewNameColumn]) {
-            [cell setImage: [NSImage imageNamed: @"File"]];
+            if([item isKindOfClass: [BrowserItem class]]
+               && [cell isKindOfClass: [FileNameCell class]])
+            {
+                void *applicationState = getApplicationState();
+                if(!applicationState)
+                    return;
+                
+                BrowserItem *browserItemObject = (BrowserItem *) item;
+                FileNameCell *fileNameCell = (FileNameCell *) cell;
+                
+                uuid_t *inodeID = [browserItemObject inodeID];
+                
+                char *fileNameCString = teInodeName(applicationState,
+                                                    &browserWindowID,
+                                                    inodeID);
+                NSString *fileName = nil;
+                if(fileNameCString) {
+                    fileName
+                        = [NSString stringWithUTF8String: fileNameCString];
+                    teStringFree(fileNameCString);
+                }
+                if(!fileName)
+                    fileName = @"";
+                [fileNameCell setText: fileName];
+                
+                char *iconNameCString = teInodeIcon(applicationState,
+                                                    &browserWindowID,
+                                                    inodeID);
+                NSString *iconName = nil;
+                if(iconNameCString) {
+                    iconName = [NSString stringWithUTF8String: iconNameCString];
+                    teStringFree(iconNameCString);
+                }
+                if(iconName) {
+                    [fileNameCell setIcon: [NSImage imageNamed: iconName]];
+                }
+            }
         }
     }
 }

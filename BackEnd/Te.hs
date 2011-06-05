@@ -29,6 +29,7 @@ module Te
    browserItemNewFileInside,
    browserItemExpanded,
    browserItemSetExpanded,
+   inodeParent,
    inodeExpandable,
    inodeChildCount,
    inodeChild,
@@ -37,6 +38,7 @@ module Te
    inodeSize,
    inodeCreationTimestamp,
    inodeModificationTimestamp,
+   inodeIcon,
    inodeRename,
    inodesDelete,
    inodeValidateDrop,
@@ -313,13 +315,16 @@ restoreProjectWindows project = do
     else return ()
 
 
-computeNextNumberedName :: String -> [String] -> Bool -> String
-computeNextNumberedName prefix siblingNames caseSensitive =
+computeNextNumberedName :: String -> String -> [String] -> Bool -> String
+computeNextNumberedName prefix suffix siblingNames caseSensitive =
   let prefix' :: String
       prefix' = caseFoldIfAppropriate prefix
       
-      prefixWithSpace :: String
-      prefixWithSpace = prefix' ++ " "
+      suffix' :: String
+      suffix' = caseFoldIfAppropriate suffix
+      
+      prefixWithSpace' :: String
+      prefixWithSpace' = prefix' ++ " "
       
       caseFoldIfAppropriate :: String -> String
       caseFoldIfAppropriate string =
@@ -327,12 +332,22 @@ computeNextNumberedName prefix siblingNames caseSensitive =
           then string
           else map toUpper string
       
+      stripPrefixAndSuffix :: String -> String -> String -> Maybe String
+      stripPrefixAndSuffix prefix suffix name =
+        if isPrefixOf prefix name
+          then let nameWithoutPrefix = drop (length prefix) name
+               in if isSuffixOf suffix nameWithoutPrefix
+                    then Just $ reverse $ drop (length suffix)
+                                               $ reverse nameWithoutPrefix
+                    else Nothing
+          else Nothing
+      
       nameNumber :: String -> Maybe Int
       nameNumber name =
         let name' = caseFoldIfAppropriate name
-        in if name' == prefix'
+        in if name' == prefix' ++ suffix'
              then Just 1
-             else case stripPrefix prefixWithSpace name' of
+             else case stripPrefixAndSuffix prefixWithSpace' suffix' name' of
                     Nothing -> Nothing
                     Just numberPart ->
                       if (length numberPart > 0) && (all isDigit numberPart)
@@ -347,8 +362,8 @@ computeNextNumberedName prefix siblingNames caseSensitive =
       
       name :: String
       name = if number == 1
-               then prefix
-               else prefixWithSpace ++ show number
+               then prefix ++ suffix
+               else prefix ++ " " ++ show number ++ suffix
   in name
 
 
@@ -357,7 +372,7 @@ getNextUntitledProjectName applicationStateMVar = do
   applicationState <- readMVar applicationStateMVar
   projectNames <- mapM (\project -> readMVar $ projectName project)
                        $ Map.elems $ applicationStateProjects applicationState
-  return $ computeNextNumberedName "Untitled" projectNames True
+  return $ computeNextNumberedName "Untitled" "" projectNames True
 
 
 computeNameForFilePath :: String -> String
@@ -403,20 +418,14 @@ browserWindowTitle browserWindow = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "Unknown" $ do
     projectName <- readMVar $ projectName project
-    maybeFolderInode <- lookupBrowserWindowRoot browserWindow
-    case maybeFolderInode of
-      Just folderInode -> do
-        rootInode <- lookupProjectRoot project
-        if inodeID rootInode == inodeID folderInode
-          then return projectName
-          else do
-            maybeFolderInodeInformation <- lookupInodeInformation folderInode
-            case maybeFolderInodeInformation of
-              Just folderInodeInformation -> do
-                let folderName = inodeInformationName folderInodeInformation
-                return $ projectName ++ " - " ++ folderName
-              Nothing -> throwIO $(internalFailure)
-      Nothing -> throwIO $(internalFailure)
+    folderInode <- lookupBrowserWindowRoot browserWindow
+    rootInode <- lookupProjectRoot project
+    if inodeID rootInode == inodeID folderInode
+      then return projectName
+      else do
+        folderInodeInformation <- lookupInodeInformation folderInode
+        let folderName = inodeInformationName folderInodeInformation
+        return $ projectName ++ " - " ++ folderName
 
 
 browserWindowTitleIcon :: BrowserWindow -> IO String
@@ -424,14 +433,11 @@ browserWindowTitleIcon browserWindow = do
   let project = browserWindowProject browserWindow
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "Project" $ do
-    maybeInode <- lookupBrowserWindowRoot browserWindow
-    case maybeInode of
-      Just inode -> do
-        rootInode <- lookupProjectRoot project
-        if inodeID rootInode == inodeID inode
-          then return "Project"
-          else return "Folder"
-      Nothing -> throwIO $(internalFailure)
+    inode <- lookupBrowserWindowRoot browserWindow
+    rootInode <- lookupProjectRoot project
+    if inodeID rootInode == inodeID inode
+      then return "Project"
+      else return "Folder"
 
 
 browserWindowRoot :: BrowserWindow -> IO BrowserItem
@@ -447,13 +453,11 @@ browserWindowRoot browserWindow = do
                browserItemBrowserWindow = browserWindow
              })
           $ do
-    maybeInode <- lookupBrowserWindowRoot browserWindow
-    case maybeInode of
-      Just inode -> return $ BrowserItem {
-                                 browserItemInode = inode,
-                                 browserItemBrowserWindow = browserWindow
-                               }
-      Nothing -> throwIO $(internalFailure)
+    inode <- lookupBrowserWindowRoot browserWindow
+    return $ BrowserItem {
+                 browserItemInode = inode,
+                 browserItemBrowserWindow = browserWindow
+               }
 
 
 getChildInodeNames :: Inode -> IO [String]
@@ -463,18 +467,12 @@ getChildInodeNames inode = do
         if index == childCount
           then return resultsSoFar
           else do
-            maybeChildInode <- lookupInodeChild inode index
-            case maybeChildInode of
-              Just childInode ->
-                getChildInodes (resultsSoFar ++ [childInode]) (index + 1)
-              Nothing -> throwIO $(internalFailure)
+            childInode <- lookupInodeChild inode index
+            getChildInodes (resultsSoFar ++ [childInode]) (index + 1)
   childInodes <- getChildInodes [] 0
   mapM (\inode -> do
-          maybeInodeInformation <- lookupInodeInformation inode
-          case maybeInodeInformation of
-            Just inodeInformation ->
-              return $ inodeInformationName inodeInformation
-            Nothing -> throwIO $(internalFailure))
+          inodeInformation <- lookupInodeInformation inode
+          return $ inodeInformationName inodeInformation)
        childInodes
 
 
@@ -485,7 +483,7 @@ browserItemNewFolderInside parentBrowserItem = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar () $ do
     siblingNames <- getChildInodeNames parentInode
-    let newName = computeNextNumberedName "New Folder" siblingNames False
+    let newName = computeNextNumberedName "New Folder" "" siblingNames False
     inodeID' <- newInodeID
     let newInode = Inode {
                        inodeID = inodeID',
@@ -508,7 +506,7 @@ browserItemNewFileInside parentBrowserItem = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar () $ do
     siblingNames <- getChildInodeNames parentInode
-    let newName = computeNextNumberedName "New Module.hs" siblingNames False
+    let newName = computeNextNumberedName "New Module" ".hs" siblingNames False
     inodeID' <- newInodeID
     let newInode = Inode {
                        inodeID = inodeID',
@@ -542,18 +540,23 @@ browserItemSetExpanded browserItem expanded = do
     recordBrowserItemExpanded browserItem expanded
 
 
+inodeParent :: Inode -> IO (Maybe Inode)
+inodeParent inode = do
+  let project = inodeProject inode
+      applicationStateMVar = projectApplicationState project
+  catchTe applicationStateMVar Nothing $ do
+    lookupInodeParent inode
+
+
 inodeExpandable :: Inode -> IO Bool
 inodeExpandable inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar False $ do
-    maybeInodeInformation <- lookupInodeInformation inode
-    case maybeInodeInformation of
-      Just inodeInformation -> do
-        case inodeInformationKind inodeInformation of
-          InodeKindDirectory -> return True
-          _ -> return False
-      Nothing -> throwIO $(internalFailure)
+    inodeInformation <- lookupInodeInformation inode
+    case inodeInformationKind inodeInformation of
+      InodeKindDirectory -> return True
+      _ -> return False
 
 
 inodeChildCount :: Inode -> IO Word64
@@ -564,11 +567,16 @@ inodeChildCount inode = do
     lookupInodeChildCount inode
 
 
-inodeChild :: Inode -> Word64 -> IO (Maybe Inode)
+inodeChild :: Inode -> Word64 -> IO Inode
 inodeChild inode index = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
-  catchTe applicationStateMVar Nothing $ do
+  catchTe applicationStateMVar
+          (Inode {
+               inodeID = nullInodeID,
+               inodeProject = project
+             })
+          $ do
     lookupInodeChild inode index
 
 
@@ -577,10 +585,8 @@ inodeName inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "Unknown" $ do
-    maybeInodeInformation <- lookupInodeInformation inode
-    case maybeInodeInformation of
-      Just inodeInformation -> return $ inodeInformationName inodeInformation
-      Nothing -> throwIO $(internalFailure)
+    inodeInformation <- lookupInodeInformation inode
+    return $ inodeInformationName inodeInformation
 
 
 inodeKind :: Inode -> IO String
@@ -588,13 +594,10 @@ inodeKind inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "Unknown" $ do
-    maybeInodeInformation <- lookupInodeInformation inode
-    case maybeInodeInformation of
-      Just inodeInformation -> do
-        case inodeInformationKind inodeInformation of
-          InodeKindDirectory -> return "Folder"
-          InodeKindHaskell -> return "Haskell"
-      Nothing -> throwIO $(internalFailure)
+    inodeInformation <- lookupInodeInformation inode
+    case inodeInformationKind inodeInformation of
+      InodeKindDirectory -> return "Folder"
+      InodeKindHaskell -> return "Haskell"
 
 
 inodeSize :: Inode -> IO (Maybe Word64)
@@ -602,10 +605,8 @@ inodeSize inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar Nothing $ do
-    maybeInodeInformation <- lookupInodeInformation inode
-    case maybeInodeInformation of
-      Just inodeInformation -> return $ inodeInformationSize inodeInformation
-      Nothing -> throwIO $(internalFailure)
+    inodeInformation <- lookupInodeInformation inode
+    return $ inodeInformationSize inodeInformation
 
 
 inodeCreationTimestamp :: Inode -> IO Timestamp
@@ -613,11 +614,8 @@ inodeCreationTimestamp inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar minBound $ do
-    maybeInodeInformation <- lookupInodeInformation inode
-    case maybeInodeInformation of
-      Just inodeInformation ->
-        return $ inodeInformationCreationTimestamp inodeInformation
-      Nothing -> throwIO $(internalFailure)
+    inodeInformation <- lookupInodeInformation inode
+    return $ inodeInformationCreationTimestamp inodeInformation
 
 
 inodeModificationTimestamp :: Inode -> IO Timestamp
@@ -625,11 +623,19 @@ inodeModificationTimestamp inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar minBound $ do
-    maybeInodeInformation <- lookupInodeInformation inode
-    case maybeInodeInformation of
-      Just inodeInformation ->
-        return $ inodeInformationModificationTimestamp inodeInformation
-      Nothing -> throwIO $(internalFailure)
+    inodeInformation <- lookupInodeInformation inode
+    return $ inodeInformationModificationTimestamp inodeInformation
+
+
+inodeIcon :: Inode -> IO String
+inodeIcon inode = do
+  let project = inodeProject inode
+      applicationStateMVar = projectApplicationState project
+  catchTe applicationStateMVar "File" $ do
+    inodeInformation <- lookupInodeInformation inode
+    case inodeInformationKind inodeInformation of
+      InodeKindDirectory -> return "Folder"
+      InodeKindHaskell -> return "File"
 
 
 inodeRename :: Inode -> String -> IO ()

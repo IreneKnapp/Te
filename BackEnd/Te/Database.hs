@@ -359,10 +359,10 @@ lookupInodeChildCount inode = do
                 [toSQL $ inodeID inode]
   case rows of
     [[SQLInteger count]] -> return $ fromIntegral count
-    _ -> return 0
+    _ -> throwIO $(internalFailure)
 
 
-lookupInodeChild :: Inode -> Word64 -> IO (Maybe Inode)
+lookupInodeChild :: Inode -> Word64 -> IO Inode
 lookupInodeChild inode index = do
   let project = inodeProject inode
       database = projectDatabase project
@@ -374,15 +374,15 @@ lookupInodeChild inode index = do
   case rows of
     [[sqlChildInodeID]] ->
       case fromSQL sqlChildInodeID of
-        Just childInodeID -> return $ Just $ Inode {
-                                                 inodeID = childInodeID,
-                                                 inodeProject = project
-                                               }
-        Nothing -> return Nothing
-    _ -> return Nothing
+        Just childInodeID -> return $ Inode {
+                                          inodeID = childInodeID,
+                                          inodeProject = project
+                                        }
+        Nothing -> throwIO $(internalFailure)
+    _ -> throwIO $(internalFailure)
 
 
-lookupInodeInformation :: Inode -> IO (Maybe InodeInformation)
+lookupInodeInformation :: Inode -> IO InodeInformation
 lookupInodeInformation inode = do
   let project = inodeProject inode
       database = projectDatabase project
@@ -399,16 +399,16 @@ lookupInodeInformation inode = do
           maybeSize = case sqlMaybeSize of
                         SQLNull -> Nothing
                         SQLInteger size -> Just $ fromIntegral size
-      return $ Just $ InodeInformation {
-                          inodeInformationName = name,
-                          inodeInformationKind = kind,
-                          inodeInformationSize = maybeSize,
-                          inodeInformationCreationTimestamp =
-                            fromIntegral creationTimestamp,
-                          inodeInformationModificationTimestamp =
-                            fromIntegral modificationTimestamp
-                        }
-    _ -> return Nothing
+      return $ InodeInformation {
+                   inodeInformationName = name,
+                   inodeInformationKind = kind,
+                   inodeInformationSize = maybeSize,
+                   inodeInformationCreationTimestamp =
+                     fromIntegral creationTimestamp,
+                   inodeInformationModificationTimestamp =
+                     fromIntegral modificationTimestamp
+                 }
+    _ -> throwIO $(internalFailure)
 
 
 recordNewBrowserWindow :: BrowserWindow -> Inode -> IO ()
@@ -427,7 +427,7 @@ recordNewBrowserWindow browserWindow browserWindowRootInode = do
   return ()
 
 
-lookupBrowserWindowRoot :: BrowserWindow -> IO (Maybe Inode)
+lookupBrowserWindowRoot :: BrowserWindow -> IO Inode
 lookupBrowserWindowRoot browserWindow = do
   let project = browserWindowProject browserWindow
       database = projectDatabase project
@@ -438,12 +438,12 @@ lookupBrowserWindowRoot browserWindow = do
   case rows of
     [[sqlRootInodeID]] ->
       case fromSQL sqlRootInodeID of
-        Just rootInodeID -> return $ Just $ Inode {
-                                                inodeID = rootInodeID,
-                                                inodeProject = project
-                                              }
-        Nothing -> return Nothing
-    _ -> return Nothing
+        Just rootInodeID -> return $ Inode {
+                                         inodeID = rootInodeID,
+                                         inodeProject = project
+                                       }
+        Nothing -> throwIO $(internalFailure)
+    _ -> throwIO $(internalFailure)
 
 
 recordBrowserItemExpanded :: BrowserItem -> Bool -> IO ()
@@ -477,4 +477,4 @@ lookupBrowserItemExpanded browserItem = do
   case rows of
     [[SQLInteger 0]] -> return False
     [[SQLInteger _]] -> return True
-    _ -> return False
+    _ -> throwIO $(internalFailure)

@@ -39,7 +39,8 @@ getTimestamp = getPOSIXTime >>= return . floor
 describeTimestamp :: Timestamp -> IO String
 describeTimestamp timestamp = do
   now <- getTimestamp
-  let timeAgo = now - timestamp
+  let timeAgo :: Word64
+      timeAgo = fromIntegral $ now - timestamp
       secondsAgo = timeAgo
       minutesAgo = div secondsAgo 60
       hoursAgo = div minutesAgo 60

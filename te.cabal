@@ -31,10 +31,15 @@ Executable Te
   includes: AppDelegate.h,
             BrowserItem.h,
             BrowserWindow.h,
+            FileNameCell.h,
+            FileNameCellFieldEditor.h,
+            HasCurrentFolder.h,
             Utilities.h
   c-sources: AppDelegate.m,
              BrowserItem.m,
              BrowserWindow.m,
+             FileNameCell.m,
+             FileNameCellFieldEditor.m
              Utilities.m
   hs-source-dirs: BackEnd
   other-modules: Data.Bitfield,
@@ -65,7 +70,7 @@ Executable Te
   objc-gc: Mandatory
   if flag(debug)
     ghc-options: -debug
-    cc-options: -g3 -O0
+    cc-options: -g3
   cc-options: -std=c99
   ghc-options: -threaded
   x-app-info-plist: Mac/Info.plist

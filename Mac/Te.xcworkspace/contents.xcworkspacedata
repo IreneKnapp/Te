@@ -56,6 +56,21 @@
       location = "group:Resources/MainMenu.xib">
    </FileRef>
    <FileRef
+      location = "group:FileNameCell.m">
+   </FileRef>
+   <FileRef
+      location = "group:FileNameCell.h">
+   </FileRef>
+   <FileRef
+      location = "group:HasCurrentFolder.h">
+   </FileRef>
+   <FileRef
+      location = "group:BrowserItem.m">
+   </FileRef>
+   <FileRef
+      location = "group:BrowserItem.h">
+   </FileRef>
+   <FileRef
       location = "group:Resources/BrowserWindow.xib">
    </FileRef>
 </Workspace>

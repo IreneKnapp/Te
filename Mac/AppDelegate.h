@@ -36,6 +36,8 @@
 - (IBAction) newProject: (id) sender;
 - (IBAction) openProject: (id) sender;
 - (IBAction) openRecentProject: (id) sender;
+- (IBAction) newFolder: (id) sender;
+- (IBAction) newHaskellModule: (id) sender;
 - (void) exceptionWithMessage: (NSString *) messageString
                       details: (NSString *) detailsString;
 void exception(char *messageCString, char *detailsCString);
