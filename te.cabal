@@ -43,6 +43,7 @@ Executable Te
              Utilities.m
   hs-source-dirs: BackEnd
   other-modules: Data.Bitfield,
+                 Data.ByteSize,
                  Data.SQLable,
                  Data.Timestamp,
                  Te,

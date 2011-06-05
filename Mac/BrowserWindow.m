@@ -300,7 +300,7 @@
                     = teInodeModificationTimestamp(applicationState,
                                                    &browserWindowID,
                                                    inodeID);
-                char *timestampCString = teTimestampToString(timestamp);
+                char *timestampCString = teTimestampShow(timestamp);
                 NSString *timestampString = nil;
                 if(timestampCString) {
                     timestampString
@@ -309,8 +309,24 @@
                 }
                 return timestampString;
             } else if([tableColumn isEqual: filesOutlineViewSizeColumn]) {
-                // TODO
-                return @"32KiB";
+                uint64_t size;
+                
+                char *sizeCString = NULL;
+                if(teInodeSize(applicationState,
+                               &browserWindowID,
+                               inodeID,
+                               &size))
+                {
+                    sizeCString = teByteSizeShow(size);
+                } else {
+                    sizeCString = teByteSizePlaceholderString();
+                }
+                NSString *sizeString = nil;
+                if(sizeCString) {
+                    sizeString = [NSString stringWithUTF8String: sizeCString];
+                    teStringFree(sizeCString);
+                }
+                return sizeString;
             } else if([tableColumn isEqual: filesOutlineViewKindColumn]) {
                 char *kindCString = teInodeKind(applicationState,
                                                 &browserWindowID,

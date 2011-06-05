@@ -19,6 +19,7 @@ import Data.Word
 import Database.SQLite3 (Database)
 
 import Data.Bitfield
+import Data.ByteSize
 import Data.Timestamp
 import Te.Identifiers
 
@@ -72,7 +73,7 @@ data InodeInformation =
   InodeInformation {
       inodeInformationName :: String,
       inodeInformationKind :: InodeKind,
-      inodeInformationSize :: Maybe Word64,
+      inodeInformationSize :: Maybe ByteSize,
       inodeInformationCreationTimestamp :: Timestamp,
       inodeInformationModificationTimestamp :: Timestamp
     }

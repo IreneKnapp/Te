@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Te
-  (Timestamp(..),
+  (ByteSize(..),
+   Timestamp(..),
    FrontEndCallbacks(..),
    ApplicationState,
    Inode, inodeID,
@@ -8,7 +9,9 @@ module Te
    BrowserItem(..),
    frontEndInternalFailure,
    versionString,
-   timestampToString,
+   timestampShow,
+   byteSizePlaceholderString,
+   byteSizeShow,
    uuidHash,
    uuidEqual,
    uuidShow,
@@ -59,6 +62,7 @@ import System.Directory
 import System.FilePath
 import Prelude hiding (catch)
 
+import Data.ByteSize
 import Data.Timestamp
 import Te.Database
 import Te.Exceptions
@@ -87,9 +91,19 @@ versionString :: String
 versionString = showVersion version
 
 
-timestampToString :: Timestamp -> IO String
-timestampToString timestamp = do
+timestampShow :: Timestamp -> IO String
+timestampShow timestamp = do
   describeTimestamp timestamp
+
+
+byteSizePlaceholderString :: IO String
+byteSizePlaceholderString = do
+  return "—"
+
+
+byteSizeShow :: ByteSize -> IO String
+byteSizeShow byteSize = do
+  return $ show byteSize
 
 
 uuidHash :: UUID -> IO Word64
@@ -594,7 +608,7 @@ inodeKind inode = do
       InodeKindHaskell -> return "Haskell"
 
 
-inodeSize :: Inode -> IO (Maybe Word64)
+inodeSize :: Inode -> IO (Maybe ByteSize)
 inodeSize inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project

@@ -14,6 +14,7 @@ import Foreign
 import Foreign.C
 
 import Data.Bitfield
+import Data.ByteSize (ByteSize(..))
 import Data.Timestamp (Timestamp(..))
 import Te
 import Te.Exceptions
@@ -42,8 +43,14 @@ foreign export ccall "teStringFree"
 foreign export ccall "teVersionString"
                      foreignVersionString
     :: IO CString
-foreign export ccall "teTimestampToString"
-                     foreignTimestampToString
+foreign export ccall "teTimestampShow"
+                     foreignTimestampShow
+    :: Word64 -> IO CString
+foreign export ccall "teByteSizePlaceholderString"
+                     foreignByteSizePlaceholderString
+    :: IO CString
+foreign export ccall "teByteSizeShow"
+                     foreignByteSizeShow
     :: Word64 -> IO CString
 foreign export ccall "teUUIDHash"
                      foreignUUIDHash
@@ -168,6 +175,7 @@ foreign export ccall "teInodeSize"
     :: StablePtr (MVar ApplicationState)
     -> Ptr BrowserWindowID
     -> Ptr InodeID
+    -> Ptr Word64
     -> IO Word64
 foreign export ccall "teInodeCreationTimestamp"
                      foreignInodeCreationTimestamp
@@ -296,9 +304,21 @@ foreignVersionString = do
   stringNew versionString
 
 
-foreignTimestampToString :: Word64 -> IO CString
-foreignTimestampToString timestamp = do
-  result <- timestampToString $ Timestamp timestamp
+foreignTimestampShow :: Word64 -> IO CString
+foreignTimestampShow timestamp = do
+  result <- timestampShow $ Timestamp timestamp
+  stringNew result
+
+
+foreignByteSizePlaceholderString :: IO CString
+foreignByteSizePlaceholderString = do
+  result <- byteSizePlaceholderString
+  stringNew result
+
+
+foreignByteSizeShow :: Word64 -> IO CString
+foreignByteSizeShow byteSize = do
+  result <- byteSizeShow $ ByteSize byteSize
   stringNew result
 
 
@@ -882,10 +902,12 @@ foreignInodeSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr BrowserWindowID
     -> Ptr InodeID
+    -> Ptr Word64
     -> IO Word64
 foreignInodeSize applicationStateMVarStablePtr
                  browserWindowIDPtr
-                 inodeIDPtr = do
+                 inodeIDPtr
+                 sizePtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
   browserWindowID <- peek browserWindowIDPtr
   maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
@@ -900,10 +922,15 @@ foreignInodeSize applicationStateMVarStablePtr
                     }
       maybeSize <- inodeSize inode
       case maybeSize of
-        Just size -> return size
-        Nothing -> return 0
+        Just size -> do
+          poke sizePtr $ fromIntegral size
+          return 1
+        Nothing -> do
+          poke sizePtr 0
+          return 0
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
+      poke sizePtr 0
       return 0
 
 

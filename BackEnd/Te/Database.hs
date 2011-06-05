@@ -27,6 +27,7 @@ import Database.SQLite3 (Database, StepResult(..), SQLData(..))
 import qualified Database.SQLite3 as SQL
 import Prelude hiding (catch)
 
+import Data.ByteSize
 import Data.SQLable
 import Data.Timestamp
 import Te.Exceptions
@@ -235,7 +236,7 @@ lookupProjectRoot project = do
 
 
 recordNewInode
-    :: Inode -> Inode -> String -> InodeKind -> Maybe Word64 -> IO ()
+    :: Inode -> Inode -> String -> InodeKind -> Maybe ByteSize -> IO ()
 recordNewInode inode parentInode name inodeKind maybeSize = do
   let project = inodeProject inode
       database = projectDatabase project
@@ -256,7 +257,7 @@ recordNewInode inode parentInode name inodeKind maybeSize = do
                 InodeKindHaskell -> SQLText "haskell",
               case maybeSize of
                 Nothing -> SQLNull
-                Just size -> SQLInteger $ fromIntegral size,
+                Just size -> toSQL size,
               sqlTimestamp,
               sqlTimestamp]
   _ <- query database
@@ -398,7 +399,7 @@ lookupInodeInformation inode = do
                    "haskell" -> InodeKindHaskell
           maybeSize = case sqlMaybeSize of
                         SQLNull -> Nothing
-                        SQLInteger size -> Just $ fromIntegral size
+                        _ -> fromSQL sqlMaybeSize
       return $ InodeInformation {
                    inodeInformationName = name,
                    inodeInformationKind = kind,
