@@ -6,7 +6,6 @@ module Te
    Inode, inodeID,
    BrowserWindow, browserWindowID,
    BrowserItem(..),
-   catchTe,
    frontEndInternalFailure,
    versionString,
    timestampToString,
@@ -70,16 +69,11 @@ import Paths_te
 
 
 catchTe :: MVar ApplicationState -> a -> IO a -> IO a
-catchTe applicationStateMVar default' action = do
+catchTe applicationStateMVar defaultValue action = do
   catch (action)
         (\e -> do
-           applicationState <- readMVar applicationStateMVar
-           let messageString = show (e :: TeException)
-               detailsString = exceptionDetails e
-               callbacks = applicationStateFrontEndCallbacks applicationState
-               callback = frontEndCallbacksException callbacks
-           callback messageString detailsString
-           return default')
+           exception applicationStateMVar e
+           return defaultValue)
 
 
 frontEndInternalFailure :: MVar ApplicationState -> String -> Word64 -> IO ()

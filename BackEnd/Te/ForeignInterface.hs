@@ -17,7 +17,7 @@ import Data.Bitfield
 import Data.Timestamp (Timestamp(..))
 import Te
 import Te.Exceptions
-import Te.Identifiers
+import Te.FrontEndCallbacks
 import Te.Identifiers
 import Te.Types
 
@@ -488,63 +488,68 @@ foreignBrowserWindowClose
     :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO ()
 foreignBrowserWindowClose applicationStateMVarStablePtr
                           browserWindowIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        ()
-                        browserWindowClose
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      browserWindowClose browserWindow
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignBrowserWindowTitle
     :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO CString
 foreignBrowserWindowTitle applicationStateMVarStablePtr
                           browserWindowIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        nullPtr
-                        (\browserWindow -> do
-                           string <- browserWindowTitle browserWindow
-                           stringNew string)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      string <- browserWindowTitle browserWindow
+      stringNew string
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return nullPtr
 
 
 foreignBrowserWindowTitleIcon
     :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO CString
 foreignBrowserWindowTitleIcon applicationStateMVarStablePtr
                               browserWindowIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        nullPtr
-                        (\browserWindow -> do
-                           string <- browserWindowTitleIcon browserWindow
-                           stringNew string)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      string <- browserWindowTitleIcon browserWindow
+      stringNew string
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return nullPtr
 
 
 findBrowserWindowByID
-    :: StablePtr (MVar ApplicationState)
-    -> Ptr BrowserWindowID
-    -> a
-    -> (BrowserWindow -> IO a)
-    -> IO a
-findBrowserWindowByID applicationStateMVarStablePtr
-                      browserWindowIDPtr
-                      defaultValue
-                      action = do
-  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  catchTe applicationStateMVar defaultValue $ do
-    applicationState <- readMVar applicationStateMVar
-    browserWindowID <- peek browserWindowIDPtr
-    maybeBrowserWindow <-
-      foldM (\maybeBrowserWindow project -> do
-               case maybeBrowserWindow of
-                 Just browserWindow -> return maybeBrowserWindow
-                 Nothing -> do
-                   browserWindows <-
-                     readMVar $ projectBrowserWindows project
-                   return $ Map.lookup browserWindowID browserWindows)
-            Nothing
-            $ Map.elems $ applicationStateProjects applicationState
-    case maybeBrowserWindow of
-      Just browserWindow -> action browserWindow
-      Nothing -> throwIO $(internalFailure)
+    :: MVar ApplicationState
+    -> BrowserWindowID
+    -> IO (Maybe BrowserWindow)
+findBrowserWindowByID applicationStateMVar
+                      browserWindowID' = do
+  applicationState <- readMVar applicationStateMVar
+  foldM (\maybeBrowserWindow project -> do
+           case maybeBrowserWindow of
+             Just _ -> return maybeBrowserWindow
+             Nothing -> do
+               browserWindows <-
+                 readMVar $ projectBrowserWindows project
+               return $ Map.lookup browserWindowID' browserWindows)
+        Nothing
+        $ Map.elems $ applicationStateProjects applicationState
 
 
 foreignBrowserWindowRoot
@@ -555,13 +560,17 @@ foreignBrowserWindowRoot
 foreignBrowserWindowRoot applicationStateMVarStablePtr
                          browserWindowIDPtr
                          inodeIDPtr = do
-  inodeID' <-
-    findBrowserWindowByID applicationStateMVarStablePtr
-                          browserWindowIDPtr
-                          nullInodeID
-                          (\browserWindow -> do
-                             browserItem <- browserWindowRoot browserWindow
-                             return $ inodeID $ browserItemInode browserItem)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  inodeID' <- case maybeBrowserWindow of
+                Just browserWindow -> do
+                  browserItem <- browserWindowRoot browserWindow
+                  return $ inodeID $ browserItemInode browserItem
+                Nothing -> do
+                  exception applicationStateMVar $(internalFailure)
+                  return nullInodeID
   poke inodeIDPtr inodeID'
 
 
@@ -573,22 +582,26 @@ foreignBrowserItemNewFolderInside
 foreignBrowserItemNewFolderInside applicationStateMVarStablePtr
                                   browserWindowIDPtr
                                   inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        ()
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                               browserItem = BrowserItem {
-                                                 browserItemInode = inode,
-                                                 browserItemBrowserWindow =
-                                                   browserWindow
-                                               }
-                           browserItemNewFolderInside browserItem)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+          browserItem = BrowserItem {
+                            browserItemInode = inode,
+                            browserItemBrowserWindow = browserWindow
+                          }
+      browserItemNewFolderInside browserItem
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignBrowserItemNewFileInside
@@ -599,22 +612,26 @@ foreignBrowserItemNewFileInside
 foreignBrowserItemNewFileInside applicationStateMVarStablePtr
                                 browserWindowIDPtr
                                 inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        ()
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                               browserItem = BrowserItem {
-                                                 browserItemInode = inode,
-                                                 browserItemBrowserWindow =
-                                                   browserWindow
-                                               }
-                           browserItemNewFileInside browserItem)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+          browserItem = BrowserItem {
+                            browserItemInode = inode,
+                            browserItemBrowserWindow = browserWindow
+                          }
+      browserItemNewFileInside browserItem
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignBrowserItemExpanded
@@ -625,25 +642,29 @@ foreignBrowserItemExpanded
 foreignBrowserItemExpanded applicationStateMVarStablePtr
                            browserWindowIDPtr
                            inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                               browserItem = BrowserItem {
-                                                 browserItemInode = inode,
-                                                 browserItemBrowserWindow =
-                                                   browserWindow
-                                               }
-                           result <- browserItemExpanded browserItem
-                           if result
-                             then return 1
-                             else return 0)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+          browserItem = BrowserItem {
+                            browserItemInode = inode,
+                            browserItemBrowserWindow = browserWindow
+                          }
+      result <- browserItemExpanded browserItem
+      if result
+        then return 1
+        else return 0
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignBrowserItemSetExpanded
@@ -656,25 +677,29 @@ foreignBrowserItemSetExpanded applicationStateMVarStablePtr
                               browserWindowIDPtr
                               inodeIDPtr
                               expanded = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        ()
-                        (\browserWindow -> do
-                           inodeID <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID,
-                                           inodeProject = project
-                                         }
-                               browserItem = BrowserItem {
-                                                 browserItemInode = inode,
-                                                 browserItemBrowserWindow =
-                                                   browserWindow
-                                               }
-                               expanded' = case expanded of
-                                             0 -> False
-                                             _ -> True
-                           browserItemSetExpanded browserItem expanded')
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID,
+                      inodeProject = project
+                    }
+          browserItem = BrowserItem {
+                            browserItemInode = inode,
+                            browserItemBrowserWindow = browserWindow
+                          }
+          expanded' = case expanded of
+                        0 -> False
+                        _ -> True
+      browserItemSetExpanded browserItem expanded'
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignInodeParent
@@ -687,23 +712,28 @@ foreignInodeParent applicationStateMVarStablePtr
                    browserWindowIDPtr
                    inodeIDPtr
                    resultInodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           maybeParentInode <- inodeParent inode
-                           case maybeParentInode of
-                             Just parentInode -> do
-                               poke resultInodeIDPtr $ inodeID parentInode
-                               return 1
-                             Nothing -> do
-                               return 0)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      maybeParentInode <- inodeParent inode
+      case maybeParentInode of
+        Just parentInode -> do
+          poke resultInodeIDPtr $ inodeID parentInode
+          return 1
+        Nothing -> do
+          return 0
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignInodeExpandable
@@ -714,20 +744,25 @@ foreignInodeExpandable
 foreignInodeExpandable applicationStateMVarStablePtr
                        browserWindowIDPtr
                        inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           result <- inodeExpandable inode
-                           if result
-                             then return 1
-                             else return 0)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      result <- inodeExpandable inode
+      if result
+        then return 1
+        else return 0
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignInodeChildCount
@@ -738,17 +773,22 @@ foreignInodeChildCount
 foreignInodeChildCount applicationStateMVarStablePtr
                        browserWindowIDPtr
                        inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           inodeChildCount inode)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      inodeChildCount inode
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignInodeChild
@@ -763,19 +803,24 @@ foreignInodeChild applicationStateMVarStablePtr
                   inodeIDPtr
                   index
                   inodeChildIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
   inodeChildID <-
-    findBrowserWindowByID applicationStateMVarStablePtr
-                          browserWindowIDPtr
-                          nullInodeID
-                          (\browserWindow -> do
-                             inodeID' <- peek inodeIDPtr
-                             let project = browserWindowProject browserWindow
-                                 inode = Inode {
-                                             inodeID = inodeID',
-                                             inodeProject = project
-                                           }
-                             inodeChild' <- inodeChild inode index
-                             return $ inodeID inodeChild')
+    case maybeBrowserWindow of
+      Just browserWindow -> do
+        inodeID' <- peek inodeIDPtr
+        let project = browserWindowProject browserWindow
+            inode = Inode {
+                        inodeID = inodeID',
+                        inodeProject = project
+                      }
+        inodeChild' <- inodeChild inode index
+        return $ inodeID inodeChild'
+      Nothing -> do
+        exception applicationStateMVar $(internalFailure)
+        return nullInodeID
   poke inodeChildIDPtr inodeChildID
 
 
@@ -787,18 +832,23 @@ foreignInodeName
 foreignInodeName applicationStateMVarStablePtr
                  browserWindowIDPtr
                  inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        nullPtr
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           string <- inodeName inode
-                           newCString string)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      string <- inodeName inode
+      newCString string
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return nullPtr
 
 
 foreignInodeKind
@@ -809,18 +859,23 @@ foreignInodeKind
 foreignInodeKind applicationStateMVarStablePtr
                  browserWindowIDPtr
                  inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        nullPtr
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           string <- inodeKind inode
-                           newCString string)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      string <- inodeKind inode
+      newCString string
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return nullPtr
 
 
 foreignInodeSize
@@ -831,20 +886,25 @@ foreignInodeSize
 foreignInodeSize applicationStateMVarStablePtr
                  browserWindowIDPtr
                  inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           maybeSize <- inodeSize inode
-                           case maybeSize of
-                             Just size -> return size
-                             Nothing -> return 0)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      maybeSize <- inodeSize inode
+      case maybeSize of
+        Just size -> return size
+        Nothing -> return 0
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignInodeCreationTimestamp
@@ -855,18 +915,23 @@ foreignInodeCreationTimestamp
 foreignInodeCreationTimestamp applicationStateMVarStablePtr
                               browserWindowIDPtr
                               inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           result <- inodeCreationTimestamp inode
-                           return $ fromIntegral result)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      result <- inodeCreationTimestamp inode
+      return $ fromIntegral result
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignInodeModificationTimestamp
@@ -877,18 +942,23 @@ foreignInodeModificationTimestamp
 foreignInodeModificationTimestamp applicationStateMVarStablePtr
                                   browserWindowIDPtr
                                   inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           result <- inodeModificationTimestamp inode
-                           return $ fromIntegral result)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      result <- inodeModificationTimestamp inode
+      return $ fromIntegral result
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignInodeIcon
@@ -899,18 +969,23 @@ foreignInodeIcon
 foreignInodeIcon applicationStateMVarStablePtr
                  browserWindowIDPtr
                  inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        nullPtr
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           icon <- inodeIcon inode
-                           stringNew icon)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      icon <- inodeIcon inode
+      stringNew icon
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return nullPtr
 
 
 foreignInodeRename
@@ -923,18 +998,23 @@ foreignInodeRename applicationStateMVarStablePtr
                    browserWindowIDPtr
                    inodeIDPtr
                    newNameCString = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        ()
-                        (\browserWindow -> do
-                           inodeID' <- peek inodeIDPtr
-                           let project = browserWindowProject browserWindow
-                               inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           newName <- peekCString newNameCString
-                           inodeRename inode newName)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      inodeID' <- peek inodeIDPtr
+      let project = browserWindowProject browserWindow
+          inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      newName <- peekCString newNameCString
+      inodeRename inode newName
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignInodesDelete
@@ -947,20 +1027,25 @@ foreignInodesDelete applicationStateMVarStablePtr
                     browserWindowIDPtr
                     inodeIDCount
                     inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        ()
-                        (\browserWindow -> do
-                           let project = browserWindowProject browserWindow
-                               inodeIDCount' = fromIntegral inodeIDCount
-                           inodeIDs <- peekArray inodeIDCount' inodeIDPtr
-                           let inodes = map (\inodeID' ->
-                                               Inode {
-                                                   inodeID = inodeID',
-                                                   inodeProject = project
-                                                 })
-                                            inodeIDs
-                           inodesDelete inodes)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      let project = browserWindowProject browserWindow
+          inodeIDCount' = fromIntegral inodeIDCount
+      inodeIDs <- peekArray inodeIDCount' inodeIDPtr
+      let inodes = map (\inodeID' ->
+                          Inode {
+                              inodeID = inodeID',
+                              inodeProject = project
+                            })
+                       inodeIDs
+      inodesDelete inodes
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignInodeValidateDrop
@@ -977,28 +1062,30 @@ foreignInodeValidateDrop applicationStateMVarStablePtr
                          dragInformationStablePtr
                          resultInodeIDPtr
                          resultDragOperationPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        0
-                        (\browserWindow -> do
-                           let project = browserWindowProject browserWindow
-                           inodeID' <- peek inodeIDPtr
-                           let inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           dragInformation <-
-                             deRefStablePtr dragInformationStablePtr
-                           result <- inodeValidateDrop inode dragInformation
-                           case result of
-                             Nothing -> return 0
-                             Just (resultInode, resultDragOperation) -> do
-                               poke resultInodeIDPtr $ inodeID resultInode
-                               let resultDragOperationBit =
-                                     valueToBit resultDragOperation
-                               poke resultDragOperationPtr
-                                    resultDragOperationBit
-                               return 1)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      let project = browserWindowProject browserWindow
+      inodeID' <- peek inodeIDPtr
+      let inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      dragInformation <- deRefStablePtr dragInformationStablePtr
+      result <- inodeValidateDrop inode dragInformation
+      case result of
+        Nothing -> return 0
+        Just (resultInode, resultDragOperation) -> do
+          poke resultInodeIDPtr $ inodeID resultInode
+          let resultDragOperationBit = valueToBit resultDragOperation
+          poke resultDragOperationPtr resultDragOperationBit
+          return 1
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
 
 
 foreignInodeAcceptDrop
@@ -1011,19 +1098,23 @@ foreignInodeAcceptDrop applicationStateMVarStablePtr
                        browserWindowIDPtr
                        inodeIDPtr
                        dragInformationStablePtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        ()
-                        (\browserWindow -> do
-                           let project = browserWindowProject browserWindow
-                           inodeID' <- peek inodeIDPtr
-                           let inode = Inode {
-                                           inodeID = inodeID',
-                                           inodeProject = project
-                                         }
-                           dragInformation <-
-                             deRefStablePtr dragInformationStablePtr
-                           inodeAcceptDrop inode dragInformation)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      let project = browserWindowProject browserWindow
+      inodeID' <- peek inodeIDPtr
+      let inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      dragInformation <- deRefStablePtr dragInformationStablePtr
+      inodeAcceptDrop inode dragInformation
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignBrowserItemDragInformationNew
@@ -1038,38 +1129,38 @@ foreignBrowserItemDragInformationNew applicationStateMVarStablePtr
                                      browserWindowIDPtr
                                      inodeIDCount
                                      inodeIDPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        (castPtrToStablePtr nullPtr)
-                        (\browserWindow -> do
-                           let allowedDragOperations =
-                                 bitfieldToSet allowedDragOperationsBitfield
-                               inodeIDCount' = fromIntegral inodeIDCount
-                               project = browserWindowProject browserWindow
-                           inodeIDs <- peekArray inodeIDCount' inodeIDPtr
-                           let browserItems =
-                                 map (\inodeID' ->
-                                        let inode =
-                                              Inode {
-                                                  inodeID = inodeID',
-                                                  inodeProject = project
-                                                }
-                                            browserItem =
-                                              BrowserItem {
-                                                  browserItemInode = inode,
-                                                  browserItemBrowserWindow =
-                                                    browserWindow
-                                                }
-                                        in browserItem)
-                                     inodeIDs
-                           let dragInformation =
-                                 BrowserItemDragInformation {
-                                     dragInformationAllowedDragOperations =
-                                       allowedDragOperations,
-                                     browserItemDragInformationBrowserItems =
-                                       browserItems
-                                   }
-                           newStablePtr dragInformation)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      let allowedDragOperations = bitfieldToSet allowedDragOperationsBitfield
+          inodeIDCount' = fromIntegral inodeIDCount
+          project = browserWindowProject browserWindow
+      inodeIDs <- peekArray inodeIDCount' inodeIDPtr
+      let browserItems = map (\inodeID' ->
+                                let inode = Inode {
+                                                inodeID = inodeID',
+                                                inodeProject = project
+                                              }
+                                    browserItem =
+                                      BrowserItem {
+                                          browserItemInode = inode,
+                                          browserItemBrowserWindow =
+                                            browserWindow
+                                        }
+                                in browserItem)
+                             inodeIDs
+          dragInformation =
+            BrowserItemDragInformation {
+                dragInformationAllowedDragOperations = allowedDragOperations,
+                browserItemDragInformationBrowserItems = browserItems
+              }
+      newStablePtr dragInformation
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return $ castPtrToStablePtr nullPtr
 
 
 foreignExternalFileDragInformationNew
@@ -1084,24 +1175,25 @@ foreignExternalFileDragInformationNew applicationStateMVarStablePtr
                                       browserWindowIDPtr
                                       filePathCount
                                       filePathCStringPtr = do
-  findBrowserWindowByID applicationStateMVarStablePtr
-                        browserWindowIDPtr
-                        (castPtrToStablePtr nullPtr)
-                        (\browserWindow -> do
-                           let allowedDragOperations =
-                                 bitfieldToSet allowedDragOperationsBitfield
-                               filePathCount' = fromIntegral filePathCount
-                           filePathCStrings <-
-                             peekArray filePathCount' filePathCStringPtr
-                           filePaths <- mapM peekCString filePathCStrings
-                           let dragInformation =
-                                 ExternalFileDragInformation {
-                                     dragInformationAllowedDragOperations =
-                                       allowedDragOperations,
-                                     externalFileDragInformationFilePaths =
-                                       filePaths
-                                   }
-                           newStablePtr dragInformation)
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      let allowedDragOperations = bitfieldToSet allowedDragOperationsBitfield
+          filePathCount' = fromIntegral filePathCount
+      filePathCStrings <- peekArray filePathCount' filePathCStringPtr
+      filePaths <- mapM peekCString filePathCStrings
+      let dragInformation =
+            ExternalFileDragInformation {
+                dragInformationAllowedDragOperations = allowedDragOperations,
+                externalFileDragInformationFilePaths = filePaths
+              }
+      newStablePtr dragInformation
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return $ castPtrToStablePtr nullPtr
 
 
 foreignDragInformationFree

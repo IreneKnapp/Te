@@ -1,5 +1,6 @@
 module Te.FrontEndCallbacks
-  (noteRecentProjectsChanged,
+  (exception,
+   noteRecentProjectsChanged,
    noteNewBrowserWindow,
    noteDeletedBrowserWindow,
    noteBrowserItemsChanged,
@@ -8,7 +9,18 @@ module Te.FrontEndCallbacks
 
 import Control.Concurrent.MVar
 
+import Te.Exceptions
 import Te.Types
+
+
+exception :: MVar ApplicationState -> TeException -> IO ()
+exception applicationStateMVar exception = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksException callbacks
+      messageString = show exception
+      detailsString = exceptionDetails exception
+  callback messageString detailsString
 
 
 noteRecentProjectsChanged :: MVar ApplicationState -> IO ()
