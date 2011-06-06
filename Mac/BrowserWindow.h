@@ -14,6 +14,8 @@
     IBOutlet NSTextField *itemCountLabel;
     
     BOOL alreadyClosing;
+    BOOL ignoreItemExpansionDueToFixing;
+    id ignoreItemExpansionDueToNesting;
     
     NSMapTable *browserItems;
     uuid_t browserWindowID;
@@ -52,6 +54,11 @@
       setObjectValue: (id) object
       forTableColumn: (NSTableColumn *) tableColumn
               byItem: (id) item;
+- (void) outlineViewItemWillExpand: (NSNotification *) notification;
+- (void) outlineViewItemWillCollapse: (NSNotification *) notification;
+- (void) outlineViewItemDidExpand: (NSNotification *) notification;
+- (void) outlineViewItemDidCollapse: (NSNotification *) notification;
+- (void) fixItemExpansionState: (BrowserItem *) item;
 - (BOOL) outlineView: (NSOutlineView *) outlineView
           writeItems: (NSArray *) items
         toPasteboard: (NSPasteboard *) pasteboard;

@@ -21,6 +21,8 @@
         browserItems = [(AppDelegate *) [NSApp delegate] newMapTable];
         
         alreadyClosing = NO;
+        ignoreItemExpansionDueToFixing = NO;
+        ignoreItemExpansionDueToNesting = nil;
         
         char *titleCString
             = teBrowserWindowTitle(applicationState, &browserWindowID);
@@ -63,7 +65,7 @@
         [filesOutlineView setDraggingSourceOperationMask: remoteOperationMask
                           forLocal: NO];
         
-        [filesOutlineView reloadData];
+        [self noteItemsChanged];
     } else {
         teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
     }
@@ -121,17 +123,21 @@
 
 
 - (void) forceClose {
-    if(!alreadyClosing)
+    if(!alreadyClosing) {
         [[self window] close];
+    }
 }
 
 
 - (void) noteItemsChanged {
     [filesOutlineView reloadData];
+    [self fixItemExpansionState: nil];
 }
 
 
 - (void) editItemName: (uuid_t *) inodeID {
+    // DNK TODO - begin editing the name of the given item, as when it was just
+    // created.
 }
 
 
@@ -448,6 +454,153 @@
                               inodeID,
                               newNameCString);
             }
+        }
+    }
+}
+
+
+- (void) outlineViewItemWillExpand: (NSNotification *) notification {
+    if(alreadyClosing)
+        return;
+    
+    NSOutlineView *outlineView = [notification object];
+    id item = [[notification userInfo] objectForKey: @"NSObject"];
+    
+    if([outlineView isEqual: filesOutlineView]) {
+        if([item isKindOfClass: [BrowserItem class]]) {
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            if(!ignoreItemExpansionDueToNesting)
+                ignoreItemExpansionDueToNesting = item;
+        }
+    }
+}
+
+
+- (void) outlineViewItemWillCollapse: (NSNotification *) notification {
+    if(alreadyClosing)
+        return;
+    
+    NSOutlineView *outlineView = [notification object];
+    id item = [[notification userInfo] objectForKey: @"NSObject"];
+    
+    if([outlineView isEqual: filesOutlineView]) {
+        if([item isKindOfClass: [BrowserItem class]]) {
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            if(!ignoreItemExpansionDueToNesting)
+                ignoreItemExpansionDueToNesting = item;
+        }
+    }
+}
+
+
+- (void) outlineViewItemDidExpand: (NSNotification *) notification {
+    if(alreadyClosing)
+        return;
+    
+    NSOutlineView *outlineView = [notification object];
+    id item = [[notification userInfo] objectForKey: @"NSObject"];
+    
+    if([outlineView isEqual: filesOutlineView]) {
+        if(ignoreItemExpansionDueToNesting == item)
+            ignoreItemExpansionDueToNesting = nil;
+        
+        if(ignoreItemExpansionDueToFixing)
+            return;
+        if(ignoreItemExpansionDueToNesting)
+            return;
+        
+        void *applicationState = getApplicationState();
+        if(!applicationState)
+            return;
+        
+        if([item isKindOfClass: [BrowserItem class]]) {
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            uuid_t *inodeID = [browserItemObject inodeID];
+            
+            teBrowserItemSetExpanded(applicationState,
+                                     &browserWindowID,
+                                     inodeID,
+                                     1);
+        }
+        
+        [self fixItemExpansionState: item];
+    }
+}
+
+
+- (void) outlineViewItemDidCollapse: (NSNotification *) notification {
+    if(alreadyClosing)
+        return;
+    
+    NSOutlineView *outlineView = [notification object];
+    id item = [[notification userInfo] objectForKey: @"NSObject"];
+    
+    if([outlineView isEqual: filesOutlineView]) {
+        if(ignoreItemExpansionDueToNesting == item)
+            ignoreItemExpansionDueToNesting = nil;
+        
+        if(ignoreItemExpansionDueToFixing)
+            return;
+        if(ignoreItemExpansionDueToNesting)
+            return;
+        
+        void *applicationState = getApplicationState();
+        if(!applicationState)
+            return;
+        
+        if([item isKindOfClass: [BrowserItem class]]) {
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            uuid_t *inodeID = [browserItemObject inodeID];
+            
+            teBrowserItemSetExpanded(applicationState,
+                                     &browserWindowID,
+                                     inodeID,
+                                     0);
+        }
+    }
+}
+
+
+- (void) fixItemExpansionState: (BrowserItem *) item {
+    if(alreadyClosing)
+        return;
+    
+    if(item) {
+        if([item isKindOfClass: [BrowserItem class]]) {
+            void *applicationState = getApplicationState();
+            if(!applicationState)
+                return;
+            
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            uuid_t *inodeID = [browserItemObject inodeID];
+            
+            BOOL expanded = teBrowserItemExpanded(applicationState,
+                                                  &browserWindowID,
+                                                  inodeID);
+            
+            ignoreItemExpansionDueToFixing = YES;
+            if(expanded) {
+                [filesOutlineView expandItem: item];
+            } else {
+                [filesOutlineView collapseItem: item];
+            }
+            ignoreItemExpansionDueToFixing = NO;
+        }
+    }
+    
+    if(!item || [filesOutlineView isItemExpanded: item]) {
+        NSInteger childCount = [self outlineView: filesOutlineView
+                                     numberOfChildrenOfItem: item];
+        for(NSInteger i = 0; i < childCount; i++) {
+            id childItem = [self outlineView: filesOutlineView
+                                 child: i
+                                 ofItem: item];
+            [self fixItemExpansionState: childItem];
         }
     }
 }
