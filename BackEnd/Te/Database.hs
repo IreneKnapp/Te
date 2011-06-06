@@ -478,4 +478,5 @@ lookupBrowserItemExpanded browserItem = do
   case rows of
     [[SQLInteger 0]] -> return False
     [[SQLInteger _]] -> return True
+    [] -> return False
     _ -> throwIO $(internalFailure)
