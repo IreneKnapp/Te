@@ -99,9 +99,10 @@ data BrowserItem =
 
 
 data DragInformation
-  = BrowserItemDragInformation {
+  = InodeDragInformation {
         dragInformationAllowedDragOperations :: Set DragOperation,
-        browserItemDragInformationBrowserItems :: [BrowserItem]
+        inodeDragInformationBrowserWindow :: BrowserWindow,
+        inodeDragInformationInodes :: [Inode]
       }
   | ExternalFileDragInformation {
         dragInformationAllowedDragOperations :: Set DragOperation,

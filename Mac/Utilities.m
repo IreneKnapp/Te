@@ -112,3 +112,71 @@ NSDragOperation dragOperationsToOperationMask(uint64_t operations) {
         operationMask |= NSDragOperationDelete;
     return operationMask;
 }
+
+
+void appendWord64(NSMutableData *data, uint64_t value) {
+    uint8_t buffer[8];
+    buffer[0] = (value >> 0) & 0xFF;
+    buffer[1] = (value >> 8) & 0xFF;
+    buffer[2] = (value >> 16) & 0xFF;
+    buffer[3] = (value >> 24) & 0xFF;
+    buffer[4] = (value >> 32) & 0xFF;
+    buffer[5] = (value >> 40) & 0xFF;
+    buffer[6] = (value >> 48) & 0xFF;
+    buffer[7] = (value >> 56) & 0xFF;
+    [data appendBytes: &buffer length: 8];
+}
+
+
+void extractWord64(NSData *data, NSInteger offset, uint64_t *value) {
+    uint8_t buffer[8];
+    [data getBytes: &buffer range: NSMakeRange(offset, 8)];
+    *value = 0;
+    *value |= (((uint64_t) buffer[0]) << 0);
+    *value |= (((uint64_t) buffer[1]) << 8);
+    *value |= (((uint64_t) buffer[2]) << 16);
+    *value |= (((uint64_t) buffer[3]) << 24);
+    *value |= (((uint64_t) buffer[4]) << 32);
+    *value |= (((uint64_t) buffer[5]) << 40);
+    *value |= (((uint64_t) buffer[6]) << 48);
+    *value |= (((uint64_t) buffer[7]) << 56);
+}
+
+
+void *extractInodesDragInformation(NSData *data,
+                                   uint64_t allowedDragOperations)
+{
+    void *applicationState = getApplicationState();
+    if(!applicationState)
+        return NULL;
+    
+    if(data && ([data length] >= 24)) {
+        uuid_t draggedBrowserWindowID;
+        [data getBytes: &draggedBrowserWindowID
+              range: NSMakeRange(0, 16)];
+        
+        uint64_t inodeIDCount;
+        extractWord64(data, 16, &inodeIDCount);
+        
+        if([data length] == 16 + 8 + 16 * inodeIDCount) {
+            uuid_t *inodeIDs = malloc(inodeIDCount * sizeof(uuid_t));
+            [data getBytes: inodeIDs
+                  range: NSMakeRange(24, inodeIDCount * 16)];
+            
+            void *dragInformation
+                = teInodeDragInformationNew(applicationState,
+                                            allowedDragOperations,
+                                            &draggedBrowserWindowID,
+                                            inodeIDCount,
+                                            inodeIDs);
+            
+            free(inodeIDs);
+            
+            return dragInformation;
+        } else {
+            return NULL;
+        }
+    } else {
+        return NULL;
+    }
+}

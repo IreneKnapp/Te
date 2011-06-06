@@ -59,4 +59,8 @@
                    validateDrop: (id <NSDraggingInfo>) info
                    proposedItem: (id) item
              proposedChildIndex: (NSInteger) index;
+- (BOOL) outlineView: (NSOutlineView *) outlineView
+          acceptDrop: (id <NSDraggingInfo>) info
+                item: (id) item
+          childIndex: (NSInteger) index;
 @end

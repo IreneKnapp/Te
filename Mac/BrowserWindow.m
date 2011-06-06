@@ -46,7 +46,7 @@
          setImage: [NSImage imageNamed: titleIcon]];
         
         NSMutableArray *draggedTypes = [NSMutableArray arrayWithCapacity: 1];
-        [draggedTypes addObject: @"com.dankna.te.datatypes.browser-items"];
+        [draggedTypes addObject: @"com.dankna.te.datatypes.inodes"];
         [filesOutlineView registerForDraggedTypes: draggedTypes];
         
         uint64_t localOperations
@@ -466,7 +466,7 @@
             return NO;
         
         NSMutableArray *declaredTypes = [NSMutableArray arrayWithCapacity: 1];
-        [declaredTypes addObject: @"com.dankna.te.datatypes.browser-items"];
+        [declaredTypes addObject: @"com.dankna.te.datatypes.inodes"];
         [pasteboard declareTypes: declaredTypes owner: self];
         
         BOOL result = YES;
@@ -474,9 +474,17 @@
         if(result) {
             NSMutableData *data = [NSMutableData data];
             
+            [data appendBytes: &browserWindowID length: 16];
+            
+            appendWord64(data, [items count]);
+            
+            for(BrowserItem *item in items) {
+                [data appendBytes: [item inodeID] length: 16];
+            }
+            
             result = [pasteboard
                        setData: data
-                       forType: @"com.dankna.te.datatypes.browser-items"];
+                       forType: @"com.dankna.te.datatypes.inodes"];
         }
         
         return result;
@@ -516,8 +524,7 @@
         
         NSString *usedType = nil;
         for(NSString *foundType in [pasteboard types]) {
-            if([foundType isEqualToString:
-                           @"com.dankna.te.datatypes.browser-items"])
+            if([foundType isEqualToString: @"com.dankna.te.datatypes.inodes"])
             {
                 usedType = foundType;
                 break;
@@ -532,21 +539,17 @@
             = dragOperationMaskToOperations(allowedDragOperationMask);
         
         void *dragInformation = NULL;
-        if([usedType isEqualToString:
-                      @"com.dankna.te.datatypes.browser-items"])
+        if([usedType isEqualToString: @"com.dankna.te.datatypes.inodes"])
         {
-            uint64_t inodeIDCount = 0;
-            uuid_t *inodeIDs = NULL;
-            
+            NSData *data
+                = [pasteboard dataForType: @"com.dankna.te.datatypes.inodes"];
             dragInformation
-                = teBrowserItemDragInformationNew(applicationState,
-                                                  allowedDragOperations,
-                                                  &browserWindowID,
-                                                  inodeIDCount,
-                                                  inodeIDs);
+                = extractInodesDragInformation(data, allowedDragOperations);
         }
-        if(!dragInformation)
+        if(!dragInformation) {
+            teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
             return NSDragOperationNone;
+        }
         
         uuid_t resultInodeID;
         uint64_t resultChildIndex;
@@ -584,6 +587,80 @@
         return resultDragOperationMask;
     } else {
         return NSDragOperationNone;
+    }
+}
+
+
+- (BOOL) outlineView: (NSOutlineView *) outlineView
+          acceptDrop: (id <NSDraggingInfo>) info
+                item: (id) item
+          childIndex: (NSInteger) index
+{
+    if(alreadyClosing)
+        return NO;
+    
+    if([outlineView isEqual: filesOutlineView]) {
+        void *applicationState = getApplicationState();
+        if(!applicationState)
+            return NO;
+        
+        uuid_t rootInodeID;
+        teBrowserWindowRoot(applicationState, &browserWindowID, &rootInodeID);
+        
+        uuid_t inodeID;
+        if([item isKindOfClass: [BrowserItem class]]) {
+            BrowserItem *browserItemObject = (BrowserItem *) item;
+            
+            uuid_t *result = [browserItemObject inodeID];
+            copyUUID(&inodeID, result);
+        } else {
+            copyUUID(&inodeID, &rootInodeID);
+        }
+        
+        NSPasteboard *pasteboard = [info draggingPasteboard];
+        
+        NSString *usedType = nil;
+        for(NSString *foundType in [pasteboard types]) {
+            if([foundType isEqualToString: @"com.dankna.te.datatypes.inodes"])
+            {
+                usedType = foundType;
+                break;
+            }
+        }
+        if(!usedType)
+            return NO;
+        
+        NSDragOperation allowedDragOperationMask
+            = [info draggingSourceOperationMask];
+        uint64_t allowedDragOperations
+            = dragOperationMaskToOperations(allowedDragOperationMask);
+        
+        void *dragInformation = NULL;
+        if([usedType isEqualToString: @"com.dankna.te.datatypes.inodes"])
+        {
+            NSData *data
+                = [pasteboard dataForType: @"com.dankna.te.datatypes.inodes"];
+            dragInformation
+                = extractInodesDragInformation(data, allowedDragOperations);
+        }
+        if(!dragInformation) {
+            teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
+            return NO;
+        }
+        
+        uint64_t result = teInodeAcceptDrop(applicationState,
+                                            &browserWindowID,
+                                            &inodeID,
+                                            dragInformation);
+        
+        teDragInformationFree(dragInformation);
+        
+        if(result == 0)
+            return NO;
+        else
+            return YES;
+    } else {
+        return NO;
     }
 }
 

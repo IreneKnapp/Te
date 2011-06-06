@@ -225,7 +225,7 @@ foreign export ccall "teInodeAcceptDrop"
     -> Ptr BrowserWindowID
     -> Ptr InodeID
     -> StablePtr DragInformation
-    -> IO ()
+    -> IO Word64
 foreign export ccall
     "teBrowserWindowDraggingSourceIntraApplicationOperations"
     foreignBrowserWindowDraggingSourceIntraApplicationOperations
@@ -249,8 +249,8 @@ foreign export ccall "teDragOperationMove"
 foreign export ccall "teDragOperationDelete"
                      foreignDragOperationDelete
     :: Word64
-foreign export ccall "teBrowserItemDragInformationNew"
-                     foreignBrowserItemDragInformationNew
+foreign export ccall "teInodeDragInformationNew"
+                     foreignInodeDragInformationNew
     :: StablePtr (MVar ApplicationState)
     -> Bitfield DragOperation
     -> Ptr BrowserWindowID
@@ -273,15 +273,19 @@ foreign export ccall "teDragInformationAllowedDragOperations"
                      foreignDragInformationAllowedDragOperations
     :: StablePtr DragInformation
     -> IO (Bitfield DragOperation)
-foreign export ccall "teDragInformationBrowserItemCount"
-                     foreignDragInformationBrowserItemCount
+foreign export ccall "teDragInformationBrowserWindow"
+                     foreignDragInformationBrowserWindow
+    :: StablePtr DragInformation
+    -> Ptr BrowserWindowID
+    -> IO ()
+foreign export ccall "teDragInformationInodeCount"
+                     foreignDragInformationInodeCount
     :: StablePtr DragInformation
     -> IO Word64
-foreign export ccall "teDragInformationBrowserItem"
-                     foreignDragInformationBrowserItem
+foreign export ccall "teDragInformationInode"
+                     foreignDragInformationInode
     :: StablePtr DragInformation
     -> Word64
-    -> Ptr BrowserWindowID
     -> Ptr InodeID
     -> IO ()
 foreign export ccall "teDragInformationFilePathCount"
@@ -1153,7 +1157,7 @@ foreignInodeAcceptDrop
     -> Ptr BrowserWindowID
     -> Ptr InodeID
     -> StablePtr DragInformation
-    -> IO ()
+    -> IO Word64
 foreignInodeAcceptDrop applicationStateMVarStablePtr
                        browserWindowIDPtr
                        inodeIDPtr
@@ -1171,10 +1175,13 @@ foreignInodeAcceptDrop applicationStateMVarStablePtr
                       inodeProject = project
                     }
       dragInformation <- deRefStablePtr dragInformationStablePtr
-      inodeAcceptDrop inode dragInformation
+      result <- inodeAcceptDrop inode dragInformation
+      if result
+        then return 1
+        else return 0
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
-      return ()
+      return 0
 
 
 foreignBrowserWindowDraggingSourceIntraApplicationOperations
@@ -1209,18 +1216,18 @@ foreignDragOperationDelete :: Word64
 foreignDragOperationDelete = valueToBit DragOperationDelete
 
 
-foreignBrowserItemDragInformationNew
+foreignInodeDragInformationNew
     :: StablePtr (MVar ApplicationState)
     -> Bitfield DragOperation
     -> Ptr BrowserWindowID
     -> Word64
     -> Ptr InodeID
     -> IO (StablePtr DragInformation)
-foreignBrowserItemDragInformationNew applicationStateMVarStablePtr
-                                     allowedDragOperationsBitfield
-                                     browserWindowIDPtr
-                                     inodeIDCount
-                                     inodeIDPtr = do
+foreignInodeDragInformationNew applicationStateMVarStablePtr
+                               allowedDragOperationsBitfield
+                               browserWindowIDPtr
+                               inodeIDCount
+                               inodeIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
   browserWindowID <- peek browserWindowIDPtr
   maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
@@ -1231,23 +1238,17 @@ foreignBrowserItemDragInformationNew applicationStateMVarStablePtr
           inodeIDCount' = fromIntegral inodeIDCount
           project = browserWindowProject browserWindow
       inodeIDs <- peekArray inodeIDCount' inodeIDPtr
-      let browserItems = map (\inodeID' ->
-                                let inode = Inode {
-                                                inodeID = inodeID',
-                                                inodeProject = project
-                                              }
-                                    browserItem =
-                                      BrowserItem {
-                                          browserItemInode = inode,
-                                          browserItemBrowserWindow =
-                                            browserWindow
-                                        }
-                                in browserItem)
-                             inodeIDs
+      let inodes = map (\inodeID' ->
+                           Inode {
+                               inodeID = inodeID',
+                               inodeProject = project
+                             })
+                       inodeIDs
           dragInformation =
-            BrowserItemDragInformation {
+            InodeDragInformation {
                 dragInformationAllowedDragOperations = allowedDragOperations,
-                browserItemDragInformationBrowserItems = browserItems
+                inodeDragInformationBrowserWindow = browserWindow,
+                inodeDragInformationInodes = inodes
               }
       newStablePtr dragInformation
     Nothing -> do
@@ -1306,44 +1307,51 @@ foreignDragInformationAllowedDragOperations dragInformationStablePtr = do
   return allowedDragOperationsBitfield
 
 
-foreignDragInformationBrowserItemCount
+foreignDragInformationBrowserWindow
+    :: StablePtr DragInformation
+    -> Ptr BrowserWindowID
+    -> IO ()
+foreignDragInformationBrowserWindow dragInformationStablePtr
+                                    browserWindowIDPtr = do
+  dragInformation <- deRefStablePtr dragInformationStablePtr
+  case dragInformation of
+    InodeDragInformation { } -> do
+      let browserWindow = inodeDragInformationBrowserWindow dragInformation
+      poke browserWindowIDPtr $ browserWindowID browserWindow
+    _ -> return ()
+
+
+foreignDragInformationInodeCount
     :: StablePtr DragInformation
     -> IO Word64
-foreignDragInformationBrowserItemCount dragInformationStablePtr = do
+foreignDragInformationInodeCount dragInformationStablePtr = do
   dragInformation <- deRefStablePtr dragInformationStablePtr
   case dragInformation of
-    BrowserItemDragInformation { } -> do
-      let browserItems = browserItemDragInformationBrowserItems dragInformation
-      return $ fromIntegral $ length browserItems
-    ExternalFileDragInformation { } -> do
-      return 0
+    InodeDragInformation { } -> do
+      let inodes = inodeDragInformationInodes dragInformation
+      return $ fromIntegral $ length inodes
+    _ -> return 0
 
 
-foreignDragInformationBrowserItem
+foreignDragInformationInode
     :: StablePtr DragInformation
     -> Word64
-    -> Ptr BrowserWindowID
     -> Ptr InodeID
     -> IO ()
-foreignDragInformationBrowserItem dragInformationStablePtr
-                                  index
-                                  browserWindowIDPtr
-                                  inodeIDPtr = do
+foreignDragInformationInode dragInformationStablePtr
+                            index
+                            inodeIDPtr = do
   dragInformation <- deRefStablePtr dragInformationStablePtr
   case dragInformation of
-    BrowserItemDragInformation { } -> do
-      let browserItems = browserItemDragInformationBrowserItems dragInformation
+    InodeDragInformation { } -> do
+      let inodes = inodeDragInformationInodes dragInformation
           index' = fromIntegral index
-      if index' < length browserItems
+      if index' < length inodes
         then do
-          let browserItem = browserItems !! index'
-              browserWindow = browserItemBrowserWindow browserItem
-              inode = browserItemInode browserItem
-          poke browserWindowIDPtr $ browserWindowID browserWindow
+          let inode = inodes !! index'
           poke inodeIDPtr $ inodeID inode
         else return ()
-    ExternalFileDragInformation { } -> do
-      return ()
+    _ -> return ()
 
 
 foreignDragInformationFilePathCount
@@ -1352,11 +1360,10 @@ foreignDragInformationFilePathCount
 foreignDragInformationFilePathCount dragInformationStablePtr = do
   dragInformation <- deRefStablePtr dragInformationStablePtr
   case dragInformation of
-    BrowserItemDragInformation { } -> do
-      return 0
     ExternalFileDragInformation { } -> do
       let filePaths = externalFileDragInformationFilePaths dragInformation
       return $ fromIntegral $ length $ filePaths
+    _ -> return 0
 
 
 foreignDragInformationFilePath
@@ -1366,8 +1373,6 @@ foreignDragInformationFilePath
 foreignDragInformationFilePath dragInformationStablePtr index = do
   dragInformation <- deRefStablePtr dragInformationStablePtr
   case dragInformation of
-    BrowserItemDragInformation { } -> do
-      return nullPtr
     ExternalFileDragInformation { } -> do
       let filePaths = externalFileDragInformationFilePaths dragInformation
           index' = fromIntegral index
@@ -1376,3 +1381,4 @@ foreignDragInformationFilePath dragInformationStablePtr index = do
           let filePath = filePaths !! index'
           stringNew filePath
         else return nullPtr
+    _ -> return nullPtr

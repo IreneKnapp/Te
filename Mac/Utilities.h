@@ -22,3 +22,7 @@ extern void opaqueRelinquishPointerFunction(const void *item,
                                              (*size)(const void *item));
 extern uint64_t dragOperationMaskToOperations(NSDragOperation operationMask);
 extern NSDragOperation dragOperationsToOperationMask(uint64_t operations);
+extern void appendWord64(NSMutableData *data, uint64_t value);
+extern void extractWord64(NSData *data, NSInteger offset, uint64_t *value);
+extern void *extractInodesDragInformation(NSData *data,
+                                          uint64_t allowedDragOperations);

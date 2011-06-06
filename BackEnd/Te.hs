@@ -680,19 +680,116 @@ inodeValidateDrop
     :: Inode
     -> DragInformation
     -> IO (Maybe (Inode, Maybe Word64, DragOperation))
-inodeValidateDrop inode dragInformation = do
-  let project = inodeProject inode
+inodeValidateDrop prospectiveTargetInode dragInformation = do
+  let project = inodeProject prospectiveTargetInode
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar Nothing $ do
-    return $ Just (inode, Nothing, DragOperationCopy)
+    getDropTargetAndOperation prospectiveTargetInode dragInformation
 
 
-inodeAcceptDrop :: Inode -> DragInformation -> IO ()
-inodeAcceptDrop inode dragInformation = do
-  let project = inodeProject inode
+inodeAcceptDrop :: Inode -> DragInformation -> IO Bool
+inodeAcceptDrop prospectiveTargetInode dragInformation = do
+  let project = inodeProject prospectiveTargetInode
       applicationStateMVar = projectApplicationState project
-  catchTe applicationStateMVar () $ do
-    throwIO $(internalFailure) -- TODO
+  catchTe applicationStateMVar False $ do
+    maybeDropTargetAndOperation <-
+      getDropTargetAndOperation prospectiveTargetInode dragInformation
+    case maybeDropTargetAndOperation of
+      Just (targetInode, _, dragOperation) -> do
+        case dragInformation of
+          InodeDragInformation { } -> do
+            mapM (\draggedInode -> do
+                    draggedInodeInformation <-
+                      lookupInodeInformation draggedInode
+                    let name = inodeInformationName draggedInodeInformation
+                    recordMovedInode draggedInode name targetInode)
+                 $ inodeDragInformationInodes dragInformation
+            browserWindowsMap <- readMVar $ projectBrowserWindows project
+            let browserWindows = Map.elems browserWindowsMap
+            mapM_ noteBrowserItemsChanged browserWindows
+            return True
+          _ -> return False
+      _ -> throwIO $(internalFailure)
+
+
+getDropTargetAndOperation
+    :: Inode
+    -> DragInformation
+    -> IO (Maybe (Inode, Maybe Word64, DragOperation))
+getDropTargetAndOperation prospectiveTargetInode dragInformation = do
+    case dragInformation of
+      InodeDragInformation { } -> do
+        let draggedInodes = inodeDragInformationInodes dragInformation
+            sameProject =
+              computeSameProject prospectiveTargetInode draggedInodes
+            allowedDragOperations =
+              dragInformationAllowedDragOperations dragInformation
+        maybeTargetInode <-
+          getDragTargetInode prospectiveTargetInode draggedInodes sameProject
+        let maybeDragOperation =
+              computeDragOperation allowedDragOperations sameProject
+        case (maybeTargetInode, maybeDragOperation) of
+          (Just targetInode, Just dragOperation) ->
+            return $ Just (targetInode, Nothing, dragOperation)
+          (Nothing, _) -> throwIO $(internalFailure)
+          _ -> return Nothing
+      _ -> return Nothing
+
+
+computeSameProject :: Inode -> [Inode] -> Bool
+computeSameProject prospectiveTargetInode draggedInodes =
+  let targetProject = inodeProject prospectiveTargetInode
+      sameProject = all (\draggedInode ->
+                           let draggedProject = inodeProject draggedInode
+                           in projectID draggedProject
+                              == projectID targetProject)
+                        draggedInodes
+  in sameProject
+
+
+getDragTargetInode :: Inode -> [Inode] -> Bool -> IO (Maybe Inode)
+getDragTargetInode prospectiveTargetInode draggedInodes sameProject = do
+  let considerInode prospectiveTargetInode = do
+        inodeInformation <-
+          lookupInodeInformation prospectiveTargetInode
+        case inodeInformationKind inodeInformation of
+          InodeKindDirectory -> do
+            if sameProject
+               && any (\draggedInode ->
+                         inodeID draggedInode
+                         == inodeID prospectiveTargetInode)
+                      draggedInodes
+              then do
+                maybeParentInode <- lookupInodeParent prospectiveTargetInode
+                case maybeParentInode of
+                  Just parentInode -> considerInode parentInode
+                  Nothing -> return Nothing
+              else return $ Just prospectiveTargetInode
+          _ -> do
+           maybeParentInode <- lookupInodeParent prospectiveTargetInode
+           case maybeParentInode of
+             Just parentInode -> considerInode parentInode
+             Nothing -> return Nothing
+  considerInode prospectiveTargetInode
+
+
+computeDragOperation :: Set DragOperation -> Bool -> Maybe DragOperation
+computeDragOperation allowedDragOperations sameProject =
+  let dragOperationAllowed dragOperation =
+        (Set.member dragOperation allowedDragOperations)
+        || (Set.member DragOperationGeneric allowedDragOperations)
+      maybeDragOperation =
+        foldl' (\maybeResult (condition, operation) ->
+                  case maybeResult of
+                    Just _ -> maybeResult
+                    Nothing -> if condition
+                                  && dragOperationAllowed operation
+                                 then Just operation
+                                 else Nothing)
+               Nothing
+               [(sameProject, DragOperationMove),
+                (True, DragOperationCopy)]
+  in maybeDragOperation
 
 
 browserWindowDraggingSourceIntraApplicationOperations :: Set DragOperation
