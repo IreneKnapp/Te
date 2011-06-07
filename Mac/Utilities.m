@@ -163,14 +163,20 @@ void *extractInodesDragInformation(NSData *data,
             [data getBytes: inodeIDs
                   range: NSMakeRange(24, inodeIDCount * 16)];
             
+            void *inodes = teInodeListNew(applicationState,
+                                          &draggedBrowserWindowID,
+                                          inodeIDCount,
+                                          inodeIDs);
+            
+            free(inodeIDs);
+            
             void *dragInformation
                 = teInodeDragInformationNew(applicationState,
                                             allowedDragOperations,
                                             &draggedBrowserWindowID,
-                                            inodeIDCount,
-                                            inodeIDs);
+                                            inodes);
             
-            free(inodeIDs);
+            teInodeListFree(inodes);
             
             return dragInformation;
         } else {

@@ -1,6 +1,7 @@
 module Te.Types
   (ApplicationState(..),
    FrontEndCallbacks(..),
+   ConfirmationDialog(..),
    RecentProject(..),
    Project(..),
    Inode(..),
@@ -35,11 +36,24 @@ data ApplicationState =
 data FrontEndCallbacks =
   FrontEndCallbacks {
       frontEndCallbacksException :: String -> String -> IO (),
+      frontEndCallbacksConfirm
+          :: ConfirmationDialog -> (Word64 -> IO ()) -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO (),
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteDeletedBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteBrowserItemsChanged :: BrowserWindow -> IO (),
       frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO ()
+    }
+
+
+data ConfirmationDialog =
+  ConfirmationDialog {
+      confirmationDialogBrowserWindow :: Maybe BrowserWindow,
+      confirmationDialogMessage :: String,
+      confirmationDialogDetails :: String,
+      confirmationDialogDefaultButtonIndex :: Maybe Word64,
+      confirmationDialogCancelButtonIndex :: Maybe Word64,
+      confirmationDialogButtons :: [String]
     }
 
 
@@ -82,6 +96,7 @@ data InodeInformation =
 data InodeKind
   = InodeKindDirectory
   | InodeKindHaskell
+  deriving (Eq)
 
 
 data BrowserWindow =

@@ -1,10 +1,12 @@
 #import <Cocoa/Cocoa.h>
 #import "HasCurrentFolder.h"
+#import "HasSelectedInodes.h"
 #import "Utilities.h"
 
 @class BrowserItem;
 @interface BrowserWindow : NSWindowController
-<NSWindowDelegate, NSOutlineViewDataSource, HasCurrentFolder>
+<NSWindowDelegate, NSOutlineViewDataSource, HasCurrentFolder,
+ HasSelectedInodes>
 {
     IBOutlet NSOutlineView *filesOutlineView;
     IBOutlet NSTableColumn *filesOutlineViewNameColumn;
@@ -24,12 +26,18 @@
 - (id) initWithBrowserWindowID: (uuid_t *) newBrowserWindowID;
 - (uuid_t *) browserWindowID;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
+- (void *) getSelectedInodeList;
 - (BrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID;
 - (void) forceClose;
 - (void) noteItemsChanged;
 - (void) editItemName: (uuid_t *) inodeID;
 - (BOOL) windowShouldClose: (id) sender;
 - (void) windowWillClose: (NSNotification *) notification;
+- (void) runSheetModalAlert: (NSAlert *) alert
+          completionHandler: (void (*)(uint64_t result)) completionHandler;
+- (void) sheetModalAlertFinished: (NSAlert *) alert
+                      returnCode: (NSInteger) returnCode
+                     contextInfo: (void *) contextInfo;
 - (BOOL)               window: (NSWindow *) window
   shouldDragDocumentWithEvent: (NSEvent *) event
                          from: (NSPoint) dragImageLocation

@@ -32,6 +32,16 @@ foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrCallback
 foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrInodeIDPtrCallback
     :: FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
+foreign import ccall "dynamic" mkIntConfirmationDialogCompletionHandlerCallback
+    :: FunPtr (StablePtr ConfirmationDialog
+               -> (FunPtr (Word64 -> IO ()))
+               -> IO ())
+    -> (StablePtr ConfirmationDialog -> FunPtr (Word64 -> IO ()) -> IO ())
+
+
+foreign import ccall "wrapper" wrapCompletionHandler
+    :: (Word64 -> IO ())
+    -> IO (FunPtr (Word64 -> IO ()))
 
 
 foreign export ccall "teFrontEndInternalFailure"
@@ -64,6 +74,9 @@ foreign export ccall "teUUIDShow"
 foreign export ccall "teApplicationInit"
                      foreignApplicationInit
     :: FunPtr (CString -> CString -> IO ())
+    -> FunPtr (StablePtr ConfirmationDialog
+               -> FunPtr (Word64 -> IO ())
+               -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
@@ -202,12 +215,11 @@ foreign export ccall "teInodeRename"
     -> Ptr InodeID
     -> CString
     -> IO ()
-foreign export ccall "teInodesDelete"
-                     foreignInodesDelete
+foreign export ccall "teInodeListDelete"
+                     foreignInodeListDelete
     :: StablePtr (MVar ApplicationState)
     -> Ptr BrowserWindowID
-    -> Word64
-    -> Ptr InodeID
+    -> StablePtr [Inode]
     -> IO ()
 foreign export ccall "teInodeValidateDrop"
                      foreignInodeValidateDrop
@@ -226,6 +238,21 @@ foreign export ccall "teInodeAcceptDrop"
     -> Ptr InodeID
     -> StablePtr DragInformation
     -> IO Word64
+foreign export ccall "teInodeListNew"
+                     foreignInodeListNew
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Word64
+    -> Ptr InodeID
+    -> IO (StablePtr [Inode])
+foreign export ccall "teInodeListFree"
+                     foreignInodeListFree
+    :: StablePtr [Inode]
+    -> IO ()
+foreign export ccall "teInodeListKernel"
+                     foreignInodeListKernel
+    :: StablePtr [Inode]
+    -> IO (StablePtr [Inode])
 foreign export ccall
     "teBrowserWindowDraggingSourceIntraApplicationOperations"
     foreignBrowserWindowDraggingSourceIntraApplicationOperations
@@ -254,14 +281,12 @@ foreign export ccall "teInodeDragInformationNew"
     :: StablePtr (MVar ApplicationState)
     -> Bitfield DragOperation
     -> Ptr BrowserWindowID
-    -> Word64
-    -> Ptr InodeID
+    -> StablePtr [Inode]
     -> IO (StablePtr DragInformation)
 foreign export ccall "teExternalFileDragInformationNew"
                      foreignExternalFileDragInformationNew
     :: StablePtr (MVar ApplicationState)
     -> Bitfield DragOperation
-    -> Ptr BrowserWindowID
     -> Word64
     -> Ptr CString
     -> IO (StablePtr DragInformation)
@@ -297,6 +322,55 @@ foreign export ccall "teDragInformationFilePath"
     :: StablePtr DragInformation
     -> Word64
     -> IO CString
+foreign export ccall "teConfirmationDialogNew"
+                     foreignConfirmationDialogNew
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> CString
+    -> CString
+    -> Word64
+    -> Word64
+    -> Word64
+    -> Ptr CString
+    -> IO (StablePtr ConfirmationDialog)
+foreign export ccall "teConfirmationDialogFree"
+                     foreignConfirmationDialogFree
+    :: StablePtr ConfirmationDialog
+    -> IO ()
+foreign export ccall "teConfirmationDialogBrowserWindow"
+                     foreignConfirmationDialogBrowserWindow
+    :: StablePtr ConfirmationDialog
+    -> Ptr BrowserWindowID
+    -> IO ()
+foreign export ccall "teConfirmationDialogMessage"
+                     foreignConfirmationDialogMessage
+    :: StablePtr ConfirmationDialog
+    -> IO CString
+foreign export ccall "teConfirmationDialogDetails"
+                     foreignConfirmationDialogDetails
+    :: StablePtr ConfirmationDialog
+    -> IO CString
+foreign export ccall "teConfirmationDialogDefaultButtonIndex"
+                     foreignConfirmationDialogDefaultButtonIndex
+    :: StablePtr ConfirmationDialog
+    -> IO Word64
+foreign export ccall "teConfirmationDialogCancelButtonIndex"
+                     foreignConfirmationDialogCancelButtonIndex
+    :: StablePtr ConfirmationDialog
+    -> IO Word64
+foreign export ccall "teConfirmationDialogButtonCount"
+                     foreignConfirmationDialogButtonCount
+    :: StablePtr ConfirmationDialog
+    -> IO Word64
+foreign export ccall "teConfirmationDialogButton"
+                     foreignConfirmationDialogButton
+    :: StablePtr ConfirmationDialog
+    -> Word64
+    -> IO CString
+
+
+outOfBandWord64 :: Word64
+outOfBandWord64 = 0xFFFFFFFFFFFFFFFF
 
 
 foreignFrontEndInternalFailure
@@ -428,8 +502,27 @@ wrapVoidBrowserItemCallback foreignCallback =
   in highLevelCallback
 
 
+wrapVoidConfirmationDialogCompletionHandlerCallback
+    :: FunPtr (StablePtr ConfirmationDialog
+               -> FunPtr (Word64 -> IO ())
+               -> IO ())
+    -> (ConfirmationDialog -> (Word64 -> IO ()) -> IO ())
+wrapVoidConfirmationDialogCompletionHandlerCallback foreignCallback =
+  let lowLevelCallback =
+        mkIntConfirmationDialogCompletionHandlerCallback foreignCallback
+      highLevelCallback confirmationDialog completionHandler = do
+        confirmationDialogStablePtr <- newStablePtr confirmationDialog
+        foreignCompletionHandler <- wrapCompletionHandler completionHandler
+        lowLevelCallback confirmationDialogStablePtr foreignCompletionHandler
+        freeStablePtr confirmationDialogStablePtr
+  in highLevelCallback
+
+
 foreignApplicationInit
     :: FunPtr (CString -> CString -> IO ())
+    -> FunPtr (StablePtr ConfirmationDialog
+               -> FunPtr (Word64 -> IO ())
+               -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
@@ -437,6 +530,7 @@ foreignApplicationInit
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreignApplicationInit foreignException
+                       foreignConfirm
                        foreignNoteRecentProjectsChanged
                        foreignNoteNewBrowserWindow
                        foreignNoteDeletedBrowserWindow
@@ -444,6 +538,8 @@ foreignApplicationInit foreignException
                        foreignEditBrowserItemName = do
   let callbackException =
         wrapVoidStringStringCallback foreignException
+      callbackConfirm =
+        wrapVoidConfirmationDialogCompletionHandlerCallback foreignConfirm
       callbackNoteRecentProjectsChanged =
         wrapVoidCallback foreignNoteRecentProjectsChanged
       callbackNoteNewBrowserWindow =
@@ -457,6 +553,8 @@ foreignApplicationInit foreignException
       callbacks = FrontEndCallbacks {
                       frontEndCallbacksException =
                         callbackException,
+                      frontEndCallbacksConfirm =
+                        callbackConfirm,
                       frontEndCallbacksNoteRecentProjectsChanged =
                         callbackNoteRecentProjectsChanged,
                       frontEndCallbacksNoteNewBrowserWindow =
@@ -598,6 +696,20 @@ findBrowserWindowByID applicationStateMVar
                return $ Map.lookup browserWindowID' browserWindows)
         Nothing
         $ Map.elems $ applicationStateProjects applicationState
+
+
+findMaybeBrowserWindowFromIDPtr
+    :: MVar ApplicationState
+    -> Ptr BrowserWindowID
+    -> IO (Maybe BrowserWindow)
+findMaybeBrowserWindowFromIDPtr applicationStateMVar
+                                browserWindowIDPtr = do
+  if browserWindowIDPtr == nullPtr
+    then return Nothing
+    else do
+      browserWindowID <- peek browserWindowIDPtr
+      findBrowserWindowByID applicationStateMVar
+                            browserWindowID
 
 
 foreignBrowserWindowRoot
@@ -1072,35 +1184,19 @@ foreignInodeRename applicationStateMVarStablePtr
       return ()
 
 
-foreignInodesDelete
+foreignInodeListDelete
     :: StablePtr (MVar ApplicationState)
     -> Ptr BrowserWindowID
-    -> Word64
-    -> Ptr InodeID
+    -> StablePtr [Inode]
     -> IO ()
-foreignInodesDelete applicationStateMVarStablePtr
-                    browserWindowIDPtr
-                    inodeIDCount
-                    inodeIDPtr = do
+foreignInodeListDelete applicationStateMVarStablePtr
+                       browserWindowIDPtr
+                       inodeListStablePtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  browserWindowID <- peek browserWindowIDPtr
-  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
-                                              browserWindowID
-  case maybeBrowserWindow of
-    Just browserWindow -> do
-      let project = browserWindowProject browserWindow
-          inodeIDCount' = fromIntegral inodeIDCount
-      inodeIDs <- peekArray inodeIDCount' inodeIDPtr
-      let inodes = map (\inodeID' ->
-                          Inode {
-                              inodeID = inodeID',
-                              inodeProject = project
-                            })
-                       inodeIDs
-      inodesDelete inodes
-    Nothing -> do
-      exception applicationStateMVar $(internalFailure)
-      return ()
+  maybeBrowserWindow <- findMaybeBrowserWindowFromIDPtr applicationStateMVar
+                                                        browserWindowIDPtr
+  inodeList <- deRefStablePtr inodeListStablePtr
+  inodeListDelete maybeBrowserWindow inodeList
 
 
 foreignInodeValidateDrop
@@ -1184,6 +1280,53 @@ foreignInodeAcceptDrop applicationStateMVarStablePtr
       return 0
 
 
+foreignInodeListNew
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Word64
+    -> Ptr InodeID
+    -> IO (StablePtr [Inode])
+foreignInodeListNew applicationStateMVarStablePtr
+                    browserWindowIDPtr
+                    inodeIDCount
+                    inodeIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      let inodeIDCount' = fromIntegral inodeIDCount
+          project = browserWindowProject browserWindow
+      inodeIDs <- peekArray inodeIDCount' inodeIDPtr
+      let inodes = map (\inodeID' ->
+                           Inode {
+                               inodeID = inodeID',
+                               inodeProject = project
+                             })
+                       inodeIDs
+      newStablePtr inodes
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return $ castPtrToStablePtr nullPtr
+
+
+foreignInodeListFree
+    :: StablePtr [Inode]
+    -> IO ()
+foreignInodeListFree inodesStablePtr = do
+  freeStablePtr inodesStablePtr
+
+
+foreignInodeListKernel
+    :: StablePtr [Inode]
+    -> IO (StablePtr [Inode])
+foreignInodeListKernel inodesStablePtr = do
+  inodes <- deRefStablePtr inodesStablePtr
+  inodesKernel' <- inodesKernel inodes
+  newStablePtr inodesKernel'
+
+
 foreignBrowserWindowDraggingSourceIntraApplicationOperations
     :: Bitfield DragOperation
 foreignBrowserWindowDraggingSourceIntraApplicationOperations =
@@ -1220,14 +1363,12 @@ foreignInodeDragInformationNew
     :: StablePtr (MVar ApplicationState)
     -> Bitfield DragOperation
     -> Ptr BrowserWindowID
-    -> Word64
-    -> Ptr InodeID
+    -> StablePtr [Inode]
     -> IO (StablePtr DragInformation)
 foreignInodeDragInformationNew applicationStateMVarStablePtr
                                allowedDragOperationsBitfield
                                browserWindowIDPtr
-                               inodeIDCount
-                               inodeIDPtr = do
+                               inodesStablePtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
   browserWindowID <- peek browserWindowIDPtr
   maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
@@ -1235,16 +1376,8 @@ foreignInodeDragInformationNew applicationStateMVarStablePtr
   case maybeBrowserWindow of
     Just browserWindow -> do
       let allowedDragOperations = bitfieldToSet allowedDragOperationsBitfield
-          inodeIDCount' = fromIntegral inodeIDCount
-          project = browserWindowProject browserWindow
-      inodeIDs <- peekArray inodeIDCount' inodeIDPtr
-      let inodes = map (\inodeID' ->
-                           Inode {
-                               inodeID = inodeID',
-                               inodeProject = project
-                             })
-                       inodeIDs
-          dragInformation =
+      inodes <- deRefStablePtr inodesStablePtr
+      let dragInformation =
             InodeDragInformation {
                 dragInformationAllowedDragOperations = allowedDragOperations,
                 inodeDragInformationBrowserWindow = browserWindow,
@@ -1259,34 +1392,24 @@ foreignInodeDragInformationNew applicationStateMVarStablePtr
 foreignExternalFileDragInformationNew
     :: StablePtr (MVar ApplicationState)
     -> Bitfield DragOperation
-    -> Ptr BrowserWindowID
     -> Word64
     -> Ptr CString
     -> IO (StablePtr DragInformation)
 foreignExternalFileDragInformationNew applicationStateMVarStablePtr
                                       allowedDragOperationsBitfield
-                                      browserWindowIDPtr
                                       filePathCount
                                       filePathCStringPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  browserWindowID <- peek browserWindowIDPtr
-  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
-                                              browserWindowID
-  case maybeBrowserWindow of
-    Just browserWindow -> do
-      let allowedDragOperations = bitfieldToSet allowedDragOperationsBitfield
-          filePathCount' = fromIntegral filePathCount
-      filePathCStrings <- peekArray filePathCount' filePathCStringPtr
-      filePaths <- mapM peekCString filePathCStrings
-      let dragInformation =
-            ExternalFileDragInformation {
-                dragInformationAllowedDragOperations = allowedDragOperations,
-                externalFileDragInformationFilePaths = filePaths
-              }
-      newStablePtr dragInformation
-    Nothing -> do
-      exception applicationStateMVar $(internalFailure)
-      return $ castPtrToStablePtr nullPtr
+  let allowedDragOperations = bitfieldToSet allowedDragOperationsBitfield
+      filePathCount' = fromIntegral filePathCount
+  filePathCStrings <- peekArray filePathCount' filePathCStringPtr
+  filePaths <- mapM peekCString filePathCStrings
+  let dragInformation =
+        ExternalFileDragInformation {
+            dragInformationAllowedDragOperations = allowedDragOperations,
+            externalFileDragInformationFilePaths = filePaths
+          }
+  newStablePtr dragInformation
 
 
 foreignDragInformationFree
@@ -1382,3 +1505,134 @@ foreignDragInformationFilePath dragInformationStablePtr index = do
           stringNew filePath
         else return nullPtr
     _ -> return nullPtr
+
+
+foreignConfirmationDialogNew
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> CString
+    -> CString
+    -> Word64
+    -> Word64
+    -> Word64
+    -> Ptr CString
+    -> IO (StablePtr ConfirmationDialog)
+foreignConfirmationDialogNew applicationStateMVarStablePtr
+                             browserWindowIDPtr
+                             messageCString
+                             detailsCString
+                             defaultButtonIndex
+                             cancelButtonIndex
+                             buttonCount
+                             buttonCStringsPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  maybeBrowserWindow <- findMaybeBrowserWindowFromIDPtr applicationStateMVar
+                                                        browserWindowIDPtr
+  message <- peekCString messageCString
+  details <- peekCString detailsCString
+  let maybeDefaultButtonIndex =
+        if defaultButtonIndex == outOfBandWord64
+          then Nothing
+          else Just defaultButtonIndex
+      maybeCancelButtonIndex =
+        if cancelButtonIndex == outOfBandWord64
+          then Nothing
+          else Just cancelButtonIndex
+  buttonCStrings <- peekArray (fromIntegral buttonCount) buttonCStringsPtr
+  buttons <- mapM peekCString buttonCStrings
+  newStablePtr $ ConfirmationDialog {
+                     confirmationDialogBrowserWindow = maybeBrowserWindow,
+                     confirmationDialogMessage = message,
+                     confirmationDialogDetails = details,
+                     confirmationDialogDefaultButtonIndex =
+                       maybeDefaultButtonIndex,
+                     confirmationDialogCancelButtonIndex =
+                       maybeCancelButtonIndex,
+                     confirmationDialogButtons = buttons
+                   }
+
+
+foreignConfirmationDialogFree
+    :: StablePtr ConfirmationDialog
+    -> IO ()
+foreignConfirmationDialogFree confirmationDialogStablePtr = do
+  freeStablePtr confirmationDialogStablePtr
+
+
+foreignConfirmationDialogBrowserWindow
+    :: StablePtr ConfirmationDialog
+    -> Ptr BrowserWindowID
+    -> IO ()
+foreignConfirmationDialogBrowserWindow confirmationDialogStablePtr
+                                       resultBrowserWindowIDPtr = do
+  confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
+  let browserWindowID' =
+        case confirmationDialogBrowserWindow confirmationDialog of
+          Just browserWindow -> browserWindowID browserWindow
+          Nothing -> nullBrowserWindowID
+  poke resultBrowserWindowIDPtr browserWindowID'
+
+
+foreignConfirmationDialogMessage
+    :: StablePtr ConfirmationDialog
+    -> IO CString
+foreignConfirmationDialogMessage confirmationDialogStablePtr = do
+  confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
+  newCString $ confirmationDialogMessage confirmationDialog
+
+
+foreignConfirmationDialogDetails
+    :: StablePtr ConfirmationDialog
+    -> IO CString
+foreignConfirmationDialogDetails confirmationDialogStablePtr = do
+  confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
+  newCString $ confirmationDialogDetails confirmationDialog
+
+
+foreignConfirmationDialogDefaultButtonIndex
+    :: StablePtr ConfirmationDialog
+    -> IO Word64
+foreignConfirmationDialogDefaultButtonIndex confirmationDialogStablePtr = do
+  confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
+  let maybeDefaultButtonIndex =
+        confirmationDialogDefaultButtonIndex confirmationDialog
+      defaultButtonIndex = case maybeDefaultButtonIndex of
+                             Just defaultButtonIndex -> defaultButtonIndex
+                             Nothing -> outOfBandWord64
+  return defaultButtonIndex
+
+
+foreignConfirmationDialogCancelButtonIndex
+    :: StablePtr ConfirmationDialog
+    -> IO Word64
+foreignConfirmationDialogCancelButtonIndex confirmationDialogStablePtr = do
+  confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
+  let maybeCancelButtonIndex =
+        confirmationDialogCancelButtonIndex confirmationDialog
+      defaultButtonIndex = case maybeCancelButtonIndex of
+                             Just defaultButtonIndex -> defaultButtonIndex
+                             Nothing -> outOfBandWord64
+  return defaultButtonIndex
+
+
+foreignConfirmationDialogButtonCount
+    :: StablePtr ConfirmationDialog
+    -> IO Word64
+foreignConfirmationDialogButtonCount confirmationDialogStablePtr = do
+  confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
+  let buttons = confirmationDialogButtons confirmationDialog
+  return $ fromIntegral $ length buttons
+
+
+foreignConfirmationDialogButton
+    :: StablePtr ConfirmationDialog
+    -> Word64
+    -> IO CString
+foreignConfirmationDialogButton confirmationDialogStablePtr
+                                index = do
+  confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
+  let index' = fromIntegral index
+      buttons = confirmationDialogButtons confirmationDialog
+  if index' < length buttons
+    then newCString $ buttons !! index'
+    else return nullPtr

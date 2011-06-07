@@ -7,6 +7,7 @@ module Te
    Inode, inodeID,
    BrowserWindow, browserWindowID,
    BrowserItem(..),
+   ConfirmationDialog(..),
    frontEndInternalFailure,
    versionString,
    timestampShow,
@@ -42,15 +43,17 @@ module Te
    inodeModificationTimestamp,
    inodeIcon,
    inodeRename,
-   inodesDelete,
+   inodeListDelete,
    inodeValidateDrop,
    inodeAcceptDrop,
+   inodesKernel,
    browserWindowDraggingSourceIntraApplicationOperations,
    browserWindowDraggingSourceInterApplicationOperations)
   where
 
 import Control.Concurrent.MVar
 import Control.Exception
+import Control.Monad
 import Data.Char
 import Data.Digest.Murmur64
 import Data.List
@@ -665,15 +668,126 @@ inodeRename inode newName = do
       Nothing -> throwIO $(internalFailure)
 
 
-inodesDelete :: [Inode] -> IO ()
-inodesDelete inodes = do
+inodeListDelete :: Maybe BrowserWindow -> [Inode] -> IO ()
+inodeListDelete maybeBrowserWindow inodes = do
+  inodes <- getInodesKernel inodes
   case inodes of
     [] -> return ()
     (firstInode:_) -> do
       let project = inodeProject firstInode
           applicationStateMVar = projectApplicationState project
       catchTe applicationStateMVar () $ do
-        mapM_ recordDeletedInode inodes
+        (nFolders, nFiles, totalSize) <- getInodesRecursiveStatistics inodes
+        if (nFolders > 0) || (nFiles > 0)
+          then do
+            let pluralize :: Int -> String -> String
+                pluralize n word =
+                  if n == 1
+                    then (show n) ++ " " ++ word
+                    else (show n) ++ " " ++ word ++ "s"
+                omitIfZero :: Int -> String -> Maybe String
+                omitIfZero n word =
+                  if n == 0
+                    then Nothing
+                    else Just $ pluralize n word
+                message = "Do you want to delete "
+                          ++ (if length inodes == 1
+                                then "this item"
+                                else "these items")
+                          ++ "?"
+                details = intercalate " and "
+                                      (catMaybes $ map (uncurry omitIfZero)
+                                                       [(nFolders, "folder"),
+                                                        (nFiles, "file")])
+                          ++ ", totalling "
+                          ++ (show totalSize)
+                          ++ ", will be deleted."
+                          ++ "  "
+                          ++ "This action is irreversible."
+            confirm applicationStateMVar
+                    (ConfirmationDialog {
+                         confirmationDialogBrowserWindow = maybeBrowserWindow,
+                         confirmationDialogMessage = message,
+                         confirmationDialogDetails = details,
+                         confirmationDialogDefaultButtonIndex = Just 0,
+                         confirmationDialogCancelButtonIndex = Just 1,
+                         confirmationDialogButtons = ["Yes", "No"]
+                       })
+                    (\result -> do
+                       if result == 0
+                         then do
+                           mapM_ recordDeletedInode inodes
+                           browserWindowsMap <-
+                             readMVar $ projectBrowserWindows project
+                           let browserWindows = Map.elems browserWindowsMap
+                           mapM_ noteBrowserItemsChanged browserWindows
+                         else return ())
+          else return ()
+
+
+getInodesRecursiveStatistics :: [Inode] -> IO (Int, Int, ByteSize)
+getInodesRecursiveStatistics inodes = do
+  inodesKernel <- getInodesKernel inodes
+  let visitInode inode = do
+        inodeInformation <- lookupInodeInformation inode
+        let isFolder = inodeInformationKind inodeInformation
+                       == InodeKindDirectory
+            size = case inodeInformationSize inodeInformation of
+                     Just size -> size
+                     Nothing -> 0
+        inodeChildren <- lookupInodeChildren inode
+        visitInodeList (if isFolder
+                          then 1
+                          else 0,
+                        if not isFolder
+                          then 1
+                          else 0,
+                        size)
+                       inodeChildren
+      visitInodeList information inodes = do
+        foldM (\(nFoldersSoFar, nFilesSoFar, totalSizeSoFar) inode -> do
+                 (nFoldersHere, nFilesHere, totalSizeHere) <- visitInode inode
+                 return (nFoldersSoFar + nFoldersHere,
+                         nFilesSoFar + nFilesHere,
+                         totalSizeSoFar + totalSizeHere))
+              information
+              inodes
+  visitInodeList (0, 0, 0) inodesKernel
+
+
+getInodesKernel :: [Inode] -> IO [Inode]
+getInodesKernel inodes = do
+  let getIsAncestorOf :: Inode -> Inode -> IO Bool
+      getIsAncestorOf potentialAncestorInode scrutineeInode = do
+        if inodeID potentialAncestorInode == inodeID scrutineeInode
+          then return True
+          else do
+            maybeScrutineeParentInode <- lookupInodeParent scrutineeInode
+            case maybeScrutineeParentInode of
+              Nothing -> return False
+              Just scrutineeParentInode ->
+                getIsAncestorOf potentialAncestorInode scrutineeParentInode
+      
+      visit :: [Inode] -> IO [Inode]
+      visit [] = return []
+      visit (firstInode:rest) = do
+        (firstInode, rest)
+          <- foldM (\(firstInode, okayInodesSoFar) foundInode -> do
+                      isAncestor <- getIsAncestorOf firstInode foundInode
+                      if isAncestor
+                        then return (firstInode, okayInodesSoFar)
+                        else do
+                          isDescendant <- getIsAncestorOf foundInode firstInode
+                          if isDescendant
+                            then return (foundInode, okayInodesSoFar)
+                            else return (firstInode,
+                                         foundInode : okayInodesSoFar))
+                   (firstInode, [])
+                   rest
+        rest <- visit rest
+        return $ firstInode : rest
+  
+  visit inodes
 
 
 inodeValidateDrop
@@ -710,6 +824,17 @@ inodeAcceptDrop prospectiveTargetInode dragInformation = do
             return True
           _ -> return False
       _ -> throwIO $(internalFailure)
+
+
+inodesKernel :: [Inode] -> IO [Inode]
+inodesKernel inodes = do
+  case inodes of
+    [] -> return []
+    (firstInode:_) -> do
+      let project = inodeProject firstInode
+          applicationStateMVar = projectApplicationState project
+      catchTe applicationStateMVar [] $ do
+        getInodesKernel inodes
 
 
 getDropTargetAndOperation

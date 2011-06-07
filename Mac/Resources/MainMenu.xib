@@ -224,7 +224,7 @@
 										<string key="NSName">_NSRecentDocumentsMenu</string>
 									</object>
 								</object>
-								<object class="NSMenuItem" id="100946608">
+								<object class="NSMenuItem" id="552339099">
 									<reference key="NSMenu" ref="720053764"/>
 									<bool key="NSIsDisabled">YES</bool>
 									<bool key="NSIsSeparator">YES</bool>
@@ -234,7 +234,7 @@
 									<reference key="NSOnImage" ref="353210768"/>
 									<reference key="NSMixedImage" ref="549394948"/>
 								</object>
-								<object class="NSMenuItem" id="940832876">
+								<object class="NSMenuItem" id="652379721">
 									<reference key="NSMenu" ref="720053764"/>
 									<string key="NSTitle">New Folder</string>
 									<string key="NSKeyEquiv">N</string>
@@ -243,10 +243,19 @@
 									<reference key="NSOnImage" ref="353210768"/>
 									<reference key="NSMixedImage" ref="549394948"/>
 								</object>
-								<object class="NSMenuItem" id="109001095">
+								<object class="NSMenuItem" id="421542411">
 									<reference key="NSMenu" ref="720053764"/>
 									<string key="NSTitle">New Haskell Module</string>
 									<string key="NSKeyEquiv">n</string>
+									<int key="NSKeyEquivModMask">1048576</int>
+									<int key="NSMnemonicLoc">2147483647</int>
+									<reference key="NSOnImage" ref="353210768"/>
+									<reference key="NSMixedImage" ref="549394948"/>
+								</object>
+								<object class="NSMenuItem" id="345341048">
+									<reference key="NSMenu" ref="720053764"/>
+									<string key="NSTitle">Delete Folder or File...</string>
+									<string type="base64-UTF8" key="NSKeyEquiv">CA</string>
 									<int key="NSKeyEquivModMask">1048576</int>
 									<int key="NSMnemonicLoc">2147483647</int>
 									<reference key="NSOnImage" ref="353210768"/>
@@ -1132,7 +1141,7 @@
 					<object class="IBActionConnection" key="connection">
 						<string key="label">newFolder:</string>
 						<reference key="source" ref="986802837"/>
-						<reference key="destination" ref="940832876"/>
+						<reference key="destination" ref="652379721"/>
 					</object>
 					<int key="connectionID">866</int>
 				</object>
@@ -1140,9 +1149,17 @@
 					<object class="IBActionConnection" key="connection">
 						<string key="label">newHaskellModule:</string>
 						<reference key="source" ref="986802837"/>
-						<reference key="destination" ref="109001095"/>
+						<reference key="destination" ref="421542411"/>
 					</object>
 					<int key="connectionID">867</int>
+				</object>
+				<object class="IBConnectionRecord">
+					<object class="IBActionConnection" key="connection">
+						<string key="label">deleteFolderOrFile:</string>
+						<reference key="source" ref="986802837"/>
+						<reference key="destination" ref="345341048"/>
+					</object>
+					<int key="connectionID">869</int>
 				</object>
 			</array>
 			<object class="IBMutableOrderedSet" key="objectRecords">
@@ -1223,9 +1240,10 @@
 							<reference ref="425164168"/>
 							<reference ref="579971712"/>
 							<reference ref="1010469920"/>
-							<reference ref="940832876"/>
-							<reference ref="100946608"/>
-							<reference ref="109001095"/>
+							<reference ref="652379721"/>
+							<reference ref="552339099"/>
+							<reference ref="421542411"/>
+							<reference ref="345341048"/>
 						</array>
 						<reference key="parent" ref="379814623"/>
 					</object>
@@ -1649,17 +1667,22 @@
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">861</int>
-						<reference key="object" ref="940832876"/>
+						<reference key="object" ref="652379721"/>
 						<reference key="parent" ref="720053764"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">862</int>
-						<reference key="object" ref="100946608"/>
+						<reference key="object" ref="552339099"/>
 						<reference key="parent" ref="720053764"/>
 					</object>
 					<object class="IBObjectRecord">
 						<int key="objectID">863</int>
-						<reference key="object" ref="109001095"/>
+						<reference key="object" ref="421542411"/>
+						<reference key="parent" ref="720053764"/>
+					</object>
+					<object class="IBObjectRecord">
+						<int key="objectID">868</int>
+						<reference key="object" ref="345341048"/>
 						<reference key="parent" ref="720053764"/>
 					</object>
 				</array>
@@ -1796,6 +1819,7 @@
 				<string key="861.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="862.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="863.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
+				<string key="868.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<string key="92.IBPluginDependency">com.apple.InterfaceBuilder.CocoaPlugin</string>
 				<integer value="1" key="92.ImportedFromIB2"/>
 			</dictionary>
@@ -1803,7 +1827,7 @@
 			<nil key="activeLocalization"/>
 			<dictionary class="NSMutableDictionary" key="localizations"/>
 			<nil key="sourceID"/>
-			<int key="maxID">867</int>
+			<int key="maxID">869</int>
 		</object>
 		<object class="IBClassDescriber" key="IBDocument.Classes">
 			<array class="NSMutableArray" key="referencedPartialClassDescriptions">
@@ -1811,6 +1835,7 @@
 					<string key="className">AppDelegate</string>
 					<string key="superclassName">NSDocumentController</string>
 					<dictionary class="NSMutableDictionary" key="actions">
+						<string key="deleteFolderOrFile:">id</string>
 						<string key="newFolder:">id</string>
 						<string key="newHaskellModule:">id</string>
 						<string key="newProject:">id</string>
@@ -1818,6 +1843,10 @@
 						<string key="openRecentProject:">id</string>
 					</dictionary>
 					<dictionary class="NSMutableDictionary" key="actionInfosByName">
+						<object class="IBActionInfo" key="deleteFolderOrFile:">
+							<string key="name">deleteFolderOrFile:</string>
+							<string key="candidateClassName">id</string>
+						</object>
 						<object class="IBActionInfo" key="newFolder:">
 							<string key="name">newFolder:</string>
 							<string key="candidateClassName">id</string>

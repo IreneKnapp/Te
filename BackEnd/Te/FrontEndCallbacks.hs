@@ -1,5 +1,6 @@
 module Te.FrontEndCallbacks
   (exception,
+   confirm,
    noteRecentProjectsChanged,
    noteNewBrowserWindow,
    noteDeletedBrowserWindow,
@@ -8,6 +9,7 @@ module Te.FrontEndCallbacks
   where
 
 import Control.Concurrent.MVar
+import Data.Word
 
 import Te.Exceptions
 import Te.Types
@@ -21,6 +23,18 @@ exception applicationStateMVar exception = do
       messageString = show exception
       detailsString = exceptionDetails exception
   callback messageString detailsString
+
+
+confirm
+    :: MVar ApplicationState
+    -> ConfirmationDialog
+    -> (Word64 -> IO ())
+    -> IO ()
+confirm applicationStateMVar confirmationDialog completionHandler = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksConfirm callbacks
+  callback confirmationDialog completionHandler
 
 
 noteRecentProjectsChanged :: MVar ApplicationState -> IO ()

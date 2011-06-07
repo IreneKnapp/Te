@@ -12,6 +12,7 @@ module Te.Database
    recordModifiedInode,
    recordMovedInode,
    lookupInodeParent,
+   lookupInodeChildren,
    lookupInodeChildCount,
    lookupInodeChild,
    lookupInodeInformation,
@@ -349,6 +350,27 @@ lookupInodeParent inode = do
                                                 }
         Nothing -> return Nothing
     _ -> return Nothing
+
+
+lookupInodeChildren :: Inode -> IO [Inode]
+lookupInodeChildren inode = do
+  let project = inodeProject inode
+      database = projectDatabase project
+  rows <- query database
+                (  "SELECT id FROM inodes WHERE parent = ?\n"
+                ++ "ORDER BY cased_name ASC")
+                [toSQL $ inodeID inode]
+  mapM (\row -> do
+          case row of
+            [sqlChildInodeID] ->
+              case fromSQL sqlChildInodeID of
+                Just childInodeID -> return $ Inode {
+                                                  inodeID = childInodeID,
+                                                  inodeProject = project
+                                                }
+                Nothing -> throwIO $(internalFailure)
+            _ -> throwIO $(internalFailure))
+       rows
 
 
 lookupInodeChildCount :: Inode -> IO Word64

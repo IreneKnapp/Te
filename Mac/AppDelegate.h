@@ -38,9 +38,14 @@
 - (IBAction) openRecentProject: (id) sender;
 - (IBAction) newFolder: (id) sender;
 - (IBAction) newHaskellModule: (id) sender;
+- (IBAction) deleteFolderOrFile: (id) sender;
 - (void) exceptionWithMessage: (NSString *) messageString
                       details: (NSString *) detailsString;
 void exception(char *messageCString, char *detailsCString);
+- (uint64_t) confirm: (void *) confirmationDialog
+   completionHandler: (void (*)(uint64_t result)) completionHandler;
+void confirm(void *confirmationDialog,
+             void (*completionHandler)(uint64_t result));
 - (void) noteRecentProjectsChanged;
 void noteRecentProjectsChanged();
 - (void) noteNewBrowserWindow: (uuid_t *) browserWindowID;

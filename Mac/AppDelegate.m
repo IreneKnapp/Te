@@ -42,6 +42,7 @@
     hs_init(&hsArgc, &hsArgv);
     
     applicationState = teApplicationInit((HsFunPtr) exception,
+                                         (HsFunPtr) confirm,
                                          (HsFunPtr) noteRecentProjectsChanged,
                                          (HsFunPtr) noteNewBrowserWindow,
                                          (HsFunPtr) noteDeletedBrowserWindow,
@@ -263,6 +264,42 @@
 }
 
 
+- (IBAction) deleteFolderOrFile: (id) sender {
+    if(!applicationState)
+        return;
+    
+    NSWindow *window = [NSApp mainWindow];
+    if(!window)
+        return;
+    
+    NSWindowController *windowController = [window windowController];
+    if(!windowController)
+        return;
+    
+    if([windowController isKindOfClass: [BrowserWindow class]]) {
+        BrowserWindow *browserWindowObject
+            = (BrowserWindow *) windowController;
+        uuid_t *browserWindowID = [browserWindowObject browserWindowID];
+        
+        void *inodeList = [browserWindowObject getSelectedInodeList];
+        
+        if(!inodeList)
+            return;
+        
+        void *inodeListKernel = teInodeListKernel(inodeList);
+        
+        teInodeListFree(inodeList);
+        
+        if(!inodeListKernel)
+            return;
+        
+        teInodeListDelete(applicationState, browserWindowID, inodeListKernel);
+        
+        teInodeListFree(inodeListKernel);
+    }
+}
+
+
 - (void) exceptionWithMessage: (NSString *) messageString
                       details: (NSString *) detailsString
 {
@@ -283,6 +320,78 @@ void exception(char *messageCString, char *detailsCString) {
         [(AppDelegate *) [NSApp delegate] exceptionWithMessage: messageString
                                           details: detailsString];
     }
+}
+
+
+- (uint64_t) confirm: (void *) confirmationDialog
+   completionHandler: (void (*)(uint64_t result)) completionHandler
+{
+    BrowserWindow *browserWindowObject = nil;
+    uuid_t browserWindowID;
+    teConfirmationDialogBrowserWindow(confirmationDialog, &browserWindowID);
+    if(!uuidIsNull(&browserWindowID)) {
+        browserWindowObject
+            = [browserWindows objectForKey: (void *) browserWindowID];
+    }
+    
+    char *messageCString = teConfirmationDialogMessage(confirmationDialog);
+    NSString *message = [NSString stringWithUTF8String: messageCString];
+    teStringFree(messageCString);
+    
+    char *detailsCString = teConfirmationDialogDetails(confirmationDialog);
+    NSString *details = [NSString stringWithUTF8String: detailsCString];
+    teStringFree(detailsCString);
+    
+    uint64_t defaultButtonIndex
+        = teConfirmationDialogDefaultButtonIndex(confirmationDialog);
+    
+    uint64_t cancelButtonIndex
+        = teConfirmationDialogCancelButtonIndex(confirmationDialog);
+    
+    uint64_t buttonCount
+        = teConfirmationDialogButtonCount(confirmationDialog);
+    
+    NSAlert *alert = [[NSAlert alloc] init];
+    [alert setMessageText: message];
+    [alert setInformativeText: details];
+    
+    for(uint64_t i = 0; i < buttonCount; i++) {
+        char *buttonTitleCString
+            = teConfirmationDialogButton(confirmationDialog, i);
+        if(buttonTitleCString) {
+            NSString *buttonTitle
+                = [NSString stringWithUTF8String: buttonTitleCString];
+            teStringFree(buttonTitleCString);
+            
+            NSButton *button = [alert addButtonWithTitle: buttonTitle];
+            
+            if(i == defaultButtonIndex) {
+                [button setKeyEquivalent: @"\r"];
+            } else if(i == cancelButtonIndex) {
+                [button setKeyEquivalent: @"\x1B"];
+            } else {
+                [button setKeyEquivalent: @""];
+            }
+            
+            [button setTag: i];
+        }
+    }
+    
+    if(browserWindowObject) {
+        [browserWindowObject runSheetModalAlert: alert
+                             completionHandler: completionHandler];
+    } else {
+        uint64_t result = [alert runModal];
+        completionHandler(result);
+    }
+}
+
+
+void confirm(void *confirmationDialog,
+             void (*completionHandler)(uint64_t result))
+{
+    [(AppDelegate *) [NSApp delegate] confirm: confirmationDialog
+                                      completionHandler: completionHandler];
 }
 
 

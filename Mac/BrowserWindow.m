@@ -109,6 +109,48 @@
 }
 
 
+- (void *) getSelectedInodeList {
+    void *applicationState = getApplicationState();
+    if(!applicationState)
+        return NULL;
+    
+    NSIndexSet *rowIndices = [filesOutlineView selectedRowIndexes];
+    uint64_t inodeIDCount = [rowIndices count];
+    if(inodeIDCount == 0) {
+        return NULL;
+    } else {
+        __block uuid_t *inodeIDs = malloc(inodeIDCount * sizeof(uuid_t));
+        
+        __block uint64_t i = 0;
+        [rowIndices enumerateIndexesUsingBlock:
+                        ^(NSUInteger index, BOOL *stop)
+                        {
+                            id item = [filesOutlineView itemAtRow: index];
+                            if([item isKindOfClass: [BrowserItem class]]) {
+                                BrowserItem *browserItemObject
+                                    = (BrowserItem *) item;
+                                
+                                uuid_t *inodeID = [browserItemObject inodeID];
+                                
+                                copyUUID(&inodeIDs[i], inodeID);
+                                
+                                i++;
+                            }
+                        }];
+        inodeIDCount = i;
+        
+        void *inodeList = teInodeListNew(applicationState,
+                                         &browserWindowID,
+                                         inodeIDCount,
+                                         inodeIDs);
+        
+        free(inodeIDs);
+        
+        return inodeList;
+    }
+}
+
+
 - (BrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID {
     BrowserItem *browserItem = [browserItems objectForKey: (void *) inodeID];
     if(!browserItem) {
@@ -154,6 +196,27 @@
         return;
     
     teBrowserWindowClose(applicationState, &browserWindowID);
+}
+
+
+- (void) runSheetModalAlert: (NSAlert *) alert
+          completionHandler: (void (*)(uint64_t result)) completionHandler
+{
+    [alert beginSheetModalForWindow: [self window]
+           modalDelegate: self
+           didEndSelector:
+            @selector(sheetModalAlertFinished:returnCode:contextInfo:)
+           contextInfo: completionHandler];
+}
+
+
+- (void) sheetModalAlertFinished: (NSAlert *) alert
+                      returnCode: (NSInteger) returnCode
+                     contextInfo: (void *) contextInfo
+{
+    void (*completionHandler)(uint64_t result)
+        = (void (*)(uint64_t result)) contextInfo;
+    completionHandler(returnCode);
 }
 
 
