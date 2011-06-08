@@ -45,6 +45,9 @@ CREATE TABLE inodes (
 );
 CREATE TABLE windows (
   id BLOB PRIMARY KEY,
+  kind TEXT CHECK ((typeof(kind) = 'text')
+                   AND ((kind = 'browser')
+                        OR (kind = 'document'))),
   top INTEGER CHECK ((top IS NULL)
                      OR (typeof(top) = 'integer')),
   left INTEGER CHECK ((left IS NULL)
@@ -87,6 +90,14 @@ CREATE TABLE browser_items (
                           AND ((expanded = 0)
                                OR (expanded = 1))),
   PRIMARY KEY (inode, browser_window)
+);
+CREATE TABLE document_windows (
+  id BLOB PRIMARY KEY REFERENCES windows(id)
+                      ON DELETE CASCADE
+                      ON UPDATE CASCADE,
+  inode BLOB REFERENCES inodes(id)
+             ON DELETE SET NULL
+             ON UPDATE CASCADE
 );
 INSERT INTO settings (program, schema_version,
 creation_timestamp, modification_timestamp) VALUES

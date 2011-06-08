@@ -4,9 +4,12 @@ module Te
    Timestamp(..),
    FrontEndCallbacks(..),
    ApplicationState,
-   Inode, inodeID,
-   BrowserWindow, browserWindowID,
+   Inode, InodeID, inodeID,
+   Window, WindowID, windowID,
+   WindowType(..), toWindowID, fromWindowID,
+   BrowserWindow, BrowserWindowID, browserWindowID,
    BrowserItem(..),
+   DocumentWindow, DocumentWindowID, documentWindowID,
    ConfirmationDialog(..),
    frontEndInternalFailure,
    versionString,
@@ -24,9 +27,9 @@ module Te
    applicationNewProject,
    applicationOpenProject,
    applicationOpenRecentProject,
-   browserWindowClose,
-   browserWindowTitle,
-   browserWindowTitleIcon,
+   windowClose,
+   windowTitle,
+   windowTitleIcon,
    browserWindowRoot,
    browserItemNewFolderInside,
    browserItemNewFileInside,
@@ -191,14 +194,14 @@ applicationNewProject applicationStateMVar =
     name <- getNextUntitledProjectName applicationStateMVar
     nameMVar <- newMVar name
     filePathMVar <- newMVar Nothing
-    browserWindowsMVar <- newMVar Map.empty
+    windowsMVar <- newMVar Map.empty
     let newProject = Project {
                          projectID = projectID,
                          projectApplicationState = applicationStateMVar,
                          projectDatabase = database,
                          projectName = nameMVar,
                          projectFilePath = filePathMVar,
-                         projectBrowserWindows = browserWindowsMVar
+                         projectWindows = windowsMVar
                        }
     addProjectToApplicationState applicationStateMVar newProject
     restoreProjectWindows newProject
@@ -229,7 +232,7 @@ applicationOpenProject' applicationStateMVar filePath = do
               projectID <- newProjectID
               nameMVar <- newMVar $ computeNameForFilePath filePath
               filePathMVar <- newMVar $ Just filePath
-              browserWindowsMVar <- newMVar Map.empty
+              windowsMVar <- newMVar Map.empty
               let newProject = Project {
                                    projectID = projectID,
                                    projectApplicationState =
@@ -237,8 +240,7 @@ applicationOpenProject' applicationStateMVar filePath = do
                                    projectDatabase = database,
                                    projectName = nameMVar,
                                    projectFilePath = filePathMVar,
-                                   projectBrowserWindows =
-                                     browserWindowsMVar
+                                   projectWindows = windowsMVar
                                  }
               addProjectToApplicationState applicationStateMVar newProject
               updateProjectInRecentProjects applicationStateMVar newProject
@@ -325,10 +327,14 @@ updateProjectInRecentProjects applicationStateMVar project = do
 
 restoreProjectWindows :: Project -> IO ()
 restoreProjectWindows project = do
-  browserWindows <- readMVar $ projectBrowserWindows project
-  if Map.null browserWindows
-    then newBrowserWindow project Nothing
-    else return ()
+  windows <- takeMVar $ projectWindows project
+  if Map.null windows
+    then do
+      putMVar (projectWindows project) windows
+      newBrowserWindow project Nothing
+    else do
+      putMVar (projectWindows project) windows
+      return ()
 
 
 computeNextNumberedName :: String -> String -> [String] -> Bool -> String
@@ -409,11 +415,11 @@ newBrowserWindow project maybeRootInode = do
                                 browserWindowID = newBrowserWindowID,
                                 browserWindowProject = project
                               }
-    browserWindows <- takeMVar $ projectBrowserWindows project
-    let browserWindows' = Map.insert newBrowserWindowID
-                                     newBrowserWindow'
-                                     browserWindows
-    putMVar (projectBrowserWindows project) browserWindows'
+        newWindow = toWindow newBrowserWindow'
+        newWindowID = windowID newWindow
+    windows <- takeMVar $ projectWindows project
+    let windows' = Map.insert newWindowID newWindow windows
+    putMVar (projectWindows project) windows'
     rootInode <- case maybeRootInode of
                    Just rootInode -> return rootInode
                    Nothing -> lookupProjectRoot project
@@ -421,41 +427,122 @@ newBrowserWindow project maybeRootInode = do
     noteNewBrowserWindow newBrowserWindow'
 
 
-browserWindowClose :: BrowserWindow -> IO ()
-browserWindowClose browserWindow = do
-  let project = browserWindowProject browserWindow
+class WindowType window where
+  toWindow :: window -> Window
+  getFromWindow :: Window -> IO (Maybe window)
+
+
+instance WindowType BrowserWindow where
+  toWindow browserWindow =
+             Window {
+                 windowID = toWindowID $ browserWindowID browserWindow,
+                 windowProject = browserWindowProject browserWindow
+               }
+  getFromWindow window = do
+    kind <- lookupWindowKind window
+    case kind of
+      WindowKindBrowser ->
+        return $ Just $ BrowserWindow {
+                            browserWindowID = fromWindowID $ windowID window,
+                            browserWindowProject = windowProject window
+                          }
+      _ -> return Nothing
+
+
+instance WindowType DocumentWindow where
+  toWindow documentWindow =
+             Window {
+                 windowID = toWindowID $ documentWindowID documentWindow,
+                 windowProject = documentWindowProject documentWindow
+               }
+  getFromWindow window = do
+    kind <- lookupWindowKind window
+    case kind of
+      WindowKindDocument ->
+        return $ Just $ DocumentWindow {
+                            documentWindowID = fromWindowID $ windowID window,
+                            documentWindowProject = windowProject window
+                          }
+      _ -> return Nothing
+
+
+windowClose :: Window -> IO ()
+windowClose window = do
+  let project = windowProject window
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar () $ do
-    noteDeletedBrowserWindow browserWindow
-    projectClose project
+    windows <- takeMVar $ projectWindows project
+    let deletedWindowID = windowID window
+        windows' = Map.delete deletedWindowID windows
+    noteDeletedWindow window
+    if Map.null windows'
+      then do
+        projectClose project
+        putMVar (projectWindows project) windows'
+      else do
+        putMVar (projectWindows project) windows'
 
 
-browserWindowTitle :: BrowserWindow -> IO String
-browserWindowTitle browserWindow = do
-  let project = browserWindowProject browserWindow
+windowTitle :: Window -> IO String
+windowTitle window = do
+  let project = windowProject window
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "Unknown" $ do
-    projectName <- readMVar $ projectName project
-    folderInode <- lookupBrowserWindowRoot browserWindow
-    rootInode <- lookupProjectRoot project
-    if inodeID rootInode == inodeID folderInode
-      then return projectName
-      else do
-        folderInodeInformation <- lookupInodeInformation folderInode
-        let folderName = inodeInformationName folderInodeInformation
-        return $ projectName ++ " - " ++ folderName
+    kind <- lookupWindowKind window
+    case kind of
+      WindowKindBrowser -> do
+        maybeBrowserWindow <- getFromWindow window
+        case maybeBrowserWindow of
+          Just browserWindow -> do
+            projectName <- readMVar $ projectName project
+            folderInode <- lookupBrowserWindowRoot browserWindow
+            rootInode <- lookupProjectRoot project
+            if inodeID rootInode == inodeID folderInode
+              then return projectName
+              else do
+                folderInodeInformation <- lookupInodeInformation folderInode
+                let folderName = inodeInformationName folderInodeInformation
+                return $ projectName ++ " - " ++ folderName
+          Nothing -> throwIO $(internalFailure)
+      WindowKindDocument -> do
+        maybeDocumentWindow <- getFromWindow window
+        case maybeDocumentWindow of
+          Just documentWindow -> do
+            documentInode <- lookupDocumentWindowInode documentWindow
+            documentInodeInformation <- lookupInodeInformation documentInode
+            let documentName = inodeInformationName documentInodeInformation
+            return documentName
+          Nothing -> throwIO $(internalFailure)
 
 
-browserWindowTitleIcon :: BrowserWindow -> IO String
-browserWindowTitleIcon browserWindow = do
-  let project = browserWindowProject browserWindow
+windowTitleIcon :: Window -> IO String
+windowTitleIcon window = do
+  let project = windowProject window
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "Project" $ do
-    inode <- lookupBrowserWindowRoot browserWindow
-    rootInode <- lookupProjectRoot project
-    if inodeID rootInode == inodeID inode
-      then return "Project"
-      else return "Folder"
+    kind <- lookupWindowKind window
+    case kind of
+      WindowKindBrowser -> do
+        maybeBrowserWindow <- getFromWindow window
+        case maybeBrowserWindow of
+          Just browserWindow -> do
+            inode <- lookupBrowserWindowRoot browserWindow
+            rootInode <- lookupProjectRoot project
+            if inodeID rootInode == inodeID inode
+              then return "Project"
+              else return "Folder"
+          Nothing -> throwIO $(internalFailure)
+      WindowKindDocument -> do
+        maybeDocumentWindow <- getFromWindow window
+        case maybeDocumentWindow of
+          Just documentWindow -> do
+            documentInode <- lookupDocumentWindowInode documentWindow
+            documentInodeInformation <- lookupInodeInformation documentInode
+            let documentKind = inodeInformationKind documentInodeInformation
+            case documentKind of
+              InodeKindDirectory -> return "Folder"
+              InodeKindHaskell -> return "File"
+          Nothing -> throwIO $(internalFailure)
 
 
 browserWindowRoot :: BrowserWindow -> IO BrowserItem
@@ -492,6 +579,17 @@ getChildInodeNames inode = do
           inodeInformation <- lookupInodeInformation inode
           return $ inodeInformationName inodeInformation)
        childInodes
+
+
+noteBrowserItemsChangedInAllBrowserWindows :: Project -> IO ()
+noteBrowserItemsChangedInAllBrowserWindows project = do
+  windows <- readMVar $ projectWindows project
+  mapM_ (\window -> do
+           maybeBrowserWindow <- getFromWindow window
+           case maybeBrowserWindow of
+             Just browserWindow -> noteBrowserItemsChanged browserWindow
+             Nothing -> return ())
+        $ Map.elems windows
 
 
 browserItemNewFolderInside :: BrowserItem -> IO ()
@@ -665,9 +763,7 @@ inodeRename inode newName = do
     case maybeParent of
       Just parent -> do
         recordMovedInode inode newName parent
-        browserWindowsMap <- readMVar $ projectBrowserWindows project
-        let browserWindows = Map.elems browserWindowsMap
-        mapM_ noteBrowserItemsChanged browserWindows
+        noteBrowserItemsChangedInAllBrowserWindows project
       Nothing -> throwIO $(internalFailure)
 
 
@@ -720,10 +816,7 @@ inodeListDelete maybeBrowserWindow inodes = do
                        if result == 0
                          then do
                            mapM_ recordDeletedInode inodes
-                           browserWindowsMap <-
-                             readMVar $ projectBrowserWindows project
-                           let browserWindows = Map.elems browserWindowsMap
-                           mapM_ noteBrowserItemsChanged browserWindows
+                           noteBrowserItemsChangedInAllBrowserWindows project
                          else return ())
           else return ()
 
@@ -834,9 +927,7 @@ inodeAcceptDrop prospectiveTargetInode dragInformation = do
                     let name = inodeInformationName draggedInodeInformation
                     recordMovedInode draggedInode name targetInode)
                  $ inodeDragInformationInodes dragInformation
-            browserWindowsMap <- readMVar $ projectBrowserWindows project
-            let browserWindows = Map.elems browserWindowsMap
-            mapM_ noteBrowserItemsChanged browserWindows
+            noteBrowserItemsChangedInAllBrowserWindows project
             return True
           _ -> return False
       _ -> throwIO $(internalFailure)

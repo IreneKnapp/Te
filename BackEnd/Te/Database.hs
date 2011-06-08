@@ -16,10 +16,13 @@ module Te.Database
    lookupInodeChildCount,
    lookupInodeChild,
    lookupInodeInformation,
+   lookupWindowKind,
    recordNewBrowserWindow,
    lookupBrowserWindowRoot,
    recordBrowserItemExpanded,
-   lookupBrowserItemExpanded)
+   lookupBrowserItemExpanded,
+   recordNewDocumentWindow,
+   lookupDocumentWindowInode)
   where
 
 import Control.Exception
@@ -157,6 +160,9 @@ initProjectDatabaseSchema database = do
   _ <- query database
              (  "CREATE TABLE windows (\n"
              ++ "  id BLOB PRIMARY KEY,\n"
+             ++ "  kind TEXT CHECK ((typeof(kind) = 'text')\n"
+             ++ "                   AND ((kind = 'browser')\n"
+             ++ "                        OR (kind = 'document'))),\n"
              ++ "  top INTEGER CHECK ((top IS NULL)\n"
              ++ "                     OR (typeof(top) = 'integer')),\n"
              ++ "  left INTEGER CHECK ((left IS NULL)\n"
@@ -203,6 +209,16 @@ initProjectDatabaseSchema database = do
              ++ "                          AND ((expanded = 0)\n"
              ++ "                               OR (expanded = 1))),\n"
              ++ "  PRIMARY KEY (inode, browser_window)\n"
+             ++ ")")
+             []
+  _ <- query database
+             (  "CREATE TABLE document_windows (\n"
+             ++ "  id BLOB PRIMARY KEY REFERENCES windows(id)\n"
+             ++ "                      ON DELETE CASCADE\n"
+             ++ "                      ON UPDATE CASCADE,\n"
+             ++ "  inode BLOB REFERENCES inodes(id)\n"
+             ++ "             ON DELETE SET NULL\n"
+             ++ "             ON UPDATE CASCADE\n"
              ++ ")")
              []
   _ <- query database
@@ -434,13 +450,29 @@ lookupInodeInformation inode = do
     _ -> throwIO $(internalFailure)
 
 
+lookupWindowKind :: Window -> IO WindowKind
+lookupWindowKind window = do
+  let project = windowProject window
+      database = projectDatabase project
+  rows <- query database
+                (  "SELECT kind FROM windows WHERE id = ?")
+                [toSQL $ windowID window]
+  case rows of
+    [[SQLText kindString]] ->
+      case lookup kindString [("browser", WindowKindBrowser),
+                              ("document", WindowKindDocument)] of
+        Just kind -> return kind
+        Nothing -> throwIO $(internalFailure)
+    _ -> throwIO $(internalFailure)
+
+
 recordNewBrowserWindow :: BrowserWindow -> Inode -> IO ()
 recordNewBrowserWindow browserWindow browserWindowRootInode = do
   let project = browserWindowProject browserWindow
       database = projectDatabase project
   _ <- query database
-             (  "INSERT INTO windows (id, top, left, height, width)\n"
-             ++ "VALUES (?, NULL, NULL, NULL, NULL)")
+             (  "INSERT INTO windows (id, kind, top, left, height, width)\n"
+             ++ "VALUES (?, 'browser', NULL, NULL, NULL, NULL)")
              [toSQL $ browserWindowID browserWindow]
   _ <- query database
              (  "INSERT INTO browser_windows (id, root_inode)\n"
@@ -501,4 +533,39 @@ lookupBrowserItemExpanded browserItem = do
     [[SQLInteger 0]] -> return False
     [[SQLInteger _]] -> return True
     [] -> return False
+    _ -> throwIO $(internalFailure)
+
+
+recordNewDocumentWindow :: DocumentWindow -> Inode -> IO ()
+recordNewDocumentWindow documentWindow documentWindowInode = do
+  let project = documentWindowProject documentWindow
+      database = projectDatabase project
+  _ <- query database
+             (  "INSERT INTO windows (id, kind, top, left, height, width)\n"
+             ++ "VALUES (?, 'document', NULL, NULL, NULL, NULL)")
+             [toSQL $ documentWindowID documentWindow]
+  _ <- query database
+             (  "INSERT INTO document_windows (id, inode)\n"
+             ++ "VALUES (?, ?)")
+             [toSQL $ documentWindowID documentWindow,
+              toSQL $ inodeID documentWindowInode]
+  return ()
+
+
+lookupDocumentWindowInode :: DocumentWindow -> IO Inode
+lookupDocumentWindowInode documentWindow = do
+  let project = documentWindowProject documentWindow
+      database = projectDatabase project
+  rows <- query database
+                (  "SELECT inode FROM document_windows\n"
+                ++ "WHERE id = ?")
+                [toSQL $ documentWindowID documentWindow]
+  case rows of
+    [[sqlInodeID]] ->
+      case fromSQL sqlInodeID of
+        Just inodeID' -> return $ Inode {
+                                      inodeID = inodeID',
+                                      inodeProject = project
+                                    }
+        Nothing -> throwIO $(internalFailure)
     _ -> throwIO $(internalFailure)

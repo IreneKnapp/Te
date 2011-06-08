@@ -25,7 +25,7 @@
         ignoreItemExpansionDueToNesting = nil;
         
         char *titleCString
-            = teBrowserWindowTitle(applicationState, &browserWindowID);
+            = teWindowTitle(applicationState, &browserWindowID);
         NSString *title = @"";
         if(titleCString) {
             title = [NSString stringWithUTF8String: titleCString];
@@ -33,7 +33,7 @@
         }
         
         char *titleIconCString
-            = teBrowserWindowTitleIcon(applicationState, &browserWindowID);
+            = teWindowTitleIcon(applicationState, &browserWindowID);
         NSString *titleIcon = @"";
         if(titleIconCString) {
             titleIcon = [NSString stringWithUTF8String: titleIconCString];
@@ -199,7 +199,7 @@
     if(!applicationState)
         return;
     
-    teBrowserWindowClose(applicationState, &browserWindowID);
+    teWindowClose(applicationState, &browserWindowID);
 }
 
 

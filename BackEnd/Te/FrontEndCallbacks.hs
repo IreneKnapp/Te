@@ -3,7 +3,7 @@ module Te.FrontEndCallbacks
    confirm,
    noteRecentProjectsChanged,
    noteNewBrowserWindow,
-   noteDeletedBrowserWindow,
+   noteDeletedWindow,
    noteBrowserItemsChanged,
    editBrowserItemName)
   where
@@ -55,14 +55,14 @@ noteNewBrowserWindow browserWindow = do
   callback browserWindow
 
 
-noteDeletedBrowserWindow :: BrowserWindow -> IO ()
-noteDeletedBrowserWindow browserWindow = do
-  let project = browserWindowProject browserWindow
+noteDeletedWindow :: Window -> IO ()
+noteDeletedWindow window = do
+  let project = windowProject window
       applicationStateMVar = projectApplicationState project
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksNoteDeletedBrowserWindow callbacks
-  callback browserWindow
+      callback = frontEndCallbacksNoteDeletedWindow callbacks
+  callback window
 
 
 noteBrowserItemsChanged :: BrowserWindow -> IO ()

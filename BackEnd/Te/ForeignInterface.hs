@@ -27,6 +27,8 @@ foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
 foreign import ccall "dynamic" mkVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
+foreign import ccall "dynamic" mkVoidWindowIDPtrCallback
+    :: FunPtr (Ptr WindowID -> IO ()) -> (Ptr WindowID -> IO ())
 foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrCallback
     :: FunPtr (Ptr BrowserWindowID -> IO ()) -> (Ptr BrowserWindowID -> IO ())
 foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrInodeIDPtrCallback
@@ -84,7 +86,7 @@ foreign export ccall "teApplicationInit"
                -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
-    -> FunPtr (Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
@@ -109,15 +111,15 @@ foreign export ccall "teApplicationOpenProject"
 foreign export ccall "teApplicationOpenRecentProject"
                      foreignApplicationOpenRecentProject
     :: StablePtr (MVar ApplicationState) -> Word64 -> IO ()
-foreign export ccall "teBrowserWindowClose"
-                     foreignBrowserWindowClose
-    :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO ()
-foreign export ccall "teBrowserWindowTitle"
-                     foreignBrowserWindowTitle
-    :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO CString
-foreign export ccall "teBrowserWindowTitleIcon"
-                     foreignBrowserWindowTitleIcon
-    :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO CString
+foreign export ccall "teWindowClose"
+                     foreignWindowClose
+    :: StablePtr (MVar ApplicationState) -> Ptr WindowID -> IO ()
+foreign export ccall "teWindowTitle"
+                     foreignWindowTitle
+    :: StablePtr (MVar ApplicationState) -> Ptr WindowID -> IO CString
+foreign export ccall "teWindowTitleIcon"
+                     foreignWindowTitleIcon
+    :: StablePtr (MVar ApplicationState) -> Ptr WindowID -> IO CString
 foreign export ccall "teBrowserWindowRoot"
                      foreignBrowserWindowRoot
     :: StablePtr (MVar ApplicationState)
@@ -487,6 +489,18 @@ wrapVoidStringStringCallback foreignCallback =
   in highLevelCallback
 
 
+wrapVoidWindowCallback
+    :: FunPtr (Ptr WindowID -> IO ())
+    -> (Window -> IO ())
+wrapVoidWindowCallback foreignCallback =
+  let lowLevelCallback = mkVoidWindowIDPtrCallback foreignCallback
+      highLevelCallback window = do
+        alloca (\windowIDPtr -> do
+                  poke windowIDPtr $ windowID window
+                  lowLevelCallback windowIDPtr)
+  in highLevelCallback
+
+
 wrapVoidBrowserWindowCallback
     :: FunPtr (Ptr BrowserWindowID -> IO ())
     -> (BrowserWindow -> IO ())
@@ -541,7 +555,7 @@ foreignApplicationInit
                -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
-    -> FunPtr (Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
@@ -549,7 +563,7 @@ foreignApplicationInit foreignException
                        foreignConfirm
                        foreignNoteRecentProjectsChanged
                        foreignNoteNewBrowserWindow
-                       foreignNoteDeletedBrowserWindow
+                       foreignNoteDeletedWindow
                        foreignNoteBrowserItemsChanged
                        foreignEditBrowserItemName = do
   let callbackException =
@@ -560,8 +574,8 @@ foreignApplicationInit foreignException
         wrapVoidCallback foreignNoteRecentProjectsChanged
       callbackNoteNewBrowserWindow =
         wrapVoidBrowserWindowCallback foreignNoteNewBrowserWindow
-      callbackNoteDeletedBrowserWindow =
-        wrapVoidBrowserWindowCallback foreignNoteDeletedBrowserWindow
+      callbackNoteDeletedWindow =
+        wrapVoidWindowCallback foreignNoteDeletedWindow
       callbackNoteBrowserItemsChanged =
         wrapVoidBrowserWindowCallback foreignNoteBrowserItemsChanged
       callbackEditBrowserItemName =
@@ -575,8 +589,8 @@ foreignApplicationInit foreignException
                         callbackNoteRecentProjectsChanged,
                       frontEndCallbacksNoteNewBrowserWindow =
                         callbackNoteNewBrowserWindow,
-                      frontEndCallbacksNoteDeletedBrowserWindow =
-                        callbackNoteDeletedBrowserWindow,
+                      frontEndCallbacksNoteDeletedWindow =
+                        callbackNoteDeletedWindow,
                       frontEndCallbacksNoteBrowserItemsChanged =
                         callbackNoteBrowserItemsChanged,
                       frontEndCallbacksEditBrowserItemName =
@@ -646,54 +660,67 @@ foreignApplicationOpenRecentProject applicationStateMVarStablePtr
   applicationOpenRecentProject applicationStateMVar index
 
 
-foreignBrowserWindowClose
-    :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO ()
-foreignBrowserWindowClose applicationStateMVarStablePtr
-                          browserWindowIDPtr = do
+foreignWindowClose
+    :: StablePtr (MVar ApplicationState) -> Ptr WindowID -> IO ()
+foreignWindowClose applicationStateMVarStablePtr
+                   windowIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  browserWindowID <- peek browserWindowIDPtr
-  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
-                                              browserWindowID
-  case maybeBrowserWindow of
-    Just browserWindow -> do
-      browserWindowClose browserWindow
+  windowID <- peek windowIDPtr
+  maybeWindow <- findWindowByID applicationStateMVar windowID
+  case maybeWindow of
+    Just window -> do
+      windowClose window
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return ()
 
 
-foreignBrowserWindowTitle
-    :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO CString
-foreignBrowserWindowTitle applicationStateMVarStablePtr
-                          browserWindowIDPtr = do
+foreignWindowTitle
+    :: StablePtr (MVar ApplicationState) -> Ptr WindowID -> IO CString
+foreignWindowTitle applicationStateMVarStablePtr
+                   windowIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  browserWindowID <- peek browserWindowIDPtr
-  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
-                                              browserWindowID
-  case maybeBrowserWindow of
-    Just browserWindow -> do
-      string <- browserWindowTitle browserWindow
+  windowID <- peek windowIDPtr
+  maybeWindow <- findWindowByID applicationStateMVar windowID
+  case maybeWindow of
+    Just window -> do
+      string <- windowTitle window
       stringNew string
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
 
 
-foreignBrowserWindowTitleIcon
-    :: StablePtr (MVar ApplicationState) -> Ptr BrowserWindowID -> IO CString
-foreignBrowserWindowTitleIcon applicationStateMVarStablePtr
-                              browserWindowIDPtr = do
+foreignWindowTitleIcon
+    :: StablePtr (MVar ApplicationState) -> Ptr WindowID -> IO CString
+foreignWindowTitleIcon applicationStateMVarStablePtr
+                       windowIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  browserWindowID <- peek browserWindowIDPtr
-  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
-                                              browserWindowID
-  case maybeBrowserWindow of
-    Just browserWindow -> do
-      string <- browserWindowTitleIcon browserWindow
+  windowID <- peek windowIDPtr
+  maybeWindow <- findWindowByID applicationStateMVar windowID
+  case maybeWindow of
+    Just window -> do
+      string <- windowTitleIcon window
       stringNew string
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
+
+
+findWindowByID
+    :: MVar ApplicationState
+    -> WindowID
+    -> IO (Maybe Window)
+findWindowByID applicationStateMVar windowID' = do
+  applicationState <- readMVar applicationStateMVar
+  foldM (\maybeWindow project -> do
+           case maybeWindow of
+             Just _ -> return maybeWindow
+             Nothing -> do
+               windows <- readMVar $ projectWindows project
+               return $ Map.lookup windowID' windows)
+        Nothing
+        $ Map.elems $ applicationStateProjects applicationState
 
 
 findBrowserWindowByID
@@ -702,16 +729,11 @@ findBrowserWindowByID
     -> IO (Maybe BrowserWindow)
 findBrowserWindowByID applicationStateMVar
                       browserWindowID' = do
-  applicationState <- readMVar applicationStateMVar
-  foldM (\maybeBrowserWindow project -> do
-           case maybeBrowserWindow of
-             Just _ -> return maybeBrowserWindow
-             Nothing -> do
-               browserWindows <-
-                 readMVar $ projectBrowserWindows project
-               return $ Map.lookup browserWindowID' browserWindows)
-        Nothing
-        $ Map.elems $ applicationStateProjects applicationState
+  maybeWindow <- findWindowByID applicationStateMVar
+                                $ toWindowID browserWindowID'
+  case maybeWindow of
+    Just window -> getFromWindow window
+    Nothing -> return Nothing
 
 
 findMaybeBrowserWindowFromIDPtr

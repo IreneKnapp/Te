@@ -7,7 +7,10 @@ module Te.Types
    Inode(..),
    InodeInformation(..),
    InodeKind(..),
+   Window(..),
+   WindowKind(..),
    BrowserWindow(..),
+   DocumentWindow(..),
    BrowserItem(..),
    DragInformation(..),
    DragOperation(..))
@@ -40,7 +43,7 @@ data FrontEndCallbacks =
           :: ConfirmationDialog -> (Word64 -> IO ()) -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO (),
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
-      frontEndCallbacksNoteDeletedBrowserWindow :: BrowserWindow -> IO (),
+      frontEndCallbacksNoteDeletedWindow :: Window -> IO (),
       frontEndCallbacksNoteBrowserItemsChanged :: BrowserWindow -> IO (),
       frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO ()
     }
@@ -72,7 +75,7 @@ data Project =
       projectDatabase :: Database,
       projectName :: MVar String,
       projectFilePath :: MVar (Maybe FilePath),
-      projectBrowserWindows :: MVar (Map BrowserWindowID BrowserWindow)
+      projectWindows :: MVar (Map WindowID Window)
     }
 
 
@@ -99,6 +102,18 @@ data InodeKind
   deriving (Eq)
 
 
+data Window =
+  Window {
+      windowID :: WindowID,
+      windowProject :: Project
+    }
+
+
+data WindowKind
+  = WindowKindBrowser
+  | WindowKindDocument
+
+
 data BrowserWindow =
   BrowserWindow {
       browserWindowID :: BrowserWindowID,
@@ -106,10 +121,18 @@ data BrowserWindow =
     }
 
 
+
 data BrowserItem =
   BrowserItem {
       browserItemInode :: Inode,
       browserItemBrowserWindow :: BrowserWindow
+    }
+
+
+data DocumentWindow =
+  DocumentWindow {
+      documentWindowID :: DocumentWindowID,
+      documentWindowProject :: Project
     }
 
 
