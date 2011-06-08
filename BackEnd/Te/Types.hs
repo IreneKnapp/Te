@@ -43,6 +43,7 @@ data FrontEndCallbacks =
           :: ConfirmationDialog -> (Word64 -> IO ()) -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO (),
       frontEndCallbacksNoteDeletedWindow :: Window -> IO (),
+      frontEndCallbacksActivateWindow :: Window -> IO (),
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteBrowserItemsChanged :: BrowserWindow -> IO (),
       frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO (),

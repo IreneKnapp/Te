@@ -89,6 +89,7 @@ foreign export ccall "teApplicationInit"
                -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr WindowID -> IO ())
+    -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
@@ -571,6 +572,7 @@ foreignApplicationInit
                -> IO ())
     -> FunPtr (IO ())
     -> FunPtr (Ptr WindowID -> IO ())
+    -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
@@ -580,6 +582,7 @@ foreignApplicationInit foreignException
                        foreignConfirm
                        foreignNoteRecentProjectsChanged
                        foreignNoteDeletedWindow
+                       foreignActivateWindow
                        foreignNoteNewBrowserWindow
                        foreignNoteBrowserItemsChanged
                        foreignEditBrowserItemName
@@ -592,6 +595,8 @@ foreignApplicationInit foreignException
         wrapVoidCallback foreignNoteRecentProjectsChanged
       callbackNoteDeletedWindow =
         wrapVoidWindowCallback foreignNoteDeletedWindow
+      callbackActivateWindow =
+        wrapVoidWindowCallback foreignActivateWindow
       callbackNoteNewBrowserWindow =
         wrapVoidBrowserWindowCallback foreignNoteNewBrowserWindow
       callbackNoteBrowserItemsChanged =
@@ -609,6 +614,8 @@ foreignApplicationInit foreignException
                         callbackNoteRecentProjectsChanged,
                       frontEndCallbacksNoteDeletedWindow =
                         callbackNoteDeletedWindow,
+                      frontEndCallbacksActivateWindow =
+                        callbackActivateWindow,
                       frontEndCallbacksNoteNewBrowserWindow =
                         callbackNoteNewBrowserWindow,
                       frontEndCallbacksNoteBrowserItemsChanged =

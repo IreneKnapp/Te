@@ -47,6 +47,7 @@
                                          (HsFunPtr) confirm,
                                          (HsFunPtr) noteRecentProjectsChanged,
                                          (HsFunPtr) noteDeletedWindow,
+                                         (HsFunPtr) activateWindow,
                                          (HsFunPtr) noteNewBrowserWindow,
                                          (HsFunPtr) noteBrowserItemsChanged,
                                          (HsFunPtr) editBrowserItemName,
@@ -420,6 +421,20 @@ void noteRecentProjectsChanged() {
 
 void noteDeletedWindow(uuid_t *windowID) {
     [(AppDelegate *) [NSApp delegate] noteDeletedWindow: windowID];
+}
+
+
+- (void) activateWindow: (uuid_t *) windowID {
+    Window *windowObject
+        = [windows objectForKey: (void *) windowID];
+    if(windowObject) {
+        [windowObject showWindow: self];
+    }
+}
+
+
+void activateWindow(uuid_t *windowID) {
+    [(AppDelegate *) [NSApp delegate] activateWindow: windowID];
 }
 
 

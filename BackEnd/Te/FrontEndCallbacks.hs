@@ -4,6 +4,7 @@ module Te.FrontEndCallbacks
    noteRecentProjectsChanged,
    noteNewBrowserWindow,
    noteDeletedWindow,
+   activateWindow,
    noteBrowserItemsChanged,
    editBrowserItemName,
    noteNewDocumentWindow)
@@ -63,6 +64,16 @@ noteDeletedWindow window = do
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteDeletedWindow callbacks
+  callback window
+
+
+activateWindow :: Window -> IO ()
+activateWindow window = do
+  let project = windowProject window
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksActivateWindow callbacks
   callback window
 
 

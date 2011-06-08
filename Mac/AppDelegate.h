@@ -50,6 +50,8 @@ void confirm(void *confirmationDialog,
 void noteRecentProjectsChanged();
 - (void) noteDeletedWindow: (uuid_t *) windowID;
 void noteDeletedWindow(uuid_t *windowID);
+- (void) activateWindow: (uuid_t *) windowID;
+void activateWindow(uuid_t *windowID);
 - (void) noteNewBrowserWindow: (uuid_t *) browserWindowID;
 void noteNewBrowserWindow(uuid_t *browserWindowID);
 - (void) noteBrowserItemsChangedInBrowserWindow: (uuid_t *) browserWindowID;

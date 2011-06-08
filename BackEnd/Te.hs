@@ -849,7 +849,26 @@ inodeOpen inode = do
       InodeKindDirectory -> do
         newBrowserWindow project $ Just inode
       InodeKindHaskell -> do
-        newDocumentWindow project inode
+        windowMap <- readMVar $ projectWindows project
+        maybeFoundWindow <-
+          foldM (\maybeFoundWindow window -> do
+                   case maybeFoundWindow of
+                     Just _ -> return maybeFoundWindow
+                     Nothing -> do
+                       maybeDocumentWindow <- getFromWindow window
+                       case maybeDocumentWindow of
+                         Just documentWindow -> do
+                           documentWindowInode <-
+                             lookupDocumentWindowInode documentWindow
+                           if inodeID documentWindowInode == inodeID inode
+                             then return $ Just window
+                             else return Nothing
+                         Nothing -> return Nothing)
+                Nothing
+                $ Map.elems windowMap
+        case maybeFoundWindow of
+          Just foundWindow -> activateWindow foundWindow
+          Nothing -> newDocumentWindow project inode
 
 
 getInodesRecursiveStatistics :: [Inode] -> IO (Int, Int, ByteSize)
