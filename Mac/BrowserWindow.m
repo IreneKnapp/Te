@@ -65,6 +65,10 @@
         [filesOutlineView setDraggingSourceOperationMask: remoteOperationMask
                           forLocal: NO];
         
+        [filesOutlineView setDoubleAction:
+                           @selector(doubleClickOutlineView:)];
+        [filesOutlineView setTarget: self];
+        
         [self noteItemsChanged];
     } else {
         teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
@@ -665,6 +669,33 @@
                                  ofItem: item];
             [self fixItemExpansionState: childItem];
         }
+    }
+}
+
+
+- (IBAction) doubleClickOutlineView: (id) sender {
+    if(alreadyClosing)
+        return;
+    
+    if([sender isEqual: filesOutlineView]) {
+        void *applicationState = getApplicationState();
+        if(!applicationState)
+            return;
+        
+        NSInteger row = [filesOutlineView clickedRow];
+        if(row == -1)
+            return;
+        
+        id item = [filesOutlineView itemAtRow: row];
+        if(![item isKindOfClass: [BrowserItem class]])
+            return;
+        BrowserItem *browserItemObject = (BrowserItem *) item;
+        
+        uuid_t *inodeID = [browserItemObject inodeID];
+        
+        teInodeOpen(applicationState,
+                    &browserWindowID,
+                    inodeID);
     }
 }
 

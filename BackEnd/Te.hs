@@ -44,6 +44,7 @@ module Te
    inodeIcon,
    inodeRename,
    inodeListDelete,
+   inodeOpen,
    inodeValidateDrop,
    inodeAcceptDrop,
    inodesKernel,
@@ -326,7 +327,7 @@ restoreProjectWindows :: Project -> IO ()
 restoreProjectWindows project = do
   browserWindows <- readMVar $ projectBrowserWindows project
   if Map.null browserWindows
-    then newBrowserWindow project
+    then newBrowserWindow project Nothing
     else return ()
 
 
@@ -399,8 +400,8 @@ computeNameForFilePath filePath =
   in fileNameWithoutExtension
 
 
-newBrowserWindow :: Project -> IO ()
-newBrowserWindow project = do
+newBrowserWindow :: Project -> Maybe Inode -> IO ()
+newBrowserWindow project maybeRootInode = do
   let applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar () $ do
     newBrowserWindowID <- newBrowserWindowID
@@ -413,7 +414,9 @@ newBrowserWindow project = do
                                      newBrowserWindow'
                                      browserWindows
     putMVar (projectBrowserWindows project) browserWindows'
-    rootInode <- lookupProjectRoot project
+    rootInode <- case maybeRootInode of
+                   Just rootInode -> return rootInode
+                   Nothing -> lookupProjectRoot project
     recordNewBrowserWindow newBrowserWindow' rootInode
     noteNewBrowserWindow newBrowserWindow'
 
@@ -723,6 +726,19 @@ inodeListDelete maybeBrowserWindow inodes = do
                            mapM_ noteBrowserItemsChanged browserWindows
                          else return ())
           else return ()
+
+
+inodeOpen :: Inode -> IO ()
+inodeOpen inode = do
+  let project = inodeProject inode
+      applicationStateMVar = projectApplicationState project
+  catchTe applicationStateMVar () $ do
+    inodeInformation <- lookupInodeInformation inode
+    case inodeInformationKind inodeInformation of
+      InodeKindDirectory -> do
+        newBrowserWindow project $ Just inode
+      _ -> do
+        return ()
 
 
 getInodesRecursiveStatistics :: [Inode] -> IO (Int, Int, ByteSize)

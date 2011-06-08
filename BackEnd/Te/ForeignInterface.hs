@@ -221,6 +221,12 @@ foreign export ccall "teInodeListDelete"
     -> Ptr BrowserWindowID
     -> StablePtr [Inode]
     -> IO ()
+foreign export ccall "teInodeOpen"
+                     foreignInodeOpen
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Ptr InodeID
+    -> IO ()
 foreign export ccall "teInodeValidateDrop"
                      foreignInodeValidateDrop
     :: StablePtr (MVar ApplicationState)
@@ -1197,6 +1203,29 @@ foreignInodeListDelete applicationStateMVarStablePtr
                                                         browserWindowIDPtr
   inodeList <- deRefStablePtr inodeListStablePtr
   inodeListDelete maybeBrowserWindow inodeList
+
+
+foreignInodeOpen
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr BrowserWindowID
+    -> Ptr InodeID
+    -> IO ()
+foreignInodeOpen applicationStateMVarStablePtr
+                 browserWindowIDPtr
+                 inodeIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  maybeBrowserWindow <- findMaybeBrowserWindowFromIDPtr applicationStateMVar
+                                                        browserWindowIDPtr
+  case maybeBrowserWindow of
+    Just browserWindow -> do
+      let project = browserWindowProject browserWindow
+      inodeID' <- peek inodeIDPtr
+      let inode = Inode {
+                      inodeID = inodeID',
+                      inodeProject = project
+                    }
+      inodeOpen inode
+    Nothing -> exception applicationStateMVar $(internalFailure)
 
 
 foreignInodeValidateDrop

@@ -67,6 +67,7 @@
 - (void) outlineViewItemDidExpand: (NSNotification *) notification;
 - (void) outlineViewItemDidCollapse: (NSNotification *) notification;
 - (void) fixItemExpansionState: (BrowserItem *) item;
+- (IBAction) doubleClickOutlineView: (id) sender;
 - (BOOL) outlineView: (NSOutlineView *) outlineView
           writeItems: (NSArray *) items
         toPasteboard: (NSPasteboard *) pasteboard;
