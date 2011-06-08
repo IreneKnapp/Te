@@ -42,16 +42,17 @@ data FrontEndCallbacks =
       frontEndCallbacksConfirm
           :: ConfirmationDialog -> (Word64 -> IO ()) -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO (),
-      frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteDeletedWindow :: Window -> IO (),
+      frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteBrowserItemsChanged :: BrowserWindow -> IO (),
-      frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO ()
+      frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO (),
+      frontEndCallbacksNoteNewDocumentWindow :: DocumentWindow -> IO ()
     }
 
 
 data ConfirmationDialog =
   ConfirmationDialog {
-      confirmationDialogBrowserWindow :: Maybe BrowserWindow,
+      confirmationDialogWindow :: Maybe Window,
       confirmationDialogMessage :: String,
       confirmationDialogDetails :: String,
       confirmationDialogDefaultButtonIndex :: Maybe Word64,

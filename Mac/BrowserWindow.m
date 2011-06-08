@@ -9,44 +9,18 @@
 
 @implementation BrowserWindow
 
-- (id) initWithBrowserWindowID: (uuid_t *) newBrowserWindowID {
+- (id) initWithWindowID: (uuid_t *) newWindowID {
     void *applicationState = getApplicationState();
     if(!applicationState)
         return nil;
     
-    self = [super initWithWindowNibName: @"BrowserWindow"];
+    self = [super initWithWindowID: newWindowID nibName: @"BrowserWindow"];
     if(self) {
-        copyUUID(&browserWindowID, newBrowserWindowID);
-        
         browserItems = [(AppDelegate *) [NSApp delegate] newMapTable];
         
-        alreadyClosing = NO;
         ignoreItemExpansionDueToFixing = NO;
         ignoreItemExpansionDueToNesting = nil;
-        
-        char *titleCString
-            = teWindowTitle(applicationState, &browserWindowID);
-        NSString *title = @"";
-        if(titleCString) {
-            title = [NSString stringWithUTF8String: titleCString];
-            teStringFree(titleCString);
-        }
-        
-        char *titleIconCString
-            = teWindowTitleIcon(applicationState, &browserWindowID);
-        NSString *titleIcon = @"";
-        if(titleIconCString) {
-            titleIcon = [NSString stringWithUTF8String: titleIconCString];
-            teStringFree(titleIconCString);
-        }
-        
-        NSWindow *window = [self window];
-        [window makeKeyAndOrderFront: self];
-        [window setTitle: title];
-        [window setRepresentedURL: [NSURL URLWithString: @""]];
-        [[window standardWindowButton: NSWindowDocumentIconButton]
-         setImage: [NSImage imageNamed: titleIcon]];
-        
+                
         NSMutableArray *draggedTypes = [NSMutableArray arrayWithCapacity: 1];
         [draggedTypes addObject: @"com.dankna.te.datatypes.inodes"];
         [filesOutlineView registerForDraggedTypes: draggedTypes];
@@ -70,15 +44,8 @@
         [filesOutlineView setTarget: self];
         
         [self noteItemsChanged];
-    } else {
-        teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
     }
     return self;
-}
-
-
-- (uuid_t *) browserWindowID {
-    return &browserWindowID;
 }
 
 
@@ -87,9 +54,10 @@
     if(!applicationState)
         return NO;
     
+    uuid_t *browserWindowID = [self windowID];
     NSIndexSet *rowIndices = [filesOutlineView selectedRowIndexes];
     if([rowIndices count] == 0) {
-        teBrowserWindowRoot(applicationState, &browserWindowID, result);
+        teBrowserWindowRoot(applicationState, browserWindowID, result);
         return YES;
     } else {
         NSUInteger firstRow = [rowIndices firstIndex];
@@ -99,7 +67,7 @@
             
             uuid_t *inodeID = [browserItemObject inodeID];
             if(!teInodeParent(applicationState,
-                              &browserWindowID,
+                              browserWindowID,
                               inodeID,
                               result))
             {
@@ -143,8 +111,10 @@
                         }];
         inodeIDCount = i;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         void *inodeList = teInodeListNew(applicationState,
-                                         &browserWindowID,
+                                         browserWindowID,
                                          inodeIDCount,
                                          inodeIDs);
         
@@ -168,13 +138,6 @@
 }
 
 
-- (void) forceClose {
-    if(!alreadyClosing) {
-        [[self window] close];
-    }
-}
-
-
 - (void) noteItemsChanged {
     [filesOutlineView reloadData];
     [self fixItemExpansionState: nil];
@@ -182,62 +145,8 @@
 
 
 - (void) editItemName: (uuid_t *) inodeID {
-    // DNK TODO - begin editing the name of the given item, as when it was just
+    // TODO - begin editing the name of the given item, as when it was just
     // created.
-}
-
-
-- (BOOL) windowShouldClose: (id) sender {
-    return YES;
-}
-
-
-- (void) windowWillClose: (NSNotification *) notification {
-    alreadyClosing = YES;
-    
-    void *applicationState = getApplicationState();
-    if(!applicationState)
-        return;
-    
-    teWindowClose(applicationState, &browserWindowID);
-}
-
-
-- (void) runSheetModalAlert: (NSAlert *) alert
-          completionHandler: (void (*)(uint64_t result)) completionHandler
-{
-    [alert beginSheetModalForWindow: [self window]
-           modalDelegate: self
-           didEndSelector:
-            @selector(sheetModalAlertFinished:returnCode:contextInfo:)
-           contextInfo: completionHandler];
-}
-
-
-- (void) sheetModalAlertFinished: (NSAlert *) alert
-                      returnCode: (NSInteger) returnCode
-                     contextInfo: (void *) contextInfo
-{
-    void (*completionHandler)(uint64_t result)
-        = (void (*)(uint64_t result)) contextInfo;
-    completionHandler(returnCode);
-    teCompletionHandlerFree((HsFunPtr) completionHandler);
-}
-
-
-- (BOOL)               window: (NSWindow *) window
-  shouldDragDocumentWithEvent: (NSEvent *) event
-                         from: (NSPoint) dragImageLocation
-               withPasteboard: (NSPasteboard *) pasteboard
-{
-    return NO;
-}
-
-
-- (BOOL)               window: (NSWindow *) window
-  shouldPopUpDocumentPathMenu: (NSMenu *) menu
-{
-    return NO;
 }
 
 
@@ -245,7 +154,7 @@
              child: (NSInteger) index
             ofItem: (id) item
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return nil;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -253,16 +162,18 @@
         if(!applicationState)
             return nil;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         uuid_t inodeChildID;
         
         if(!item) {
             uuid_t inodeID;
             teBrowserWindowRoot(applicationState,
-                                &browserWindowID,
+                                browserWindowID,
                                 &inodeID);
             
             teInodeChild(applicationState,
-                         &browserWindowID,
+                         browserWindowID,
                          &inodeID,
                          index,
                          &inodeChildID);
@@ -272,7 +183,7 @@
             uuid_t *inodeID = [browserItem inodeID];
             
             teInodeChild(applicationState,
-                         &browserWindowID,
+                         browserWindowID,
                          inodeID,
                          index,
                          &inodeChildID);
@@ -290,7 +201,7 @@
 - (BOOL) outlineView: (NSOutlineView *) outlineView
     isItemExpandable: (id) item
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return NO;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -298,13 +209,15 @@
         if(!applicationState)
             return NO;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         if([item isKindOfClass: [BrowserItem class]]) {
             BrowserItem *browserItem = (BrowserItem *) item;
             
             uuid_t *inodeID = [browserItem inodeID];
             uint64_t result
                 = teInodeExpandable(applicationState,
-                                    &browserWindowID,
+                                    browserWindowID,
                                     inodeID);
             if(result)
                 return YES;
@@ -322,7 +235,7 @@
 - (NSInteger) outlineView: (NSOutlineView *) outlineView
    numberOfChildrenOfItem: (id) item
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return 0;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -330,15 +243,17 @@
         if(!applicationState)
             return 0;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         if(!item) {
             uuid_t inodeID;
             teBrowserWindowRoot(applicationState,
-                                &browserWindowID,
+                                browserWindowID,
                                 &inodeID);
             
             uint64_t count
                 = teInodeChildCount(applicationState,
-                                    &browserWindowID,
+                                    browserWindowID,
                                     &inodeID);
             return count;
         } else if([item isKindOfClass: [BrowserItem class]]) {
@@ -347,7 +262,7 @@
             uuid_t *inodeID = [browserItem inodeID];
             uint64_t count
                 = teInodeChildCount(applicationState,
-                                    &browserWindowID,
+                                    browserWindowID,
                                     inodeID);
             return count;
         } else {
@@ -363,7 +278,7 @@
   objectValueForTableColumn: (NSTableColumn *) tableColumn
                      byItem: (id) item
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return nil;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -372,12 +287,14 @@
             if(!applicationState)
                 return nil;
             
+            uuid_t *browserWindowID = [self windowID];
+            
             BrowserItem *browserItemObject = (BrowserItem *) item;
             uuid_t *inodeID = [browserItemObject inodeID];
             
             if([tableColumn isEqual: filesOutlineViewNameColumn]) {
                 char *nameCString = teInodeName(applicationState,
-                                                &browserWindowID,
+                                                browserWindowID,
                                                 inodeID);
                 NSString *name = nil;
                 if(nameCString) {
@@ -390,7 +307,7 @@
             {
                 uint64_t timestamp
                     = teInodeModificationTimestamp(applicationState,
-                                                   &browserWindowID,
+                                                   browserWindowID,
                                                    inodeID);
                 char *timestampCString = teTimestampShow(timestamp);
                 NSString *timestampString = nil;
@@ -405,7 +322,7 @@
                 
                 char *sizeCString = NULL;
                 if(teInodeSize(applicationState,
-                               &browserWindowID,
+                               browserWindowID,
                                inodeID,
                                &size))
                 {
@@ -421,7 +338,7 @@
                 return sizeString;
             } else if([tableColumn isEqual: filesOutlineViewKindColumn]) {
                 char *kindCString = teInodeKind(applicationState,
-                                                &browserWindowID,
+                                                browserWindowID,
                                                 inodeID);
                 NSString *kind = nil;
                 if(kindCString) {
@@ -446,7 +363,7 @@
       forTableColumn: (NSTableColumn *) tableColumn
                 item: (id) item
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -458,13 +375,15 @@
                 if(!applicationState)
                     return;
                 
+                uuid_t *browserWindowID = [self windowID];
+                
                 BrowserItem *browserItemObject = (BrowserItem *) item;
                 FileNameCell *fileNameCell = (FileNameCell *) cell;
                 
                 uuid_t *inodeID = [browserItemObject inodeID];
                 
                 char *fileNameCString = teInodeName(applicationState,
-                                                    &browserWindowID,
+                                                    browserWindowID,
                                                     inodeID);
                 NSString *fileName = nil;
                 if(fileNameCString) {
@@ -477,7 +396,7 @@
                 [fileNameCell setText: fileName];
                 
                 char *iconNameCString = teInodeIcon(applicationState,
-                                                    &browserWindowID,
+                                                    browserWindowID,
                                                     inodeID);
                 NSString *iconName = nil;
                 if(iconNameCString) {
@@ -498,7 +417,7 @@
       forTableColumn: (NSTableColumn *) tableColumn
               byItem: (id) item
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -510,6 +429,8 @@
                 if(!applicationState)
                     return;
                 
+                uuid_t *browserWindowID = [self windowID];
+                
                 BrowserItem *browserItemObject = (BrowserItem *) item;
                 NSString *newName = (NSString *) object;
                 
@@ -518,7 +439,7 @@
                 char *newNameCString = (char *) [newName UTF8String];
                 
                 teInodeRename(applicationState,
-                              &browserWindowID,
+                              browserWindowID,
                               inodeID,
                               newNameCString);
             }
@@ -528,7 +449,7 @@
 
 
 - (void) outlineViewItemWillExpand: (NSNotification *) notification {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     NSOutlineView *outlineView = [notification object];
@@ -546,7 +467,7 @@
 
 
 - (void) outlineViewItemWillCollapse: (NSNotification *) notification {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     NSOutlineView *outlineView = [notification object];
@@ -564,7 +485,7 @@
 
 
 - (void) outlineViewItemDidExpand: (NSNotification *) notification {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     NSOutlineView *outlineView = [notification object];
@@ -583,13 +504,15 @@
         if(!applicationState)
             return;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         if([item isKindOfClass: [BrowserItem class]]) {
             BrowserItem *browserItemObject = (BrowserItem *) item;
             
             uuid_t *inodeID = [browserItemObject inodeID];
             
             teBrowserItemSetExpanded(applicationState,
-                                     &browserWindowID,
+                                     browserWindowID,
                                      inodeID,
                                      1);
         }
@@ -600,7 +523,7 @@
 
 
 - (void) outlineViewItemDidCollapse: (NSNotification *) notification {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     NSOutlineView *outlineView = [notification object];
@@ -619,13 +542,15 @@
         if(!applicationState)
             return;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         if([item isKindOfClass: [BrowserItem class]]) {
             BrowserItem *browserItemObject = (BrowserItem *) item;
             
             uuid_t *inodeID = [browserItemObject inodeID];
             
             teBrowserItemSetExpanded(applicationState,
-                                     &browserWindowID,
+                                     browserWindowID,
                                      inodeID,
                                      0);
         }
@@ -634,7 +559,7 @@
 
 
 - (void) fixItemExpansionState: (BrowserItem *) item {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     if(item) {
@@ -643,12 +568,14 @@
             if(!applicationState)
                 return;
             
+            uuid_t *browserWindowID = [self windowID];
+            
             BrowserItem *browserItemObject = (BrowserItem *) item;
             
             uuid_t *inodeID = [browserItemObject inodeID];
             
             BOOL expanded = teBrowserItemExpanded(applicationState,
-                                                  &browserWindowID,
+                                                  browserWindowID,
                                                   inodeID);
             
             ignoreItemExpansionDueToFixing = YES;
@@ -675,13 +602,15 @@
 
 
 - (IBAction) doubleClickOutlineView: (id) sender {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return;
     
     if([sender isEqual: filesOutlineView]) {
         void *applicationState = getApplicationState();
         if(!applicationState)
             return;
+        
+        uuid_t *browserWindowID = [self windowID];
         
         NSInteger row = [filesOutlineView clickedRow];
         if(row == -1)
@@ -695,7 +624,7 @@
         uuid_t *inodeID = [browserItemObject inodeID];
         
         teInodeOpen(applicationState,
-                    &browserWindowID,
+                    browserWindowID,
                     inodeID);
     }
 }
@@ -705,13 +634,15 @@
           writeItems: (NSArray *) items
         toPasteboard: (NSPasteboard *) pasteboard
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return NO;
     
     if([outlineView isEqual: filesOutlineView]) {
         void *applicationState = getApplicationState();
         if(!applicationState)
             return NO;
+        
+        uuid_t *browserWindowID = [self windowID];
         
         NSMutableArray *declaredTypes = [NSMutableArray arrayWithCapacity: 1];
         [declaredTypes addObject: @"com.dankna.te.datatypes.inodes"];
@@ -722,7 +653,7 @@
         if(result) {
             NSMutableData *data = [NSMutableData data];
             
-            [data appendBytes: &browserWindowID length: 16];
+            [data appendBytes: browserWindowID length: 16];
             
             appendWord64(data, [items count]);
             
@@ -747,7 +678,7 @@
                    proposedItem: (id) item
              proposedChildIndex: (NSInteger) index
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return NSDragOperationNone;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -755,8 +686,10 @@
         if(!applicationState)
             return NSDragOperationNone;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         uuid_t rootInodeID;
-        teBrowserWindowRoot(applicationState, &browserWindowID, &rootInodeID);
+        teBrowserWindowRoot(applicationState, browserWindowID, &rootInodeID);
         
         uuid_t inodeID;
         if([item isKindOfClass: [BrowserItem class]]) {
@@ -803,7 +736,7 @@
         uint64_t resultChildIndex;
         uint64_t resultDragOperation;
         uint64_t resultType = teInodeValidateDrop(applicationState,
-                                                  &browserWindowID,
+                                                  browserWindowID,
                                                   &inodeID,
                                                   dragInformation,
                                                   &resultInodeID,
@@ -844,7 +777,7 @@
                 item: (id) item
           childIndex: (NSInteger) index
 {
-    if(alreadyClosing)
+    if([self alreadyClosing])
         return NO;
     
     if([outlineView isEqual: filesOutlineView]) {
@@ -852,8 +785,10 @@
         if(!applicationState)
             return NO;
         
+        uuid_t *browserWindowID = [self windowID];
+        
         uuid_t rootInodeID;
-        teBrowserWindowRoot(applicationState, &browserWindowID, &rootInodeID);
+        teBrowserWindowRoot(applicationState, browserWindowID, &rootInodeID);
         
         uuid_t inodeID;
         if([item isKindOfClass: [BrowserItem class]]) {
@@ -897,7 +832,7 @@
         }
         
         uint64_t result = teInodeAcceptDrop(applicationState,
-                                            &browserWindowID,
+                                            browserWindowID,
                                             &inodeID,
                                             dragInformation);
         

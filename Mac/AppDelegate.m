@@ -1,7 +1,9 @@
 #import "AppDelegate.h"
 #import <HsFFI.h>
 #import "Te/ForeignInterface_stub.h"
+#import "Window.h"
 #import "BrowserWindow.h"
+#import "DocumentWindow.h"
 
 @implementation AppDelegate
 @synthesize applicationState;
@@ -44,14 +46,15 @@
     applicationState = teApplicationInit((HsFunPtr) exception,
                                          (HsFunPtr) confirm,
                                          (HsFunPtr) noteRecentProjectsChanged,
+                                         (HsFunPtr) noteDeletedWindow,
                                          (HsFunPtr) noteNewBrowserWindow,
-                                         (HsFunPtr) noteDeletedBrowserWindow,
                                          (HsFunPtr) noteBrowserItemsChanged,
-                                         (HsFunPtr) editBrowserItemName);
+                                         (HsFunPtr) editBrowserItemName,
+                                         (HsFunPtr) noteNewDocumentWindow);
     
     keyFunctions = nil;
     valueFunctions = nil;
-    browserWindows = [self newMapTable];
+    windows = [self newMapTable];
     
     char *versionLabelCString = teVersionString();
     NSString *versionLabelString = @"";
@@ -227,7 +230,7 @@
     if([windowController isKindOfClass: [BrowserWindow class]]) {
         BrowserWindow *browserWindowObject
             = (BrowserWindow *) windowController;
-        uuid_t *browserWindowID = [browserWindowObject browserWindowID];
+        uuid_t *browserWindowID = [browserWindowObject windowID];
         uuid_t inodeID;
         if([browserWindowObject getCurrentFolderInodeID: &inodeID]) {
             teBrowserItemNewFolderInside(applicationState,
@@ -253,7 +256,7 @@
     if([windowController isKindOfClass: [BrowserWindow class]]) {
         BrowserWindow *browserWindowObject
             = (BrowserWindow *) windowController;
-        uuid_t *browserWindowID = [browserWindowObject browserWindowID];
+        uuid_t *browserWindowID = [browserWindowObject windowID];
         uuid_t inodeID;
         if([browserWindowObject getCurrentFolderInodeID: &inodeID]) {
             teBrowserItemNewFileInside(applicationState,
@@ -279,7 +282,7 @@
     if([windowController isKindOfClass: [BrowserWindow class]]) {
         BrowserWindow *browserWindowObject
             = (BrowserWindow *) windowController;
-        uuid_t *browserWindowID = [browserWindowObject browserWindowID];
+        uuid_t *browserWindowID = [browserWindowObject windowID];
         
         void *inodeList = [browserWindowObject getSelectedInodeList];
         
@@ -326,12 +329,11 @@ void exception(char *messageCString, char *detailsCString) {
 - (uint64_t) confirm: (void *) confirmationDialog
    completionHandler: (void (*)(uint64_t result)) completionHandler
 {
-    BrowserWindow *browserWindowObject = nil;
-    uuid_t browserWindowID;
-    teConfirmationDialogBrowserWindow(confirmationDialog, &browserWindowID);
-    if(!uuidIsNull(&browserWindowID)) {
-        browserWindowObject
-            = [browserWindows objectForKey: (void *) browserWindowID];
+    Window *windowObject = nil;
+    uuid_t windowID;
+    teConfirmationDialogWindow(confirmationDialog, &windowID);
+    if(!uuidIsNull(&windowID)) {
+        windowObject = [windows objectForKey: (void *) windowID];
     }
     
     char *messageCString = teConfirmationDialogMessage(confirmationDialog);
@@ -377,9 +379,9 @@ void exception(char *messageCString, char *detailsCString) {
         }
     }
     
-    if(browserWindowObject) {
-        [browserWindowObject runSheetModalAlert: alert
-                             completionHandler: completionHandler];
+    if(windowObject) {
+        [windowObject runSheetModalAlert: alert
+                      completionHandler: completionHandler];
     } else {
         uint64_t result = [alert runModal];
         completionHandler(result);
@@ -406,12 +408,27 @@ void noteRecentProjectsChanged() {
 }
 
 
+- (void) noteDeletedWindow: (uuid_t *) windowID {
+    Window *windowObject
+        = [windows objectForKey: (void *) windowID];
+    if(windowObject) {
+        [windowObject forceClose];
+        [windows removeObjectForKey: (void *) windowID];
+    }
+}
+
+
+void noteDeletedWindow(uuid_t *windowID) {
+    [(AppDelegate *) [NSApp delegate] noteDeletedWindow: windowID];
+}
+
+
 - (void) noteNewBrowserWindow: (uuid_t *) browserWindowID {
     BrowserWindow *browserWindowObject
-        = [[BrowserWindow alloc] initWithBrowserWindowID: browserWindowID];
+        = [[BrowserWindow alloc] initWithWindowID: browserWindowID];
     if(browserWindowObject)
-        [browserWindows setObject: browserWindowObject
-                        forKey: (void *) browserWindowID];
+        [windows setObject: browserWindowObject
+                 forKey: (void *) browserWindowID];
 }
 
 
@@ -420,26 +437,10 @@ void noteNewBrowserWindow(uuid_t *browserWindowID) {
 }
 
 
-- (void) noteDeletedBrowserWindow: (uuid_t *) browserWindowID {
-    BrowserWindow *browserWindowObject
-        = [browserWindows objectForKey: (void *) browserWindowID];
-    if(browserWindowObject) {
-        [browserWindowObject forceClose];
-        [browserWindows removeObjectForKey: (void *) browserWindowID];
-    }
-}
-
-
-void noteDeletedBrowserWindow(uuid_t *browserWindowID) {
-    [(AppDelegate *) [NSApp delegate] noteDeletedBrowserWindow:
-                                       browserWindowID];
-}
-
-
 - (void) noteBrowserItemsChangedInBrowserWindow: (uuid_t *) browserWindowID {
-    BrowserWindow *browserWindowObject
-        = [browserWindows objectForKey: (void *) browserWindowID];
-    if(browserWindowObject) {
+    Window *windowObject = [windows objectForKey: (void *) browserWindowID];
+    if(windowObject && [windowObject isKindOfClass: [BrowserWindow class]]) {
+        BrowserWindow *browserWindowObject = (BrowserWindow *) windowObject;
         [browserWindowObject noteItemsChanged];
     }
 }
@@ -454,9 +455,9 @@ void noteBrowserItemsChanged(uuid_t *browserWindowID) {
 - (void) editBrowserItemNameInBrowserWindow: (uuid_t *) browserWindowID
                                       inode: (uuid_t *) inodeID
 {
-    BrowserWindow *browserWindowObject
-        = [browserWindows objectForKey: (void *) browserWindowID];
-    if(browserWindowObject) {
+    Window *windowObject = [windows objectForKey: (void *) browserWindowID];
+    if(windowObject && [windowObject isKindOfClass: [BrowserWindow class]]) {
+        BrowserWindow *browserWindowObject = (BrowserWindow *) windowObject;
         [browserWindowObject editItemName: inodeID];
     }
 }
@@ -465,6 +466,20 @@ void noteBrowserItemsChanged(uuid_t *browserWindowID) {
 void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID) {
     [(AppDelegate *) [NSApp delegate]
      editBrowserItemNameInBrowserWindow: browserWindowID inode: inodeID];
+}
+
+
+- (void) noteNewDocumentWindow: (uuid_t *) documentWindowID {
+    DocumentWindow *documentWindowObject
+        = [[DocumentWindow alloc] initWithWindowID: documentWindowID];
+    if(documentWindowObject)
+        [windows setObject: documentWindowObject
+                 forKey: (void *) documentWindowID];
+}
+
+
+void noteNewDocumentWindow(uuid_t *documentWindowID) {
+    [(AppDelegate *) [NSApp delegate] noteNewDocumentWindow: documentWindowID];
 }
 
 @end

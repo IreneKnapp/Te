@@ -31,16 +31,20 @@ Executable Te
   includes: AppDelegate.h,
             BrowserItem.h,
             BrowserWindow.h,
+            DocumentWindow.h,
             FileNameCell.h,
             FileNameCellFieldEditor.h,
             HasCurrentFolder.h,
-            Utilities.h
+            Utilities.h,
+            Window.h
   c-sources: AppDelegate.m,
              BrowserItem.m,
              BrowserWindow.m,
+             DocumentWindow.m,
              FileNameCell.m,
-             FileNameCellFieldEditor.m
-             Utilities.m
+             FileNameCellFieldEditor.m,
+             Utilities.m,
+             Window.m
   hs-source-dirs: BackEnd
   other-modules: Data.Bitfield,
                  Data.ByteSize,
@@ -77,7 +81,8 @@ Executable Te
   x-app-info-plist: Mac/Info.plist
   x-app-resource-dir: Mac/Resources
   x-app-xibs: MainMenu.xib,
-              BrowserWindow.xib
+              BrowserWindow.xib,
+              DocumentWindow.xib
   x-app-other-resources: Application.icns,
                          Project.icns,
                          Te.png,

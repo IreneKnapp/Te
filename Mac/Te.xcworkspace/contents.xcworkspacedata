@@ -2,6 +2,30 @@
 <Workspace
    version = "1.0">
    <FileRef
+      location = "group:DocumentWindow.h">
+   </FileRef>
+   <FileRef
+      location = "group:DocumentWindow.m">
+   </FileRef>
+   <FileRef
+      location = "group:FileNameCellFieldEditor.h">
+   </FileRef>
+   <FileRef
+      location = "group:FileNameCellFieldEditor.m">
+   </FileRef>
+   <FileRef
+      location = "group:HasSelectedInodes.h">
+   </FileRef>
+   <FileRef
+      location = "group:Window.h">
+   </FileRef>
+   <FileRef
+      location = "group:Window.m">
+   </FileRef>
+   <FileRef
+      location = "group:Resources/DocumentWindow.xib">
+   </FileRef>
+   <FileRef
       location = "group:AppDelegate.h">
    </FileRef>
    <FileRef

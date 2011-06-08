@@ -34,6 +34,9 @@ foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrCallback
 foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrInodeIDPtrCallback
     :: FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
+foreign import ccall "dynamic" mkVoidDocumentWindowIDPtrCallback
+    :: FunPtr (Ptr DocumentWindowID -> IO ())
+    -> (Ptr DocumentWindowID -> IO ())
 foreign import ccall "dynamic" mkIntConfirmationDialogCompletionHandlerCallback
     :: FunPtr (StablePtr ConfirmationDialog
                -> (FunPtr (Word64 -> IO ()))
@@ -85,10 +88,11 @@ foreign export ccall "teApplicationInit"
                -> FunPtr (Word64 -> IO ())
                -> IO ())
     -> FunPtr (IO ())
-    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
+    -> FunPtr (Ptr DocumentWindowID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit"
                      foreignApplicationExit
@@ -225,7 +229,7 @@ foreign export ccall "teInodeRename"
 foreign export ccall "teInodeListDelete"
                      foreignInodeListDelete
     :: StablePtr (MVar ApplicationState)
-    -> Ptr BrowserWindowID
+    -> Ptr WindowID
     -> StablePtr [Inode]
     -> IO ()
 foreign export ccall "teInodeOpen"
@@ -338,7 +342,7 @@ foreign export ccall "teDragInformationFilePath"
 foreign export ccall "teConfirmationDialogNew"
                      foreignConfirmationDialogNew
     :: StablePtr (MVar ApplicationState)
-    -> Ptr BrowserWindowID
+    -> Ptr WindowID
     -> CString
     -> CString
     -> Word64
@@ -350,10 +354,10 @@ foreign export ccall "teConfirmationDialogFree"
                      foreignConfirmationDialogFree
     :: StablePtr ConfirmationDialog
     -> IO ()
-foreign export ccall "teConfirmationDialogBrowserWindow"
-                     foreignConfirmationDialogBrowserWindow
+foreign export ccall "teConfirmationDialogWindow"
+                     foreignConfirmationDialogWindow
     :: StablePtr ConfirmationDialog
-    -> Ptr BrowserWindowID
+    -> Ptr WindowID
     -> IO ()
 foreign export ccall "teConfirmationDialogMessage"
                      foreignConfirmationDialogMessage
@@ -548,38 +552,54 @@ wrapVoidConfirmationDialogCompletionHandlerCallback foreignCallback =
   in highLevelCallback
 
 
+wrapVoidDocumentWindowCallback
+    :: FunPtr (Ptr DocumentWindowID -> IO ())
+    -> (DocumentWindow -> IO ())
+wrapVoidDocumentWindowCallback foreignCallback =
+  let lowLevelCallback = mkVoidDocumentWindowIDPtrCallback foreignCallback
+      highLevelCallback documentWindow = do
+        alloca (\documentWindowIDPtr -> do
+                  poke documentWindowIDPtr $ documentWindowID documentWindow
+                  lowLevelCallback documentWindowIDPtr)
+  in highLevelCallback
+
+
 foreignApplicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (StablePtr ConfirmationDialog
                -> FunPtr (Word64 -> IO ())
                -> IO ())
     -> FunPtr (IO ())
-    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
+    -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
+    -> FunPtr (Ptr DocumentWindowID -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreignApplicationInit foreignException
                        foreignConfirm
                        foreignNoteRecentProjectsChanged
-                       foreignNoteNewBrowserWindow
                        foreignNoteDeletedWindow
+                       foreignNoteNewBrowserWindow
                        foreignNoteBrowserItemsChanged
-                       foreignEditBrowserItemName = do
+                       foreignEditBrowserItemName
+                       foreignNoteNewDocumentWindow = do
   let callbackException =
         wrapVoidStringStringCallback foreignException
       callbackConfirm =
         wrapVoidConfirmationDialogCompletionHandlerCallback foreignConfirm
       callbackNoteRecentProjectsChanged =
         wrapVoidCallback foreignNoteRecentProjectsChanged
-      callbackNoteNewBrowserWindow =
-        wrapVoidBrowserWindowCallback foreignNoteNewBrowserWindow
       callbackNoteDeletedWindow =
         wrapVoidWindowCallback foreignNoteDeletedWindow
+      callbackNoteNewBrowserWindow =
+        wrapVoidBrowserWindowCallback foreignNoteNewBrowserWindow
       callbackNoteBrowserItemsChanged =
         wrapVoidBrowserWindowCallback foreignNoteBrowserItemsChanged
       callbackEditBrowserItemName =
         wrapVoidBrowserItemCallback foreignEditBrowserItemName
+      callbackNoteNewDocumentWindow =
+        wrapVoidDocumentWindowCallback foreignNoteNewDocumentWindow
       callbacks = FrontEndCallbacks {
                       frontEndCallbacksException =
                         callbackException,
@@ -587,14 +607,16 @@ foreignApplicationInit foreignException
                         callbackConfirm,
                       frontEndCallbacksNoteRecentProjectsChanged =
                         callbackNoteRecentProjectsChanged,
-                      frontEndCallbacksNoteNewBrowserWindow =
-                        callbackNoteNewBrowserWindow,
                       frontEndCallbacksNoteDeletedWindow =
                         callbackNoteDeletedWindow,
+                      frontEndCallbacksNoteNewBrowserWindow =
+                        callbackNoteNewBrowserWindow,
                       frontEndCallbacksNoteBrowserItemsChanged =
                         callbackNoteBrowserItemsChanged,
                       frontEndCallbacksEditBrowserItemName =
-                        callbackEditBrowserItemName
+                        callbackEditBrowserItemName,
+                      frontEndCallbacksNoteNewDocumentWindow =
+                        callbackNoteNewDocumentWindow
                     }
   applicationStateMVar <- applicationInit callbacks
   newStablePtr applicationStateMVar
@@ -736,18 +758,17 @@ findBrowserWindowByID applicationStateMVar
     Nothing -> return Nothing
 
 
-findMaybeBrowserWindowFromIDPtr
+findMaybeWindowFromIDPtr
     :: MVar ApplicationState
-    -> Ptr BrowserWindowID
-    -> IO (Maybe BrowserWindow)
-findMaybeBrowserWindowFromIDPtr applicationStateMVar
-                                browserWindowIDPtr = do
-  if browserWindowIDPtr == nullPtr
+    -> Ptr WindowID
+    -> IO (Maybe Window)
+findMaybeWindowFromIDPtr applicationStateMVar
+                         windowIDPtr = do
+  if windowIDPtr == nullPtr
     then return Nothing
     else do
-      browserWindowID <- peek browserWindowIDPtr
-      findBrowserWindowByID applicationStateMVar
-                            browserWindowID
+      windowID <- peek windowIDPtr
+      findWindowByID applicationStateMVar windowID
 
 
 foreignBrowserWindowRoot
@@ -1224,17 +1245,16 @@ foreignInodeRename applicationStateMVarStablePtr
 
 foreignInodeListDelete
     :: StablePtr (MVar ApplicationState)
-    -> Ptr BrowserWindowID
+    -> Ptr WindowID
     -> StablePtr [Inode]
     -> IO ()
 foreignInodeListDelete applicationStateMVarStablePtr
-                       browserWindowIDPtr
+                       windowIDPtr
                        inodeListStablePtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  maybeBrowserWindow <- findMaybeBrowserWindowFromIDPtr applicationStateMVar
-                                                        browserWindowIDPtr
+  maybeWindow <- findMaybeWindowFromIDPtr applicationStateMVar windowIDPtr
   inodeList <- deRefStablePtr inodeListStablePtr
-  inodeListDelete maybeBrowserWindow inodeList
+  inodeListDelete maybeWindow inodeList
 
 
 foreignInodeOpen
@@ -1246,8 +1266,9 @@ foreignInodeOpen applicationStateMVarStablePtr
                  browserWindowIDPtr
                  inodeIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  maybeBrowserWindow <- findMaybeBrowserWindowFromIDPtr applicationStateMVar
-                                                        browserWindowIDPtr
+  browserWindowID <- peek browserWindowIDPtr
+  maybeBrowserWindow <- findBrowserWindowByID applicationStateMVar
+                                              browserWindowID
   case maybeBrowserWindow of
     Just browserWindow -> do
       let project = browserWindowProject browserWindow
@@ -1570,7 +1591,7 @@ foreignDragInformationFilePath dragInformationStablePtr index = do
 
 foreignConfirmationDialogNew
     :: StablePtr (MVar ApplicationState)
-    -> Ptr BrowserWindowID
+    -> Ptr WindowID
     -> CString
     -> CString
     -> Word64
@@ -1579,7 +1600,7 @@ foreignConfirmationDialogNew
     -> Ptr CString
     -> IO (StablePtr ConfirmationDialog)
 foreignConfirmationDialogNew applicationStateMVarStablePtr
-                             browserWindowIDPtr
+                             windowIDPtr
                              messageCString
                              detailsCString
                              defaultButtonIndex
@@ -1587,8 +1608,7 @@ foreignConfirmationDialogNew applicationStateMVarStablePtr
                              buttonCount
                              buttonCStringsPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  maybeBrowserWindow <- findMaybeBrowserWindowFromIDPtr applicationStateMVar
-                                                        browserWindowIDPtr
+  maybeWindow <- findMaybeWindowFromIDPtr applicationStateMVar windowIDPtr
   message <- peekCString messageCString
   details <- peekCString detailsCString
   let maybeDefaultButtonIndex =
@@ -1602,7 +1622,7 @@ foreignConfirmationDialogNew applicationStateMVarStablePtr
   buttonCStrings <- peekArray (fromIntegral buttonCount) buttonCStringsPtr
   buttons <- mapM peekCString buttonCStrings
   newStablePtr $ ConfirmationDialog {
-                     confirmationDialogBrowserWindow = maybeBrowserWindow,
+                     confirmationDialogWindow = maybeWindow,
                      confirmationDialogMessage = message,
                      confirmationDialogDetails = details,
                      confirmationDialogDefaultButtonIndex =
@@ -1620,18 +1640,18 @@ foreignConfirmationDialogFree confirmationDialogStablePtr = do
   freeStablePtr confirmationDialogStablePtr
 
 
-foreignConfirmationDialogBrowserWindow
+foreignConfirmationDialogWindow
     :: StablePtr ConfirmationDialog
-    -> Ptr BrowserWindowID
+    -> Ptr WindowID
     -> IO ()
-foreignConfirmationDialogBrowserWindow confirmationDialogStablePtr
-                                       resultBrowserWindowIDPtr = do
+foreignConfirmationDialogWindow confirmationDialogStablePtr
+                                resultWindowIDPtr = do
   confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
-  let browserWindowID' =
-        case confirmationDialogBrowserWindow confirmationDialog of
-          Just browserWindow -> browserWindowID browserWindow
-          Nothing -> nullBrowserWindowID
-  poke resultBrowserWindowIDPtr browserWindowID'
+  let windowID' =
+        case confirmationDialogWindow confirmationDialog of
+          Just window -> windowID window
+          Nothing -> nullWindowID
+  poke resultWindowIDPtr windowID'
 
 
 foreignConfirmationDialogMessage

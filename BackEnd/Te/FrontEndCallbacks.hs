@@ -5,7 +5,8 @@ module Te.FrontEndCallbacks
    noteNewBrowserWindow,
    noteDeletedWindow,
    noteBrowserItemsChanged,
-   editBrowserItemName)
+   editBrowserItemName,
+   noteNewDocumentWindow)
   where
 
 import Control.Concurrent.MVar
@@ -84,3 +85,13 @@ editBrowserItemName browserItem = do
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksEditBrowserItemName callbacks
   callback browserItem
+
+
+noteNewDocumentWindow :: DocumentWindow -> IO ()
+noteNewDocumentWindow documentWindow = do
+  let project = documentWindowProject documentWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksNoteNewDocumentWindow callbacks
+  callback documentWindow

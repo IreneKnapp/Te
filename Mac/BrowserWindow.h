@@ -1,12 +1,12 @@
 #import <Cocoa/Cocoa.h>
+#import "Window.h"
 #import "HasCurrentFolder.h"
 #import "HasSelectedInodes.h"
 #import "Utilities.h"
 
 @class BrowserItem;
-@interface BrowserWindow : NSWindowController
-<NSWindowDelegate, NSOutlineViewDataSource, HasCurrentFolder,
- HasSelectedInodes>
+@interface BrowserWindow : Window
+<NSOutlineViewDataSource, HasCurrentFolder, HasSelectedInodes>
 {
     IBOutlet NSOutlineView *filesOutlineView;
     IBOutlet NSTableColumn *filesOutlineViewNameColumn;
@@ -15,35 +15,18 @@
     IBOutlet NSTableColumn *filesOutlineViewKindColumn;
     IBOutlet NSTextField *itemCountLabel;
     
-    BOOL alreadyClosing;
     BOOL ignoreItemExpansionDueToFixing;
     id ignoreItemExpansionDueToNesting;
     
     NSMapTable *browserItems;
-    uuid_t browserWindowID;
 }
 
-- (id) initWithBrowserWindowID: (uuid_t *) newBrowserWindowID;
-- (uuid_t *) browserWindowID;
+- (id) initWithWindowID: (uuid_t *) newWindowID;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
 - (void *) getSelectedInodeList;
 - (BrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID;
-- (void) forceClose;
 - (void) noteItemsChanged;
 - (void) editItemName: (uuid_t *) inodeID;
-- (BOOL) windowShouldClose: (id) sender;
-- (void) windowWillClose: (NSNotification *) notification;
-- (void) runSheetModalAlert: (NSAlert *) alert
-          completionHandler: (void (*)(uint64_t result)) completionHandler;
-- (void) sheetModalAlertFinished: (NSAlert *) alert
-                      returnCode: (NSInteger) returnCode
-                     contextInfo: (void *) contextInfo;
-- (BOOL)               window: (NSWindow *) window
-  shouldDragDocumentWithEvent: (NSEvent *) event
-                         from: (NSPoint) dragImageLocation
-               withPasteboard: (NSPasteboard *) pasteboard;
-- (BOOL)               window: (NSWindow *) window
-  shouldPopUpDocumentPathMenu: (NSMenu *) menu;
 - (id) outlineView: (NSOutlineView *) outlineView
              child: (NSInteger) index
             ofItem: (id) item;

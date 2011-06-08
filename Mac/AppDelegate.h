@@ -15,7 +15,7 @@
     void *applicationState;
     NSPointerFunctions *keyFunctions;
     NSPointerFunctions *valueFunctions;
-    NSMapTable *browserWindows;
+    NSMapTable *windows;
     
     int hsArgc;
     char **hsArgv;
@@ -48,13 +48,15 @@ void confirm(void *confirmationDialog,
              void (*completionHandler)(uint64_t result));
 - (void) noteRecentProjectsChanged;
 void noteRecentProjectsChanged();
+- (void) noteDeletedWindow: (uuid_t *) windowID;
+void noteDeletedWindow(uuid_t *windowID);
 - (void) noteNewBrowserWindow: (uuid_t *) browserWindowID;
 void noteNewBrowserWindow(uuid_t *browserWindowID);
-- (void) noteDeletedBrowserWindow: (uuid_t *) browserWindowID;
-void noteDeletedBrowserWindow(uuid_t *browserWindowID);
 - (void) noteBrowserItemsChangedInBrowserWindow: (uuid_t *) browserWindowID;
 void noteBrowserItemsChanged(uuid_t *browserWindowID);
 - (void) editBrowserItemNameInBrowserWindow: (uuid_t *) browserWindowID
                                       inode: (uuid_t *) inodeID;
 void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID);
+- (void) noteNewDocumentWindow: (uuid_t *) documentWindowID;
+void noteNewDocumentWindow(uuid_t *documentWindowID);
 @end

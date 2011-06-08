@@ -406,27 +406,6 @@ computeNameForFilePath filePath =
   in fileNameWithoutExtension
 
 
-newBrowserWindow :: Project -> Maybe Inode -> IO ()
-newBrowserWindow project maybeRootInode = do
-  let applicationStateMVar = projectApplicationState project
-  catchTe applicationStateMVar () $ do
-    newBrowserWindowID <- newBrowserWindowID
-    let newBrowserWindow' = BrowserWindow {
-                                browserWindowID = newBrowserWindowID,
-                                browserWindowProject = project
-                              }
-        newWindow = toWindow newBrowserWindow'
-        newWindowID = windowID newWindow
-    windows <- takeMVar $ projectWindows project
-    let windows' = Map.insert newWindowID newWindow windows
-    putMVar (projectWindows project) windows'
-    rootInode <- case maybeRootInode of
-                   Just rootInode -> return rootInode
-                   Nothing -> lookupProjectRoot project
-    recordNewBrowserWindow newBrowserWindow' rootInode
-    noteNewBrowserWindow newBrowserWindow'
-
-
 class WindowType window where
   toWindow :: window -> Window
   getFromWindow :: Window -> IO (Maybe window)
@@ -464,6 +443,45 @@ instance WindowType DocumentWindow where
                             documentWindowProject = windowProject window
                           }
       _ -> return Nothing
+
+
+newBrowserWindow :: Project -> Maybe Inode -> IO ()
+newBrowserWindow project maybeRootInode = do
+  let applicationStateMVar = projectApplicationState project
+  catchTe applicationStateMVar () $ do
+    newBrowserWindowID <- newBrowserWindowID
+    let newBrowserWindow' = BrowserWindow {
+                                browserWindowID = newBrowserWindowID,
+                                browserWindowProject = project
+                              }
+        newWindow = toWindow newBrowserWindow'
+        newWindowID = windowID newWindow
+    windows <- takeMVar $ projectWindows project
+    let windows' = Map.insert newWindowID newWindow windows
+    putMVar (projectWindows project) windows'
+    rootInode <- case maybeRootInode of
+                   Just rootInode -> return rootInode
+                   Nothing -> lookupProjectRoot project
+    recordNewBrowserWindow newBrowserWindow' rootInode
+    noteNewBrowserWindow newBrowserWindow'
+
+
+newDocumentWindow :: Project -> Inode -> IO ()
+newDocumentWindow project documentInode = do
+  let applicationStateMVar = projectApplicationState project
+  catchTe applicationStateMVar () $ do
+    newDocumentWindowID <- newDocumentWindowID
+    let newDocumentWindow' = DocumentWindow {
+                                documentWindowID = newDocumentWindowID,
+                                documentWindowProject = project
+                              }
+        newWindow = toWindow newDocumentWindow'
+        newWindowID = windowID newWindow
+    windows <- takeMVar $ projectWindows project
+    let windows' = Map.insert newWindowID newWindow windows
+    putMVar (projectWindows project) windows'
+    recordNewDocumentWindow newDocumentWindow' documentInode
+    noteNewDocumentWindow newDocumentWindow'
 
 
 windowClose :: Window -> IO ()
@@ -767,8 +785,8 @@ inodeRename inode newName = do
       Nothing -> throwIO $(internalFailure)
 
 
-inodeListDelete :: Maybe BrowserWindow -> [Inode] -> IO ()
-inodeListDelete maybeBrowserWindow inodes = do
+inodeListDelete :: Maybe Window -> [Inode] -> IO ()
+inodeListDelete maybeWindow inodes = do
   inodes <- getInodesKernel inodes
   case inodes of
     [] -> return ()
@@ -805,7 +823,7 @@ inodeListDelete maybeBrowserWindow inodes = do
                           ++ "This action is irreversible."
             confirm applicationStateMVar
                     (ConfirmationDialog {
-                         confirmationDialogBrowserWindow = maybeBrowserWindow,
+                         confirmationDialogWindow = maybeWindow,
                          confirmationDialogMessage = message,
                          confirmationDialogDetails = details,
                          confirmationDialogDefaultButtonIndex = Just 0,
@@ -830,8 +848,8 @@ inodeOpen inode = do
     case inodeInformationKind inodeInformation of
       InodeKindDirectory -> do
         newBrowserWindow project $ Just inode
-      _ -> do
-        return ()
+      InodeKindHaskell -> do
+        newDocumentWindow project inode
 
 
 getInodesRecursiveStatistics :: [Inode] -> IO (Int, Int, ByteSize)
