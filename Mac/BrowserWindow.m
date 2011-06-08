@@ -221,6 +221,7 @@
     void (*completionHandler)(uint64_t result)
         = (void (*)(uint64_t result)) contextInfo;
     completionHandler(returnCode);
+    teCompletionHandlerFree((HsFunPtr) completionHandler);
 }
 
 

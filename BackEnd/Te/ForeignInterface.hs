@@ -36,7 +36,9 @@ foreign import ccall "dynamic" mkIntConfirmationDialogCompletionHandlerCallback
     :: FunPtr (StablePtr ConfirmationDialog
                -> (FunPtr (Word64 -> IO ()))
                -> IO ())
-    -> (StablePtr ConfirmationDialog -> FunPtr (Word64 -> IO ()) -> IO ())
+    -> (StablePtr ConfirmationDialog
+        -> FunPtr (Word64 -> IO ())
+        -> IO ())
 
 
 foreign import ccall "wrapper" wrapCompletionHandler
@@ -71,6 +73,9 @@ foreign export ccall "teUUIDEqual"
 foreign export ccall "teUUIDShow"
                      foreignUUIDShow
     :: Ptr UUID -> IO CString
+foreign export ccall "teCompletionHandlerFree"
+                     foreignCompletionHandlerFree
+    :: FunPtr (Word64 -> IO ()) -> IO ()
 foreign export ccall "teApplicationInit"
                      foreignApplicationInit
     :: FunPtr (CString -> CString -> IO ())
@@ -451,6 +456,11 @@ foreignUUIDShow uuidPtr = do
   uuid <- peek uuidPtr
   string <- uuidShow uuid
   stringNew string
+
+
+foreignCompletionHandlerFree :: FunPtr (Word64 -> IO ()) -> IO ()
+foreignCompletionHandlerFree completionHandler = do
+  freeHaskellFunPtr completionHandler
 
 
 wrapVoidCallback

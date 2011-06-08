@@ -383,6 +383,7 @@ void exception(char *messageCString, char *detailsCString) {
     } else {
         uint64_t result = [alert runModal];
         completionHandler(result);
+        teCompletionHandlerFree((HsFunPtr) completionHandler);
     }
 }
 
