@@ -7,6 +7,9 @@
 
 @implementation AppDelegate
 @synthesize applicationState;
+@synthesize baseFont;
+@synthesize emWidth;
+@synthesize lineHeight;
 
 - (NSMapTable *) newMapTable {
     if(!keyFunctions) {
@@ -78,6 +81,40 @@
     [openPanel setCanChooseDirectories: NO];
     [openPanel setAllowsMultipleSelection: YES];
     [openPanel setResolvesAliases: YES];
+    
+    baseFont = [NSFont fontWithName: @"Monaco" size: 14.0];
+    
+    NSTextStorage *textStorage = [[NSTextStorage alloc] init];
+    NSMutableDictionary *attributes
+        = [NSMutableDictionary dictionaryWithCapacity: 1];
+    [attributes setObject: baseFont forKey: NSFontAttributeName];
+    NSAttributedString *attributedString
+        = [[NSAttributedString alloc] initWithString: @"M"
+                                      attributes: attributes];
+    [textStorage setAttributedString: attributedString];
+    NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
+    [textStorage addLayoutManager: layoutManager];
+    NSTextContainer *textContainer = [[NSTextContainer alloc] init];
+    [layoutManager addTextContainer: textContainer];
+    NSUInteger numberOfGlyphs = [layoutManager numberOfGlyphs];
+    NSRange allGlyphRange = NSMakeRange(0, numberOfGlyphs);
+    [layoutManager ensureLayoutForGlyphRange: allGlyphRange];
+    NSGlyph *glyphBuffer = malloc(sizeof(NSGlyph) * numberOfGlyphs);
+    [layoutManager getGlyphs: glyphBuffer range: allGlyphRange];
+    CGFloat totalAdvancement = 0.0;
+    for(NSUInteger i = 0; i < numberOfGlyphs; i++) {
+        NSSize incrementalAdvancement
+            = [baseFont advancementForGlyph: glyphBuffer[i]];
+        totalAdvancement += incrementalAdvancement.width;
+    }
+    free(glyphBuffer);
+    emWidth = totalAdvancement;
+    
+    lineHeight = 0.0;
+    lineHeight += [baseFont ascender];
+    lineHeight -= [baseFont descender];
+    lineHeight += [baseFont leading];
+    lineHeight = ceil(lineHeight);
 }
 
 
