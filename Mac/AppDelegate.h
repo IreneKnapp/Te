@@ -16,19 +16,29 @@
     NSPointerFunctions *keyFunctions;
     NSPointerFunctions *valueFunctions;
     NSMapTable *windows;
+    
     NSFont *baseFont;
     CGFloat emWidth;
     CGFloat lineHeight;
+    
+    NSFont *lineNumberFont;
+    CGFloat lineNumberEmWidth;
+    CGFloat lineNumberLineHeight;
     
     int hsArgc;
     char **hsArgv;
 }
 @property (assign) void *applicationState;
 @property (assign) NSFont *baseFont;
+@property (assign) NSFont *lineNumberFont;
 @property (assign) CGFloat emWidth;
 @property (assign) CGFloat lineHeight;
+@property (assign) CGFloat lineNumberEmWidth;
+@property (assign) CGFloat lineNumberLineHeight;
 
 - (NSMapTable *) newMapTable;
+- (CGFloat) measureEmWidth: (NSFont *) font;
+- (CGFloat) measureLineHeight: (NSFont *) font;
 - (void) applicationWillFinishLaunching: (NSNotification *) notification;
 - (void) applicationWillTerminate: (NSNotification *) notification;
 - (void) applicationDidFinishLaunching: (NSNotification *) notification;

@@ -66,7 +66,7 @@
                                   endingColor: titleGradientBottomColor];
         
         baselineOffset = 3.0;
-        captionInset = [DocumentContentView leftMarginWidth];
+        captionInset = [DocumentContentView leftMarginWidth] + 5.0;
         captionLineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
         titleLineHeight = [@"M" sizeWithAttributes: titleAttributes].height;
     }
