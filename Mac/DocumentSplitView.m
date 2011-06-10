@@ -235,6 +235,14 @@
         trackingDividerDrag = YES;
         dividerBeingTracked = dividerIndex;
         previousDragPoint = location;
+        
+        BOOL optionDown = [event modifierFlags] & NSAlternateKeyMask;
+        
+        if((dividerIndex + 1 == nDividers) || optionDown) {
+            creatingNewDivider = YES;
+        } else {
+            creatingNewDivider = NO;
+        }
     }
 }
 
@@ -274,26 +282,29 @@
     CGFloat subviewCollapseThresholdSize = [self subviewCollapseThresholdSize];
     
     collapsedAbove = NO;
-    {
-        CGFloat proposedEdgeAbove = newPosition + dividerThickness;
-        CGFloat absoluteMax
-            = [self absoluteMaxCoordinateOfDividerAt: dividerBeingTracked];
-        CGFloat proposedHeightAbove = absoluteMax - proposedEdgeAbove;
-        if(proposedHeightAbove < subviewCollapseThresholdSize) {
-            newPosition = absoluteMax + dividerThickness;
-            collapsedAbove = YES;
-        }
-    }
-    
     collapsedBelow = NO;
-    if(!collapsedAbove) {
-        CGFloat proposedEdgeBelow = newPosition;
-        CGFloat absoluteMin
-            = [self absoluteMinCoordinateOfDividerAt: dividerBeingTracked];
-        CGFloat proposedHeightBelow = proposedEdgeBelow - absoluteMin;
-        if(proposedHeightBelow < subviewCollapseThresholdSize) {
-            newPosition = absoluteMin;
-            collapsedBelow = YES;
+    
+    if(!creatingNewDivider) {
+        {
+            CGFloat proposedEdgeAbove = newPosition + dividerThickness;
+            CGFloat absoluteMax
+                = [self absoluteMaxCoordinateOfDividerAt: dividerBeingTracked];
+            CGFloat proposedHeightAbove = absoluteMax - proposedEdgeAbove;
+            if(proposedHeightAbove < subviewCollapseThresholdSize) {
+                newPosition = absoluteMax + dividerThickness;
+                collapsedAbove = YES;
+            }
+        }
+        
+        if(!collapsedAbove) {
+            CGFloat proposedEdgeBelow = newPosition;
+            CGFloat absoluteMin
+                = [self absoluteMinCoordinateOfDividerAt: dividerBeingTracked];
+            CGFloat proposedHeightBelow = proposedEdgeBelow - absoluteMin;
+            if(proposedHeightBelow < subviewCollapseThresholdSize) {
+                newPosition = absoluteMin;
+                collapsedBelow = YES;
+            }
         }
     }
     
@@ -352,10 +363,12 @@
     if(!trackingDividerDrag)
         return;
     
-    if(collapsedAbove) {
-        [self removeContentSubviewAtIndex: dividerBeingTracked];
-    } else if(collapsedBelow) {
-        [self removeContentSubviewAtIndex: dividerBeingTracked + 1];
+    if(!creatingNewDivider) {
+        if(collapsedAbove) {
+            [self removeContentSubviewAtIndex: dividerBeingTracked];
+        } else if(collapsedBelow) {
+            [self removeContentSubviewAtIndex: dividerBeingTracked + 1];
+        }
     }
     trackingDividerDrag = NO;
 }
@@ -517,8 +530,7 @@
     if(dividerIndex + 1 < [contentSubviews count]) {
         CGFloat absoluteBottom
             = [self absoluteMinCoordinateOfDividerAt: dividerIndex];
-        CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-        CGFloat minimumHeight = lineHeight * 5.0;
+        CGFloat minimumHeight = [self subviewMinimumSize];
         enforcedBottom = absoluteBottom + minimumHeight;
     }
     
@@ -535,9 +547,7 @@
 {
     CGFloat absoluteTop
         = [self absoluteMaxCoordinateOfDividerAt: dividerIndex];
-    
-    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-    CGFloat minimumHeight = lineHeight * 5.0;
+    CGFloat minimumHeight = [self subviewMinimumSize];
     CGFloat enforcedTop = absoluteTop - minimumHeight;
     
     if(proposedPosition > enforcedTop)
@@ -564,6 +574,12 @@
     CGFloat constrainedPosition = absoluteTop - constrainedHeight;
     
     return constrainedPosition;
+}
+
+
+- (CGFloat) subviewMinimumSize {
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    return lineHeight * 5.0;
 }
 
 

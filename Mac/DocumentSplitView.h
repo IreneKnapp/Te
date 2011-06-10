@@ -12,6 +12,7 @@
     NSPoint previousDragPoint;
     BOOL collapsedAbove;
     BOOL collapsedBelow;
+    BOOL creatingNewDivider;
 }
 @property (readonly) NSArray *contentSubviews;
 
@@ -36,5 +37,6 @@
                        ofDividerAt: (NSUInteger) dividerIndex;
 - (CGFloat) constrainSplitPosition: (CGFloat) proposedPosition
                        ofDividerAt: (NSUInteger) dividerIndex;
+- (CGFloat) subviewMinimumSize;
 - (CGFloat) subviewCollapseThresholdSize;
 @end
