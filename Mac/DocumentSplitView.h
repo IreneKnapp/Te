@@ -8,6 +8,19 @@
     NSMutableArray *contentSubviews;
     NSMutableArray *dividerSubviews;
     
+    NSMutableDictionary *captionAttributes;
+    NSMutableDictionary *titleAttributes;
+    NSMutableDictionary *titleUnderprintAttributes;
+    NSColor *topBorderColor;
+    NSColor *bottomBorderColor;
+    NSColor *curvyBorderColor;
+    NSGradient *captionGradient;
+    NSGradient *titleGradient;
+    CGFloat baselineOffset;
+    CGFloat captionInset;
+    CGFloat captionLineHeight;
+    CGFloat titleLineHeight;
+    
     BOOL trackingDividerDrag;
     NSUInteger dividerBeingTracked;
     NSPoint previousDragPoint;
@@ -27,6 +40,10 @@
 - (NSView *) dividerSubviewAtIndex: (NSUInteger) dividerIndex;
 - (void) drawRect: (NSRect) dirtyRect;
 - (void) drawGhost: (NSRect) frame;
+- (void) drawDividerInFrame: (NSRect) dividerFrame
+                   isBottom: (BOOL) isBottom
+                    caption: (NSString *) caption
+              documentTitle: (NSString *) documentTitle;
 - (NSView *) hitTest: (NSPoint) point;
 - (void) mouseDown: (NSEvent *) event;
 - (void) mouseDragged: (NSEvent *) event;

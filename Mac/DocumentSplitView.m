@@ -23,6 +23,52 @@
         contentSubviews = [NSMutableArray arrayWithCapacity: 16];
         dividerSubviews = [NSMutableArray arrayWithCapacity: 16];
         ghostWindow = nil;
+
+        NSFont *captionFont = [(AppDelegate *) [NSApp delegate] baseFont];
+        captionAttributes
+            = [NSMutableDictionary dictionaryWithCapacity: 1];
+        [captionAttributes setObject: captionFont forKey: NSFontAttributeName];
+        
+        NSFont *titleFont = [NSFont titleBarFontOfSize: 14.0];
+        titleAttributes
+            = [NSMutableDictionary dictionaryWithCapacity: 3];
+        [titleAttributes setObject: titleFont forKey: NSFontAttributeName];
+        NSMutableParagraphStyle *titleParagraphStyle
+            = [[NSParagraphStyle defaultParagraphStyle] mutableCopyWithZone: nil];
+        [titleParagraphStyle setAlignment: NSCenterTextAlignment];
+        [titleAttributes setObject: titleParagraphStyle
+                         forKey: NSParagraphStyleAttributeName];
+        titleUnderprintAttributes
+            = [titleAttributes mutableCopyWithZone: nil];
+        [titleUnderprintAttributes
+          setObject: [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0]
+          forKey: NSForegroundColorAttributeName];
+        
+        topBorderColor
+            = [NSColor colorWithDeviceWhite: 0.89 alpha: 1.0];
+        bottomBorderColor
+            = [NSColor colorWithDeviceWhite: 0.32 alpha: 1.0];
+        NSColor *captionGradientTopColor
+            = [NSColor colorWithDeviceWhite: 0.91 alpha: 1.0];
+        NSColor *captionGradientBottomColor
+            = [NSColor colorWithDeviceWhite: 1.00 alpha: 1.0];
+        NSColor *titleGradientTopColor
+            = [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0];
+        NSColor *titleGradientBottomColor
+            = [NSColor colorWithDeviceWhite: 0.66 alpha: 1.0];
+        curvyBorderColor
+            = [NSColor colorWithDeviceWhite: 0.0 alpha: 0.5];
+        captionGradient
+            = [[NSGradient alloc] initWithStartingColor: captionGradientTopColor
+                                  endingColor: captionGradientBottomColor];
+        titleGradient
+            = [[NSGradient alloc] initWithStartingColor: titleGradientTopColor
+                                  endingColor: titleGradientBottomColor];
+        
+        baselineOffset = 3.0;
+        captionInset = [DocumentContentView leftMarginWidth];
+        captionLineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+        titleLineHeight = [@"M" sizeWithAttributes: titleAttributes].height;
     }
     return self;
 }
@@ -67,122 +113,97 @@
 }
 
 
-- (void) drawRect: (NSRect) dirtyRect {
-    NSFont *captionFont = [(AppDelegate *) [NSApp delegate] baseFont];
-    NSMutableDictionary *captionAttributes
-        = [NSMutableDictionary dictionaryWithCapacity: 1];
-    [captionAttributes setObject: captionFont forKey: NSFontAttributeName];
-    
-    NSFont *titleFont = [NSFont titleBarFontOfSize: 14.0];
-    NSMutableDictionary *titleAttributes
-        = [NSMutableDictionary dictionaryWithCapacity: 3];
-    [titleAttributes setObject: titleFont forKey: NSFontAttributeName];
-    NSMutableParagraphStyle *titleParagraphStyle
-        = [[NSParagraphStyle defaultParagraphStyle] mutableCopyWithZone: nil];
-    [titleParagraphStyle setAlignment: NSCenterTextAlignment];
-    [titleAttributes setObject: titleParagraphStyle
-                     forKey: NSParagraphStyleAttributeName];
-    NSMutableDictionary *titleUnderprintAttributes
-        = [titleAttributes mutableCopyWithZone: nil];
-    [titleUnderprintAttributes
-      setObject: [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0]
-      forKey: NSForegroundColorAttributeName];
-    
-    NSColor *topBorderColor
-        = [NSColor colorWithDeviceWhite: 0.89 alpha: 1.0];
-    NSColor *bottomBorderColor
-        = [NSColor colorWithDeviceWhite: 0.32 alpha: 1.0];
-    NSColor *captionGradientTopColor
-        = [NSColor colorWithDeviceWhite: 0.91 alpha: 1.0];
-    NSColor *captionGradientBottomColor
-        = [NSColor colorWithDeviceWhite: 1.00 alpha: 1.0];
-    NSColor *titleGradientTopColor
-        = [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0];
-    NSColor *titleGradientBottomColor
-        = [NSColor colorWithDeviceWhite: 0.66 alpha: 1.0];
-    NSGradient *captionGradient
-        = [[NSGradient alloc] initWithStartingColor: captionGradientTopColor
-                              endingColor: captionGradientBottomColor];
-    NSGradient *titleGradient
-        = [[NSGradient alloc] initWithStartingColor: titleGradientTopColor
-                              endingColor: titleGradientBottomColor];
-    
-    CGFloat baselineOffset = 3.0;
-    CGFloat captionInset = [DocumentContentView leftMarginWidth];
-    CGFloat captionLineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-    CGFloat titleLineHeight
-        = [@"M" sizeWithAttributes: titleAttributes].height;
-    
+- (void) drawRect: (NSRect) dirtyRect {    
     NSUInteger nDividers = [dividerSubviews count];
     for(NSUInteger i = 0; i < nDividers; i++) {
         NSRect dividerFrame = [[dividerSubviews objectAtIndex: i] frame];
         BOOL isBottom = i + 1 == nDividers;
         
-        NSRect topBorderRect = dividerFrame;
-        topBorderRect.origin.y += topBorderRect.size.height - 1.0;
-        topBorderRect.size.height = 1.0;
-        
-        NSRect bottomBorderRect = dividerFrame;
-        bottomBorderRect.size.height = 1.0;
-        
-        CGFloat leftX = dividerFrame.origin.x;
-        CGFloat rightX = dividerFrame.origin.x + dividerFrame.size.width;
-        
-        CGFloat curveMiddleX
-            = (dividerFrame.size.width - captionInset) / 4.0
-              + dividerFrame.origin.x + captionInset;
-        CGFloat curveLeftX = curveMiddleX - 50.0;
-        CGFloat curveRightX = curveMiddleX + 50.0;
-        CGFloat lowerControlPointX
-            = (curveRightX - curveLeftX) * 0.75 + curveLeftX;
-        CGFloat upperControlPointX
-            = (curveRightX - curveLeftX) * 0.25 + curveLeftX;
-        
-        CGFloat topY = dividerFrame.origin.y + dividerFrame.size.height;
-        CGFloat bottomY = dividerFrame.origin.y;
-        
-        NSBezierPath *topRegion = [NSBezierPath bezierPath];
-        [topRegion moveToPoint: NSMakePoint(leftX, topY)];
-        [topRegion lineToPoint: NSMakePoint(leftX, bottomY)];
-        [topRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
-        [topRegion curveToPoint: NSMakePoint(curveRightX, topY)
-                   controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
-                   controlPoint2: NSMakePoint(upperControlPointX, topY)];
-        [topRegion closePath];
-        
-        NSBezierPath *bottomRegion = [NSBezierPath bezierPath];
-        [bottomRegion moveToPoint: NSMakePoint(rightX, topY)];
-        [bottomRegion lineToPoint: NSMakePoint(rightX, bottomY)];
-        [bottomRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
-        [bottomRegion curveToPoint: NSMakePoint(curveRightX, topY)
-                      controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
-                      controlPoint2: NSMakePoint(upperControlPointX, topY)];
-        [bottomRegion closePath];
-        
-        NSBezierPath *curvyBorder = [NSBezierPath bezierPath];
-        [curvyBorder moveToPoint: NSMakePoint(curveLeftX, bottomY)];
-        [curvyBorder curveToPoint: NSMakePoint(curveRightX, topY)
-                     controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
-                     controlPoint2: NSMakePoint(upperControlPointX, topY)];
-        [curvyBorder lineToPoint: NSMakePoint(rightX, topY)];
-        
-        [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
-        
-        [captionGradient drawInBezierPath: topRegion angle: -90.0];
-        
-        [topBorderColor set];
-        [NSBezierPath fillRect: topBorderRect];
-        
-        [[NSColor colorWithDeviceWhite: 0.0 alpha: 0.5] set];
-        [curvyBorder stroke];
-        
-        if(!isBottom) {
-            [bottomBorderColor set];
-            [NSBezierPath fillRect: bottomBorderRect];
-        }
-        
-        NSString *caption = @"(12, 13) in 1980";
-        
+        [self drawDividerInFrame: dividerFrame
+                        isBottom: isBottom
+                         caption: @"(12, 13) in 1980"
+                   documentTitle: @"Document Title"];
+    }
+}
+
+
+- (void) drawGhost: (NSRect) frame {
+    [self drawDividerInFrame: frame
+          isBottom: NO
+          caption: nil
+          documentTitle: nil];
+}
+
+
+- (void) drawDividerInFrame: (NSRect) dividerFrame
+                   isBottom: (BOOL) isBottom
+                    caption: (NSString *) caption
+              documentTitle: (NSString *) documentTitle
+{
+    NSRect topBorderRect = dividerFrame;
+    topBorderRect.origin.y += topBorderRect.size.height - 1.0;
+    topBorderRect.size.height = 1.0;
+    
+    NSRect bottomBorderRect = dividerFrame;
+    bottomBorderRect.size.height = 1.0;
+    
+    CGFloat leftX = dividerFrame.origin.x;
+    CGFloat rightX = dividerFrame.origin.x + dividerFrame.size.width;
+    
+    CGFloat curveMiddleX
+        = (dividerFrame.size.width - captionInset) / 4.0
+          + dividerFrame.origin.x + captionInset;
+    CGFloat curveLeftX = curveMiddleX - 50.0;
+    CGFloat curveRightX = curveMiddleX + 50.0;
+    CGFloat lowerControlPointX
+        = (curveRightX - curveLeftX) * 0.75 + curveLeftX;
+    CGFloat upperControlPointX
+        = (curveRightX - curveLeftX) * 0.25 + curveLeftX;
+    
+    CGFloat topY = dividerFrame.origin.y + dividerFrame.size.height;
+    CGFloat bottomY = dividerFrame.origin.y;
+    
+    NSBezierPath *topRegion = [NSBezierPath bezierPath];
+    [topRegion moveToPoint: NSMakePoint(leftX, topY)];
+    [topRegion lineToPoint: NSMakePoint(leftX, bottomY)];
+    [topRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
+    [topRegion curveToPoint: NSMakePoint(curveRightX, topY)
+               controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
+               controlPoint2: NSMakePoint(upperControlPointX, topY)];
+    [topRegion closePath];
+    
+    NSBezierPath *bottomRegion = [NSBezierPath bezierPath];
+    [bottomRegion moveToPoint: NSMakePoint(rightX, topY)];
+    [bottomRegion lineToPoint: NSMakePoint(rightX, bottomY)];
+    [bottomRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
+    [bottomRegion curveToPoint: NSMakePoint(curveRightX, topY)
+                  controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
+                  controlPoint2: NSMakePoint(upperControlPointX, topY)];
+    [bottomRegion closePath];
+    
+    NSBezierPath *curvyBorder = [NSBezierPath bezierPath];
+    [curvyBorder moveToPoint: NSMakePoint(curveLeftX, bottomY)];
+    [curvyBorder curveToPoint: NSMakePoint(curveRightX, topY)
+                 controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
+                 controlPoint2: NSMakePoint(upperControlPointX, topY)];
+    [curvyBorder lineToPoint: NSMakePoint(rightX, topY)];
+    
+    [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
+    
+    [captionGradient drawInBezierPath: topRegion angle: -90.0];
+    
+    [topBorderColor set];
+    [NSBezierPath fillRect: topBorderRect];
+    
+    [curvyBorderColor set];
+    [curvyBorder stroke];
+    
+    if(!isBottom) {
+        [bottomBorderColor set];
+        [NSBezierPath fillRect: bottomBorderRect];
+    }
+    
+    if(caption) {
         NSRect captionRect = dividerFrame;
         captionRect.origin.y += baselineOffset;
         captionRect.size.height = captionLineHeight;
@@ -191,30 +212,22 @@
         
         [caption drawInRect: captionRect
                  withAttributes: captionAttributes];
-        
-        if(!isBottom) {
-            NSString *documentTitle = @"Document Title";
-            
-            NSRect titleRect = dividerFrame;
-            titleRect.origin.y += baselineOffset;
-            titleRect.size.height = titleLineHeight;
-            
-            NSRect titleUnderprintRect = titleRect;
-            titleUnderprintRect.origin.y -= 1.0;
-            
-            [documentTitle drawInRect: titleUnderprintRect
-                           withAttributes: titleUnderprintAttributes];
-            
-            [documentTitle drawInRect: titleRect
-                           withAttributes: titleAttributes];
-        }
     }
-}
-
-
-- (void) drawGhost: (NSRect) frame {
-    [[NSColor redColor] set];
-    [NSBezierPath fillRect: frame];
+    
+    if(!isBottom && documentTitle) {
+        NSRect titleRect = dividerFrame;
+        titleRect.origin.y += baselineOffset;
+        titleRect.size.height = titleLineHeight;
+        
+        NSRect titleUnderprintRect = titleRect;
+        titleUnderprintRect.origin.y -= 1.0;
+        
+        [documentTitle drawInRect: titleUnderprintRect
+                       withAttributes: titleUnderprintAttributes];
+        
+        [documentTitle drawInRect: titleRect
+                       withAttributes: titleAttributes];
+    }
 }
 
 

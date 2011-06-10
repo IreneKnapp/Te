@@ -26,7 +26,7 @@
         
         [self setOpaque: NO];
         [self setIgnoresMouseEvents: YES];
-        [self setAlphaValue: 0.25];
+        [self setAlphaValue: 0.50];
         
         [aboveWindow addChildWindow: self ordered: NSWindowAbove];
     }
