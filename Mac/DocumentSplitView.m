@@ -383,20 +383,30 @@
     } else {
         CGFloat subviewMinimumSize = [self subviewMinimumSize];
         
+        CGFloat semiConstrainedNewPosition
+            = [self constrainSplitPosition: proposedNewPosition
+                    ofDividerAt: dividerBeingTracked];
+        
         {
             CGFloat thresholdHeightAbove
-                = frameAbove.size.height - subviewMinimumSize;
+                = frameAbove.size.height
+                  - (subviewMinimumSize + dividerThickness);
             
-            if(constrainedHeightAbove <= thresholdHeightAbove) {
+            if(proposedHeightAbove <= thresholdHeightAbove) {
+                CGFloat semiConstrainedEdgeAbove
+                    = semiConstrainedNewPosition + dividerThickness;
+                CGFloat semiConstrainedHeightAbove
+                    = absoluteMax - semiConstrainedEdgeAbove;
+                
                 subviewBelow = subviewAbove;
                 subviewAbove
                     = [self newContentSubviewAtIndex: dividerBeingTracked];
                 
                 frameBelow = frameAbove;
                 frameBelow.size.height
-                    -= constrainedHeightAbove + dividerThickness;
+                    -= semiConstrainedHeightAbove + dividerThickness;
                 
-                frameAbove.size.height = constrainedHeightAbove;
+                frameAbove.size.height = semiConstrainedHeightAbove;
                 frameAbove.origin.y
                     += frameBelow.size.height + dividerThickness;
                 
@@ -423,7 +433,12 @@
             CGFloat thresholdHeightBelow
                 = frameBelow.size.height - subviewMinimumSize;
             
-            if(constrainedHeightBelow <= thresholdHeightBelow) {
+            if(proposedHeightBelow <= thresholdHeightBelow) {
+                CGFloat semiConstrainedEdgeBelow
+                    = semiConstrainedNewPosition;
+                CGFloat semiConstrainedHeightBelow
+                    = semiConstrainedEdgeBelow - absoluteMin;
+                
                 subviewAbove
                     = [self newContentSubviewAtIndex: dividerBeingTracked + 1];
                 
