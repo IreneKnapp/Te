@@ -162,10 +162,7 @@
         [curvyBorder curveToPoint: NSMakePoint(curveRightX, topY)
                      controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
                      controlPoint2: NSMakePoint(upperControlPointX, topY)];
-        
-        NSBezierPath *topBorderRightPart = [NSBezierPath bezierPath];
-        [topBorderRightPart moveToPoint: NSMakePoint(curveRightX, topY)];
-        [topBorderRightPart lineToPoint: NSMakePoint(rightX, topY)];
+        [curvyBorder lineToPoint: NSMakePoint(rightX, topY)];
         
         [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
         
@@ -176,7 +173,6 @@
         
         [[NSColor colorWithDeviceWhite: 0.0 alpha: 0.5] set];
         [curvyBorder stroke];
-        [topBorderRightPart stroke];
         
         if(!isBottom) {
             [bottomBorderColor set];
