@@ -601,18 +601,14 @@
 - (CGFloat) dividerThickness {
     CGFloat minimumThickness = [DocumentSplitView minimumDividerThickness];
     CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-    CGFloat totalHeight = [self frame].size.height;
+    CGFloat totalHeight = [self bounds].size.height;
     NSUInteger nDividers = [contentSubviews count];
-    CGFloat minimumNonContentSpace
-        = totalHeight - nDividers * minimumThickness;
+    CGFloat minimumNonContentSpace = nDividers * minimumThickness;
     NSUInteger nContentLines
         = floor((totalHeight - minimumNonContentSpace) / lineHeight);
     CGFloat contentSpace = nContentLines * lineHeight;
     CGFloat nonContentSpace = totalHeight - contentSpace;
-    CGFloat extraNonContentSpace = nonContentSpace - minimumNonContentSpace;
-    CGFloat extraNonContentSpacePerDivider
-        = ceil(extraNonContentSpace / nDividers);
-    return extraNonContentSpacePerDivider + minimumThickness;
+    return ceil(nonContentSpace / nDividers);
 }
 
 
