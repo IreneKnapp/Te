@@ -139,34 +139,45 @@
         CGFloat topY = dividerFrame.origin.y + dividerFrame.size.height;
         CGFloat bottomY = dividerFrame.origin.y;
         
-        if(!isBottom) {
-            NSBezierPath *topRegion = [NSBezierPath bezierPath];
-            [topRegion moveToPoint: NSMakePoint(leftX, topY)];
-            [topRegion lineToPoint: NSMakePoint(leftX, bottomY)];
-            [topRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
-            [topRegion curveToPoint: NSMakePoint(curveRightX, topY)
-                       controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
-                       controlPoint2: NSMakePoint(upperControlPointX, topY)];
-            [topRegion closePath];
-            
-            [captionGradient drawInBezierPath: topRegion angle: -90.0];
-            
-            NSBezierPath *bottomRegion = [NSBezierPath bezierPath];
-            [bottomRegion moveToPoint: NSMakePoint(rightX, topY)];
-            [bottomRegion lineToPoint: NSMakePoint(rightX, bottomY)];
-            [bottomRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
-            [bottomRegion curveToPoint: NSMakePoint(curveRightX, topY)
-                         controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
-                         controlPoint2: NSMakePoint(upperControlPointX, topY)];
-            [bottomRegion closePath];
-            
-            [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
-        } else {
-            [captionGradient drawInRect: dividerFrame angle: -90.0];
-        }
+        NSBezierPath *topRegion = [NSBezierPath bezierPath];
+        [topRegion moveToPoint: NSMakePoint(leftX, topY)];
+        [topRegion lineToPoint: NSMakePoint(leftX, bottomY)];
+        [topRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
+        [topRegion curveToPoint: NSMakePoint(curveRightX, topY)
+                   controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
+                   controlPoint2: NSMakePoint(upperControlPointX, topY)];
+        [topRegion closePath];
+        
+        NSBezierPath *bottomRegion = [NSBezierPath bezierPath];
+        [bottomRegion moveToPoint: NSMakePoint(rightX, topY)];
+        [bottomRegion lineToPoint: NSMakePoint(rightX, bottomY)];
+        [bottomRegion lineToPoint: NSMakePoint(curveLeftX, bottomY)];
+        [bottomRegion curveToPoint: NSMakePoint(curveRightX, topY)
+                      controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
+                      controlPoint2: NSMakePoint(upperControlPointX, topY)];
+        [bottomRegion closePath];
+        
+        NSBezierPath *curvyBorder = [NSBezierPath bezierPath];
+        [curvyBorder moveToPoint: NSMakePoint(curveLeftX, bottomY)];
+        [curvyBorder curveToPoint: NSMakePoint(curveRightX, topY)
+                     controlPoint1: NSMakePoint(lowerControlPointX, bottomY)
+                     controlPoint2: NSMakePoint(upperControlPointX, topY)];
+        
+        NSBezierPath *topBorderRightPart = [NSBezierPath bezierPath];
+        [topBorderRightPart moveToPoint: NSMakePoint(curveRightX, topY)];
+        [topBorderRightPart lineToPoint: NSMakePoint(rightX, topY)];
+        
+        [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
+        
+        [captionGradient drawInBezierPath: topRegion angle: -90.0];
         
         [topBorderColor set];
         [NSBezierPath fillRect: topBorderRect];
+        
+        [[NSColor colorWithDeviceWhite: 0.0 alpha: 0.5] set];
+        [curvyBorder stroke];
+        [topBorderRightPart stroke];
+        
         if(!isBottom) {
             [bottomBorderColor set];
             [NSBezierPath fillRect: bottomBorderRect];
