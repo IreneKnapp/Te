@@ -2,7 +2,7 @@ name: te
 version: 0.1
 cabal-version: >= 1.6
 build-type: Custom
-license: BSD3
+license: AllRightsReserved
 license-file: LICENSE
 copyright: Copyright (c) 2009 Dan Knapp
 author: Dan Knapp
