@@ -92,13 +92,6 @@
         = [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0];
     NSColor *titleGradientBottomColor
         = [NSColor colorWithDeviceWhite: 0.66 alpha: 1.0];
-        /*
-    NSMutableArray *captionGradientColors
-        = [NSMutableArray arrayWithCapacity: 3];
-    [captionGradientColors addObject: captionGradientTopAndBottomColor];
-    [captionGradientColors addObject: captionGradientMiddleColor];
-    [captionGradientColors addObject: captionGradientTopAndBottomColor];
-    */
     NSGradient *captionGradient
         = [[NSGradient alloc] initWithStartingColor: captionGradientTopColor
                               endingColor: captionGradientBottomColor];
@@ -128,7 +121,8 @@
         CGFloat rightX = dividerFrame.origin.x + dividerFrame.size.width;
         
         CGFloat curveMiddleX
-            = dividerFrame.size.width / 4.0 + dividerFrame.origin.x;
+            = (dividerFrame.size.width - captionInset) / 4.0
+              + dividerFrame.origin.x + captionInset;
         CGFloat curveLeftX = curveMiddleX - 50.0;
         CGFloat curveRightX = curveMiddleX + 50.0;
         CGFloat lowerControlPointX
