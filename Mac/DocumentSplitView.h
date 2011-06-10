@@ -12,6 +12,8 @@
     NSPoint previousDragPoint;
     BOOL collapsedAbove;
     BOOL collapsedBelow;
+    BOOL createdAbove;
+    BOOL createdBelow;
     BOOL creatingNewDivider;
 }
 @property (readonly) NSArray *contentSubviews;
