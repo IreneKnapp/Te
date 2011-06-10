@@ -300,8 +300,10 @@
     dividerFrame.origin.y = newPosition;
     [dividerSubview setFrame: dividerFrame];
     
-    if(newPosition != oldPosition)
-        previousDragPoint = location;
+    if(newPosition != oldPosition) {
+        previousDragPoint.x = location.x;
+        previousDragPoint.y += newPosition - oldPosition;
+    }
 }
 
 
