@@ -22,9 +22,13 @@
         
         NSRect frame = [window frame];
         CGFloat newWidth
-            = 20.0 + emWidth * 80.0 + 40.0 + [NSScroller scrollerWidth];
-        NSUInteger lineCount = floor(frame.size.height / lineHeight);
-        CGFloat newHeight = lineCount * lineHeight;
+            = [DocumentContentView leftMarginWidth]
+              + emWidth * 80.0
+              + [DocumentContentView rightMarginWidth];
+        CGFloat dividerThickness = [DocumentSplitView minimumDividerThickness];
+        NSUInteger lineCount
+            = floor((frame.size.height - dividerThickness) / lineHeight);
+        CGFloat newHeight = lineCount * lineHeight + dividerThickness;
         
         CGFloat widthDifference = newWidth - frame.size.width;
         frame.origin.x -= widthDifference / 2.0;
@@ -44,16 +48,7 @@
         [window setMaxSize: contentMaxSize];
         [window setContentResizeIncrements: NSMakeSize(1.0, lineHeight)];
         
-        [window setAutorecalculatesContentBorderThickness: NO
-                forEdge: NSMinYEdge];
-        [window setContentBorderThickness: 32.0 forEdge: NSMinYEdge];
-        
-        NSRect contentFrame = [[window contentView] frame];
-        
-        NSRect lowerContentFrame = contentFrame;
-        lowerContentFrame.size.height = floor(contentFrame.size.height / 2.0);
-        NSRect upperContentFrame = lowerContentFrame;
-        upperContentFrame.origin.y += lowerContentFrame.size.height;
+        NSRect contentFrame = [[window contentView] bounds];
         
         documentSplitView
             = [[DocumentSplitView alloc] initWithFrame: contentFrame];
@@ -62,14 +57,11 @@
         [[window contentView] addSubview: documentSplitView];
         
         upperDocumentContentView
-            = [[DocumentContentView alloc] initWithFrame: upperContentFrame];
-        [documentSplitView addSubview: upperDocumentContentView];
-        
+            = [documentSplitView newContentSubviewAtIndex: 0];
         lowerDocumentContentView
-            = [[DocumentContentView alloc] initWithFrame: lowerContentFrame];
-        [documentSplitView addSubview: lowerDocumentContentView];
+            = [documentSplitView newContentSubviewAtIndex: 1];
         
-        [documentSplitView adjustSubviews];
+        [documentSplitView adjustSubviewsToEqualSizes];
     }
     return self;
 }

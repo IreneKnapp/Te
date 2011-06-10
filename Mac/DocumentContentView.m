@@ -7,6 +7,16 @@
 
 @implementation DocumentContentView
 
++ (CGFloat) leftMarginWidth {
+    return 20.0;
+}
+
+
++ (CGFloat) rightMarginWidth {
+    return 40.0 + [NSScroller scrollerWidth];
+}
+
+
 - (id) initWithFrame: (NSRect) frame {
     self = [super initWithFrame: frame];
     if(self) {
@@ -16,13 +26,11 @@
         
         NSRect verticalScrollerFrame;
         verticalScrollerFrame.size.width = scrollerWidth;
-        verticalScrollerFrame.size.height = bounds.size.height - 32.0;
+        verticalScrollerFrame.size.height = bounds.size.height;
         verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
         verticalScrollerFrame.origin.y = 0.0;
         verticalScroller
             = [[NSScroller alloc] initWithFrame: verticalScrollerFrame];
-        [self addSubview: verticalScroller];
-        [verticalScroller setFrame: verticalScrollerFrame];
         [verticalScroller setAutoresizingMask:
                            NSViewMinXMargin | NSViewHeightSizable];
         [verticalScroller setArrowsPosition: NSScrollerArrowsDefaultSetting];
@@ -31,6 +39,7 @@
         [verticalScroller setTarget: self];
         [verticalScroller setAction: @selector(scrollerActivated:)];
         [verticalScroller setEnabled: YES];
+        [self addSubview: verticalScroller];
         
         textStorage = [[NSTextStorage alloc] init];
         
@@ -57,19 +66,17 @@
     CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
     
     CGFloat farLeft = 0.0;
-    CGFloat leftMarginWidth = 20.0;
+    CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
     CGFloat contentAreaLeft = farLeft + leftMarginWidth;
     CGFloat contentAreaWidth = ceil(emWidth * 80.0);
     CGFloat contentAreaRight = contentAreaLeft + contentAreaWidth;
-    CGFloat rightMarginWidth = 40.0 + [NSScroller scrollerWidth];
+    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
     CGFloat farRight = contentAreaRight + rightMarginWidth;
     
     CGFloat totalHeight = [self bounds].size.height;
-    NSUInteger nLines = floor((totalHeight - 32.0) / lineHeight);
+    NSUInteger nLines = floor(totalHeight / lineHeight);
     CGFloat contentAreaTop = 0.0;
-    CGFloat farBottom = totalHeight;
-    CGFloat bottomMarginHeight = 32.0;
-    CGFloat contentAreaBottom = farBottom - bottomMarginHeight;
+    CGFloat contentAreaBottom = totalHeight;
     CGFloat contentAreaHeight = contentAreaBottom - contentAreaTop;
     
     NSRect contentArea
@@ -107,7 +114,10 @@
     for(NSUInteger i = 0; i < nLines; i++) {
         CGFloat lineTop = upcomingLineTop;
         
-        NSString *string = @"Colorless green ideas sleep furiously.";
+        NSString *string =
+            [NSString stringWithFormat:
+                       @"%02i: Colorless green ideas sleep furiously.",
+                       i];
         NSAttributedString *attributedString
             = [[NSAttributedString alloc] initWithString: string
                                           attributes: attributes];
@@ -125,6 +135,11 @@
 - (IBAction) scrollerActivated: (id) sender {
     if([sender isEqual: verticalScroller]) {
     }
+}
+
+
+- (void) mouseDown: (NSEvent *) event {
+    NSLog(@"Click made it to content view.");
 }
 
 @end

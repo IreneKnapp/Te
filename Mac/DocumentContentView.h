@@ -9,8 +9,11 @@
     NSTextContainer *textContainer;
 }
 
++ (CGFloat) leftMarginWidth;
++ (CGFloat) rightMarginWidth;
 - (id) initWithFrame: (NSRect) frame;
 - (BOOL) isFlipped;
 - (void) drawRect: (NSRect) dirtyRect;
 - (IBAction) scrollerActivated: (id) sender;
+- (void) mouseDown: (NSEvent *) event;
 @end
