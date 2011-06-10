@@ -1,16 +1,16 @@
 #import <Cocoa/Cocoa.h>
 
 
-enum Axes {
-  BothAxes,
-  HorizontalAxis,
-  VerticalAxis
+enum MouseTrackingAxes {
+  TrackMouseBothAxes,
+  TrackMouseHorizontalAxis,
+  TrackMouseVerticalAxis
 };
 
 @interface TransparentHelperWindow : NSWindow
 {
     NSPoint savedMouseLocation;
-    enum Axes axes;
+    enum MouseTrackingAxes axes;
 }
 
 - (id) initWithContentRect: (NSRect) contentRect
@@ -18,7 +18,7 @@ enum Axes {
                aboveWindow: (NSWindow *) aboveWindow;
 - (void) remove;
 - (void) startTrackingMouse: (NSPoint) newLocation
-                     onAxes: (enum Axes) newAxes;
+                     onAxes: (enum MouseTrackingAxes) newAxes;
 - (void) updateMouse: (NSPoint) newLocation;
 - (void) offsetBy: (NSSize) offsetAmount;
 @end

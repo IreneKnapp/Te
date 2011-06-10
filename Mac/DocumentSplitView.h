@@ -1,12 +1,21 @@
 #import <Cocoa/Cocoa.h>
 
 
+enum SplitAxis {
+    UncommittedSplitAxis,
+    VerticalSplitAxis,
+    HorizontalSplitAxis
+};
+
 @class DocumentContentView;
 @class TransparentHelperWindow;
 @interface DocumentSplitView : NSView
 {
     NSMutableArray *contentSubviews;
-    NSMutableArray *dividerSubviews;
+    NSMutableArray *dividerSubviewsForVerticalContent;
+    NSMutableArray *dividerSubviewsForHorizontalContent;
+    
+    enum SplitAxis committedAxis;
     
     NSMutableDictionary *captionAttributes;
     NSMutableDictionary *titleAttributes;
@@ -22,7 +31,8 @@
     CGFloat titleLineHeight;
     
     BOOL trackingDividerDrag;
-    NSUInteger dividerBeingTracked;
+    NSUInteger dividerIndexBeingTracked;
+    enum SplitAxis dividerAxisBeingTracked;
     NSPoint previousDragPoint;
     BOOL collapsedAbove;
     BOOL collapsedBelow;
@@ -33,34 +43,45 @@
 }
 @property (readonly) NSArray *contentSubviews;
 
-+ (CGFloat) minimumDividerThickness;
++ (CGFloat) minimumDividerThicknessForAxis: (enum SplitAxis) dividerAxis;
 - (id) initWithFrame: (NSRect) frame;
-- (DocumentContentView *) newContentSubviewAtIndex: (NSUInteger) index;
+- (DocumentContentView *) newContentSubviewAtIndex: (NSUInteger) index
+                          alongAxis: (enum SplitAxis) alongAxis;
 - (void) removeContentSubviewAtIndex: (NSUInteger) index;
-- (NSView *) dividerSubviewAtIndex: (NSUInteger) dividerIndex;
 - (void) drawRect: (NSRect) dirtyRect;
-- (void) drawGhost: (NSRect) frame;
-- (void) drawDividerInFrame: (NSRect) dividerFrame
-                   isBottom: (BOOL) isBottom
-                    caption: (NSString *) caption
-              documentTitle: (NSString *) documentTitle;
+- (void) drawGhostForHorizontalContent: (NSRect) frame;
+- (void) drawGhostForVerticalContent: (NSRect) frame;
+- (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame;
+- (void) drawDividerForVerticalContentInFrame: (NSRect) dividerFrame
+                                     isBottom: (BOOL) isBottom
+                                      caption: (NSString *) caption
+                                documentTitle: (NSString *) documentTitle;
 - (NSView *) hitTest: (NSPoint) point;
 - (void) mouseDown: (NSEvent *) event;
 - (void) mouseDragged: (NSEvent *) event;
 - (void) mouseUp: (NSEvent *) event;
-- (void) createGhostWindowWithDividerAt: (NSUInteger) dividerIndex;
+- (void) createGhostWindowWithDividerAt: (NSUInteger) dividerIndex
+                                   axis: (enum SplitAxis) dividerAxis;
 - (void) cleanupGhostWindow;
 - (void) adjustSubviews;
+- (void) adjustSubviewsUncommittedAxis;
+- (void) adjustSubviewsHorizontalAxis;
+- (void) adjustSubviewsVerticalAxis;
 - (void) adjustSubviewsToEqualSizes;
-- (CGFloat) dividerThickness;
-- (CGFloat) absoluteMinCoordinateOfDividerAt: (NSUInteger) dividerIndex;
-- (CGFloat) absoluteMaxCoordinateOfDividerAt: (NSUInteger) dividerIndex;
+- (CGFloat) dividerThicknessForAxis: (enum SplitAxis) dividerAxis;
+- (CGFloat) absoluteMinCoordinateOfDividerAt: (NSUInteger) dividerIndex
+                                        axis: (enum SplitAxis) dividerAxis;
+- (CGFloat) absoluteMaxCoordinateOfDividerAt: (NSUInteger) dividerIndex
+                                        axis: (enum SplitAxis) dividerAxis;
 - (CGFloat) constrainMinCoordinate: (CGFloat) proposedPosition
-                       ofDividerAt: (NSUInteger) dividerIndex;
+                       ofDividerAt: (NSUInteger) dividerIndex
+                              axis: (enum SplitAxis) dividerAxis;
 - (CGFloat) constrainMaxCoordinate: (CGFloat) proposedPosition
-                       ofDividerAt: (NSUInteger) dividerIndex;
+                       ofDividerAt: (NSUInteger) dividerIndex
+                              axis: (enum SplitAxis) dividerAxis;
 - (CGFloat) constrainSplitPosition: (CGFloat) proposedPosition
-                       ofDividerAt: (NSUInteger) dividerIndex;
-- (CGFloat) subviewMinimumSize;
-- (CGFloat) subviewCollapseThresholdSize;
+                       ofDividerAt: (NSUInteger) dividerIndex
+                              axis: (enum SplitAxis) dividerAxis;
+- (CGFloat) subviewMinimumSizeForAxis: (enum SplitAxis) dividerAxis;
+- (CGFloat) subviewCollapseThresholdSizeForAxis: (enum SplitAxis) dividerAxis;
 @end

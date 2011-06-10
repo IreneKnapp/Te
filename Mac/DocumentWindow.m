@@ -21,14 +21,20 @@
         CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
         
         NSRect frame = [window frame];
+        CGFloat dividerHeight
+            = [DocumentSplitView minimumDividerThicknessForAxis:
+                                  VerticalSplitAxis];
+        CGFloat dividerWidth
+            = [DocumentSplitView minimumDividerThicknessForAxis:
+                                  HorizontalSplitAxis];
         CGFloat newWidth
-            = [DocumentContentView leftMarginWidth]
+            = dividerWidth
+              + [DocumentContentView leftMarginWidth]
               + emWidth * 80.0
               + [DocumentContentView rightMarginWidth];
-        CGFloat dividerThickness = [DocumentSplitView minimumDividerThickness];
         NSUInteger lineCount
-            = floor((frame.size.height - dividerThickness) / lineHeight);
-        CGFloat newHeight = lineCount * lineHeight + dividerThickness;
+            = floor((frame.size.height - dividerHeight) / lineHeight);
+        CGFloat newHeight = lineCount * lineHeight + dividerHeight;
         
         CGFloat widthDifference = newWidth - frame.size.width;
         frame.origin.x -= widthDifference / 2.0;
@@ -56,12 +62,11 @@
                             NSViewWidthSizable | NSViewHeightSizable];
         [[window contentView] addSubview: documentSplitView];
         
-        upperDocumentContentView
-            = [documentSplitView newContentSubviewAtIndex: 0];
-        lowerDocumentContentView
-            = [documentSplitView newContentSubviewAtIndex: 1];
+        firstDocumentContentView
+            = [documentSplitView newContentSubviewAtIndex: 0
+                                 alongAxis: UncommittedSplitAxis];
         
-        [documentSplitView adjustSubviewsToEqualSizes];
+        [documentSplitView adjustSubviews];
     }
     return self;
 }

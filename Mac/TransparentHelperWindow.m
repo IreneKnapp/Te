@@ -41,7 +41,7 @@
 
 
 - (void) startTrackingMouse: (NSPoint) newLocation
-                     onAxes: (enum Axes) newAxes
+                     onAxes: (enum MouseTrackingAxes) newAxes
 {
     newLocation = [[self parentWindow] convertBaseToScreen: newLocation];
     savedMouseLocation = newLocation;
@@ -53,9 +53,9 @@
     newLocation = [[self parentWindow] convertBaseToScreen: newLocation];
     
     NSSize offset = NSZeroSize;
-    if((axes == BothAxes) || (axes == HorizontalAxis))
+    if((axes == TrackMouseBothAxes) || (axes == TrackMouseHorizontalAxis))
         offset.width = newLocation.x - savedMouseLocation.x;
-    if((axes == BothAxes) || (axes == VerticalAxis))
+    if((axes == TrackMouseBothAxes) || (axes == TrackMouseVerticalAxis))
         offset.height = newLocation.y - savedMouseLocation.y;
     
     [self offsetBy: offset];
