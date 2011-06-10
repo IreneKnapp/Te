@@ -37,6 +37,8 @@ Executable Te
             FileNameCell.h,
             FileNameCellFieldEditor.h,
             HasCurrentFolder.h,
+            TransparentHelperWindow.h,
+            TransparentHelperWindowView.h,
             Utilities.h,
             Window.h
   c-sources: AppDelegate.m,
@@ -47,6 +49,8 @@ Executable Te
              DocumentWindow.m,
              FileNameCell.m,
              FileNameCellFieldEditor.m,
+             TransparentHelperWindow.m,
+             TransparentHelperWindowView.m,
              Utilities.m,
              Window.m
   hs-source-dirs: BackEnd

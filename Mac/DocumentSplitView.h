@@ -2,6 +2,7 @@
 
 
 @class DocumentContentView;
+@class TransparentHelperWindow;
 @interface DocumentSplitView : NSView
 {
     NSMutableArray *contentSubviews;
@@ -15,6 +16,7 @@
     BOOL createdAbove;
     BOOL createdBelow;
     BOOL creatingNewDivider;
+    TransparentHelperWindow *ghostWindow;
 }
 @property (readonly) NSArray *contentSubviews;
 
@@ -24,10 +26,13 @@
 - (void) removeContentSubviewAtIndex: (NSUInteger) index;
 - (NSView *) dividerSubviewAtIndex: (NSUInteger) dividerIndex;
 - (void) drawRect: (NSRect) dirtyRect;
+- (void) drawGhost: (NSRect) frame;
 - (NSView *) hitTest: (NSPoint) point;
 - (void) mouseDown: (NSEvent *) event;
 - (void) mouseDragged: (NSEvent *) event;
 - (void) mouseUp: (NSEvent *) event;
+- (void) createGhostWindowWithDividerAt: (NSUInteger) dividerIndex;
+- (void) cleanupGhostWindow;
 - (void) adjustSubviews;
 - (void) adjustSubviewsToEqualSizes;
 - (CGFloat) dividerThickness;

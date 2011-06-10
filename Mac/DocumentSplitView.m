@@ -3,6 +3,7 @@
 #import "Te/ForeignInterface_stub.h"
 #import "AppDelegate.h"
 #import "DocumentContentView.h"
+#import "TransparentHelperWindow.h"
 #import "Utilities.h"
 
 
@@ -21,6 +22,7 @@
         trackingDividerDrag = NO;
         contentSubviews = [NSMutableArray arrayWithCapacity: 16];
         dividerSubviews = [NSMutableArray arrayWithCapacity: 16];
+        ghostWindow = nil;
     }
     return self;
 }
@@ -210,6 +212,12 @@
 }
 
 
+- (void) drawGhost: (NSRect) frame {
+    [[NSColor redColor] set];
+    [NSBezierPath fillRect: frame];
+}
+
+
 - (NSView *) hitTest: (NSPoint) point {
     NSView *superResult = [super hitTest: point];
     if([dividerSubviews containsObject: superResult]) {
@@ -253,6 +261,9 @@
         
         if((dividerIndex + 1 == nDividers) || optionDown) {
             creatingNewDivider = YES;
+            [self createGhostWindowWithDividerAt: dividerIndex];
+            [ghostWindow startTrackingMouse: [event locationInWindow]
+                         onAxes: VerticalAxis];
         } else {
             creatingNewDivider = NO;
         }
@@ -263,6 +274,10 @@
 - (void) mouseDragged: (NSEvent *) event {
     if(!trackingDividerDrag)
         return;
+    
+    if(ghostWindow) {
+        [ghostWindow updateMouse: [event locationInWindow]];
+    }
     
     NSView *subviewAbove
         = [contentSubviews objectAtIndex: dividerBeingTracked];
@@ -392,7 +407,9 @@
                 = frameAbove.size.height
                   - (subviewMinimumSize + dividerThickness);
             
-            if(proposedHeightAbove <= thresholdHeightAbove) {
+            if(proposedHeightAbove <= thresholdHeightAbove) {                
+                [self cleanupGhostWindow];
+                
                 CGFloat semiConstrainedEdgeAbove
                     = semiConstrainedNewPosition + dividerThickness;
                 CGFloat semiConstrainedHeightAbove
@@ -434,6 +451,8 @@
                 = frameBelow.size.height - subviewMinimumSize;
             
             if(proposedHeightBelow <= thresholdHeightBelow) {
+                [self cleanupGhostWindow];
+                
                 CGFloat semiConstrainedEdgeBelow
                     = semiConstrainedNewPosition;
                 CGFloat semiConstrainedHeightBelow
@@ -476,6 +495,10 @@
     if(!trackingDividerDrag)
         return;
     
+    if(ghostWindow) {
+        [self cleanupGhostWindow];
+    }
+    
     if(!creatingNewDivider) {
         if(collapsedAbove) {
             [self removeContentSubviewAtIndex: dividerBeingTracked];
@@ -488,6 +511,32 @@
         }
     }
     trackingDividerDrag = NO;
+}
+
+
+- (void) createGhostWindowWithDividerAt: (NSUInteger) dividerIndex {
+    [self cleanupGhostWindow];
+    
+    NSRect dividerFrame
+        = [self convertRectToBase:
+                 [[dividerSubviews objectAtIndex: dividerIndex] frame]];
+    
+    ghostWindow
+        = [[TransparentHelperWindow alloc]
+            initWithContentRect: dividerFrame
+            drawHelper: ^(NSRect drawFrame)
+             {
+                 [self drawGhost: drawFrame];
+             }
+            aboveWindow: [self window]];
+}
+
+
+- (void) cleanupGhostWindow {
+    if(ghostWindow) {
+        [ghostWindow remove];
+        ghostWindow = nil;
+    }
 }
 
 
