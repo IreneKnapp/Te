@@ -1365,27 +1365,11 @@
     if(dividerAxis == HorizontalSplitAxis) {
         CGFloat minimumThickness
             = [DocumentSplitView minimumDividerThicknessForAxis: dividerAxis];
-        CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
-        CGFloat totalWidth = [self bounds].size.width;
-        NSUInteger nDividers = [contentSubviews count];
-        CGFloat minimumNonContentSpace = nDividers * minimumThickness;
-        NSUInteger nContentColumns
-            = floor((totalWidth - minimumNonContentSpace) / emWidth);
-        CGFloat contentSpace = nContentColumns * emWidth;
-        CGFloat nonContentSpace = totalWidth - contentSpace;
-        return ceil(nonContentSpace / nDividers);
+        return minimumThickness;
     } else if(dividerAxis == VerticalSplitAxis) {
         CGFloat minimumThickness
             = [DocumentSplitView minimumDividerThicknessForAxis: dividerAxis];
-        CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-        CGFloat totalHeight = [self bounds].size.height;
-        NSUInteger nDividers = [contentSubviews count];
-        CGFloat minimumNonContentSpace = nDividers * minimumThickness;
-        NSUInteger nContentLines
-            = floor((totalHeight - minimumNonContentSpace) / lineHeight);
-        CGFloat contentSpace = nContentLines * lineHeight;
-        CGFloat nonContentSpace = totalHeight - contentSpace;
-        return ceil(nonContentSpace / nDividers);
+        return minimumThickness;
     }
 }
 
