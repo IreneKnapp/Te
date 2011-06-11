@@ -28,11 +28,17 @@
         
         NSRect verticalScrollerFrame;
         verticalScrollerFrame.size.width = scrollerWidth;
-        verticalScrollerFrame.size.height = bounds.size.height;
-        verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
+        verticalScrollerFrame.size.height = scrollerWidth * 10.0;
+        verticalScrollerFrame.origin.x = 0.0;
         verticalScrollerFrame.origin.y = 0.0;
         verticalScroller
             = [[NSScroller alloc] initWithFrame: verticalScrollerFrame];
+        verticalScrollerFrame.size.width = scrollerWidth;
+        verticalScrollerFrame.size.height = bounds.size.height;
+        verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
+        verticalScrollerFrame.origin.y = 0.0;
+        [verticalScroller setFrame: verticalScrollerFrame];
+        
         [verticalScroller setAutoresizingMask:
                            NSViewMinXMargin | NSViewHeightSizable];
         [verticalScroller setArrowsPosition: NSScrollerArrowsDefaultSetting];
@@ -58,8 +64,6 @@
 
 
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize {
-    [super resizeSubviewsWithOldSize: oldBoundsSize];
-    
     NSRect bounds = [self bounds];
     
     if(bounds.size.height > 0.0) {
@@ -69,12 +73,15 @@
         if(window)
             contentView = [window contentView];
         
-        if(![superview isEqual: contentView]) {
-            NSRect verticalScrollerFrame = [verticalScroller frame];
-            if(verticalScrollerFrame.size.height != bounds.size.height) {
-                verticalScrollerFrame.size.height = bounds.size.height;
-                [verticalScroller setFrame: verticalScrollerFrame];
-            }
+        if(superview && ![superview isEqual: contentView]) {
+            CGFloat scrollerWidth = [NSScroller scrollerWidth];
+            
+            NSRect verticalScrollerFrame;
+            verticalScrollerFrame.size.width = scrollerWidth;
+            verticalScrollerFrame.size.height = bounds.size.height;
+            verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
+            verticalScrollerFrame.origin.y = 0.0;
+            [verticalScroller setFrame: verticalScrollerFrame];
         }
     }
 }
