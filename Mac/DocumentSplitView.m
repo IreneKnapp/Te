@@ -185,6 +185,8 @@
 
 
 - (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame {
+    [[NSColor redColor] set];
+    [NSBezierPath fillRect: dividerFrame];
 }
 
 
@@ -549,7 +551,7 @@
         {
             if(proposedSizeBefore < subviewCollapseThresholdSize) {
                 if(dividerAxisBeingTracked == HorizontalSplitAxis) {
-                    actualNewPosition = absoluteMin - dividerThickness;
+                    actualNewPosition = absoluteMin;
                 } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
                     actualNewPosition = absoluteMax + dividerThickness;
                 }
@@ -560,7 +562,7 @@
         if(!collapsedBefore) {
             if(proposedSizeAfter < subviewCollapseThresholdSize) {
                 if(dividerAxisBeingTracked == HorizontalSplitAxis) {
-                    actualNewPosition = absoluteMax;
+                    actualNewPosition = absoluteMax + dividerThickness;
                 } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
                     actualNewPosition = absoluteMin;
                 }
@@ -736,7 +738,7 @@
             
             if(proposedSizeAfter <= thresholdSizeAfter) {
                 [self cleanupGhostWindow];
-                                
+                
                 subviewBefore = [self newContentSubviewAtIndex:
                                        contentIndexAfter
                                       alongAxis: dividerAxisBeingTracked];
@@ -946,8 +948,9 @@
     CGFloat totalSubviewWidthAfter
         = bounds.size.width - nSubviews * dividerThickness;
     
-    CGFloat subviewRight = 0.0;
-    for(NSUInteger i = nSubviews - 1; i >= 0; i--) {
+    CGFloat subviewRight = [self bounds].size.width;
+    for(NSUInteger nMinusI = 0; nMinusI < nSubviews; nMinusI++) {
+        NSUInteger i = nSubviews - nMinusI - 1;
         NSView *subview = [contentSubviews objectAtIndex: i];
         CGFloat subviewWidth = floor(proportions[i] * totalSubviewWidthAfter);
         CGFloat subviewLeft = subviewRight - subviewWidth;
