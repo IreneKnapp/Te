@@ -17,42 +17,9 @@
     self = [super initWithWindowID: newWindowID nibName: @"DocumentWindow"];
     if(self) {
         NSWindow *window = [self window];
-        CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
-        CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
         
-        NSRect frame = [window frame];
-        CGFloat dividerHeight
-            = [DocumentSplitView minimumDividerThicknessForAxis:
-                                  VerticalSplitAxis];
-        CGFloat dividerWidth
-            = [DocumentSplitView minimumDividerThicknessForAxis:
-                                  HorizontalSplitAxis];
-        CGFloat newWidth
-            = dividerWidth
-              + [DocumentContentView leftMarginWidth]
-              + emWidth * 80.0
-              + [DocumentContentView rightMarginWidth];
-        NSUInteger lineCount
-            = floor((frame.size.height - dividerHeight) / lineHeight);
-        CGFloat newHeight = lineCount * lineHeight + dividerHeight;
-        
-        CGFloat widthDifference = newWidth - frame.size.width;
-        frame.origin.x -= widthDifference / 2.0;
-        frame.size.width = newWidth;
-        
-        CGFloat heightDifference = newHeight - frame.size.height;
-        frame.origin.y -= heightDifference;
-        frame.size.height = newHeight;
-        
-        [window setFrame: frame display: YES];
-        
-        NSSize contentMinSize = [window contentMinSize];
-        contentMinSize.width = newWidth;
-        [window setContentMinSize: contentMinSize];
-        NSSize contentMaxSize = [window contentMaxSize];
-        contentMaxSize.width = newWidth;
-        [window setMaxSize: contentMaxSize];
-        [window setContentResizeIncrements: NSMakeSize(1.0, lineHeight)];
+        [self sizeToDefault];
+        [self setConstraints];
         
         NSRect contentFrame = [[window contentView] bounds];
         
@@ -68,6 +35,67 @@
         [documentSplitView adjustSubviews];
     }
     return self;
+}
+
+
+- (void) sizeToDefault {
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    
+    CGFloat dividerHeight
+        = [DocumentSplitView minimumDividerThicknessForAxis:
+                              VerticalSplitAxis];
+    CGFloat dividerWidth
+        = [DocumentSplitView minimumDividerThicknessForAxis:
+                              HorizontalSplitAxis];
+    CGFloat newWidth
+        = dividerWidth
+          + [DocumentContentView leftMarginWidth]
+          + emWidth * 80.0
+          + [DocumentContentView rightMarginWidth];
+    CGFloat newHeight = 50.0 * lineHeight + dividerHeight;
+    
+    [self adjustSize: NSMakeSize(newWidth, newHeight)];
+}
+
+
+- (void) setConstraints {
+    NSWindow *window = [self window];
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    CGFloat dividerHeight
+        = [DocumentSplitView minimumDividerThicknessForAxis:
+                              VerticalSplitAxis];
+    CGFloat dividerWidth
+        = [DocumentSplitView minimumDividerThicknessForAxis:
+                              HorizontalSplitAxis];
+    
+    CGFloat minWidth
+        = dividerWidth
+          + [DocumentContentView leftMarginWidth]
+          + emWidth * 40
+          + [DocumentContentView rightMarginWidth];
+    CGFloat minHeight = 10.0 * lineHeight + dividerHeight;
+    
+    [window setContentMinSize: NSMakeSize(minWidth, minHeight)];
+    [window setContentMaxSize: NSMakeSize(INFINITY, INFINITY)];
+    [window setContentResizeIncrements: NSMakeSize(emWidth, lineHeight)];
+}
+
+
+- (void) adjustSize: (NSSize) newSize {
+    NSWindow *window = [self window];
+    NSRect frame = [window frame];
+    
+    CGFloat widthDifference = newSize.width - frame.size.width;
+    frame.origin.x -= widthDifference / 2.0;
+    
+    CGFloat heightDifference = newSize.height - frame.size.height;
+    frame.origin.y -= heightDifference;
+    
+    frame.size = newSize;
+    
+    [window setFrame: frame display: YES];
 }
 
 

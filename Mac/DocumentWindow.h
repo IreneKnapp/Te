@@ -14,5 +14,8 @@
 }
 
 - (id) initWithWindowID: (uuid_t *) newWindowID;
+- (void) sizeToDefault;
+- (void) setConstraints;
+- (void) adjustSize: (NSSize) newSize;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
 @end
