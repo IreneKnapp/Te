@@ -34,10 +34,10 @@ enum SplitAxis {
     NSUInteger dividerIndexBeingTracked;
     enum SplitAxis dividerAxisBeingTracked;
     NSPoint previousDragPoint;
-    BOOL collapsedAbove;
-    BOOL collapsedBelow;
-    BOOL createdAbove;
-    BOOL createdBelow;
+    BOOL collapsedBefore;
+    BOOL collapsedAfter;
+    BOOL createdBefore;
+    BOOL createdAfter;
     BOOL creatingNewDivider;
     TransparentHelperWindow *ghostWindow;
 }
@@ -84,4 +84,12 @@ enum SplitAxis {
                               axis: (enum SplitAxis) dividerAxis;
 - (CGFloat) subviewMinimumSizeForAxis: (enum SplitAxis) dividerAxis;
 - (CGFloat) subviewCollapseThresholdSizeForAxis: (enum SplitAxis) dividerAxis;
+- (BOOL) contentExistsBeforeDividerIndex: (NSUInteger) dividerIndex
+                                    axis: (enum SplitAxis) dividerAxis;
+- (BOOL) contentExistsAfterDividerIndex: (NSUInteger) dividerIndex
+                                   axis: (enum SplitAxis) dividerAxis;
+- (NSUInteger) contentIndexBeforeDividerIndex: (NSUInteger) dividerIndex
+                                         axis: (enum SplitAxis) dividerAxis;
+- (NSUInteger) contentIndexAfterDividerIndex: (NSUInteger) dividerIndex
+                                        axis: (enum SplitAxis) dividerAxis;
 @end

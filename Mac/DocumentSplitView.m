@@ -123,6 +123,8 @@
         [self addSubview: newDividerSubview];
     }
     
+    committedAxis = alongAxis;
+    
     return newContentSubview;
 }
 
@@ -136,6 +138,10 @@
         [dividerSubviewsForHorizontalContent removeObjectAtIndex: index];
     } else if(committedAxis == VerticalSplitAxis) {
         [dividerSubviewsForVerticalContent removeObjectAtIndex: index];
+    }
+    
+    if([contentSubviews count] < 2) {
+        committedAxis = UncommittedSplitAxis;
     }
 }
 
@@ -335,8 +341,8 @@
         dividerIndexBeingTracked = foundIndex;
         dividerAxisBeingTracked = foundAxis;
         previousDragPoint = location;
-        createdAbove = NO;
-        createdBelow = NO;
+        createdBefore = NO;
+        createdAfter = NO;
         
         BOOL isTerminalDivider;
         if(foundAxis == HorizontalSplitAxis) {
@@ -381,222 +387,403 @@
         [ghostWindow updateMouse: [event locationInWindow]];
     }
     
-    NSView *subviewAbove
-        = [contentSubviews objectAtIndex: dividerIndexBeingTracked];
-    NSView *subviewBelow = nil;
-    if(dividerIndexBeingTracked + 1 < [contentSubviews count]) {
-        subviewBelow
-            = [contentSubviews objectAtIndex: dividerIndexBeingTracked + 1];
+    BOOL contentExistsBefore
+        = [self contentExistsBeforeDividerIndex: dividerIndexBeingTracked
+                                           axis: dividerAxisBeingTracked];
+    BOOL contentExistsAfter
+        = [self contentExistsAfterDividerIndex: dividerIndexBeingTracked
+                                          axis: dividerAxisBeingTracked];
+    NSUInteger contentIndexBefore;
+    if(contentExistsBefore)
+        contentIndexBefore
+            = [self contentIndexBeforeDividerIndex: dividerIndexBeingTracked
+                                              axis: dividerAxisBeingTracked];
+    NSUInteger contentIndexAfter;
+    if(contentExistsAfter)
+        contentIndexAfter
+            = [self contentIndexAfterDividerIndex: dividerIndexBeingTracked
+                                             axis: dividerAxisBeingTracked];
+    
+    NSView *subviewBefore = nil;
+    if(contentExistsBefore)
+        subviewBefore = [contentSubviews objectAtIndex: contentIndexBefore];
+    NSView *subviewAfter = nil;
+    if(contentExistsAfter)
+        subviewAfter = [contentSubviews objectAtIndex: contentIndexAfter];
+    NSView *dividerSubview;
+    if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+        dividerSubview
+            = [dividerSubviewsForHorizontalContent
+                objectAtIndex: dividerIndexBeingTracked];
+    } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+        dividerSubview
+            = [dividerSubviewsForVerticalContent
+                objectAtIndex: dividerIndexBeingTracked];
     }
-    NSView *dividerSubview
-        = [dividerSubviewsForVerticalContent
-            objectAtIndex: dividerIndexBeingTracked];
     
     NSPoint location = [self convertPoint: [event locationInWindow]
                              fromView: nil];
-    CGFloat verticalOffset = location.y - previousDragPoint.y;
-    
-    CGFloat oldPosition;
-    NSRect frameAbove = [subviewAbove frame];
-    NSRect frameBelow;
-    if(subviewBelow) {
-        frameBelow = [subviewBelow frame];
-        oldPosition = frameBelow.origin.y + frameBelow.size.height;
-    } else {
-        frameBelow = NSMakeRect(0.0, 0.0, [self bounds].size.width, 0.0);
-        oldPosition = 0.0;
+    CGFloat offset;
+    if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+        offset = location.x - previousDragPoint.x;
+    } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+        offset = location.y - previousDragPoint.y;
     }
     
-    CGFloat proposedNewPosition = oldPosition + verticalOffset;
+    NSRect placeholderFrame;
+    if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+        placeholderFrame
+            = NSMakeRect(0.0, 0.0, 0.0, [self bounds].size.height);
+    } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+        placeholderFrame
+            = NSMakeRect(0.0, 0.0, [self bounds].size.width, 0.0);
+    }
+    
+    NSRect frameBefore;
+    if(subviewBefore) {
+        frameBefore = [subviewBefore frame];
+    } else {
+        frameBefore = placeholderFrame;
+    }
+    
+    NSRect frameAfter;
+    if(subviewAfter) {
+        frameAfter = [subviewAfter frame];
+    } else {
+        frameAfter = placeholderFrame;
+    }
+    
+    CGFloat oldPosition;
+    if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+        if(subviewBefore) {
+            oldPosition = frameBefore.origin.x + frameBefore.size.width;
+        } else {
+            oldPosition = 0.0;
+        }
+    } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+        if(subviewAfter) {
+            oldPosition = frameAfter.origin.y + frameAfter.size.height;
+        } else {
+            oldPosition = 0.0;
+        }
+    }
+    
+    CGFloat proposedNewPosition = oldPosition + offset;
     
     CGFloat constrainedNewPosition
         = [self constrainSplitPosition: proposedNewPosition
                 ofDividerAt: dividerIndexBeingTracked
-                axis: VerticalSplitAxis];
+                axis: dividerAxisBeingTracked];
     
     CGFloat minConstrainedPosition
         = [self constrainMinCoordinate: constrainedNewPosition
                 ofDividerAt: dividerIndexBeingTracked
-                axis: VerticalSplitAxis];
+                axis: dividerAxisBeingTracked];
     if(constrainedNewPosition < minConstrainedPosition)
         constrainedNewPosition = minConstrainedPosition;
     
     CGFloat maxConstrainedPosition
         = [self constrainMaxCoordinate: constrainedNewPosition
                 ofDividerAt: dividerIndexBeingTracked
-                axis: VerticalSplitAxis];
+                axis: dividerAxisBeingTracked];
     if(constrainedNewPosition > maxConstrainedPosition)
         constrainedNewPosition = maxConstrainedPosition;
     
     CGFloat dividerThickness
-        = [self dividerThicknessForAxis: VerticalSplitAxis];
-    
+        = [self dividerThicknessForAxis: dividerAxisBeingTracked];
     CGFloat absoluteMax
         = [self absoluteMaxCoordinateOfDividerAt: dividerIndexBeingTracked
-                                            axis: VerticalSplitAxis];
-    
-    CGFloat proposedEdgeAbove = proposedNewPosition + dividerThickness;
-    CGFloat proposedHeightAbove = absoluteMax - proposedEdgeAbove;
-    
-    CGFloat constrainedEdgeAbove = constrainedNewPosition + dividerThickness;
-    CGFloat constrainedHeightAbove = absoluteMax - constrainedEdgeAbove;
-    
+                                            axis: dividerAxisBeingTracked];
     CGFloat absoluteMin
         = [self absoluteMinCoordinateOfDividerAt: dividerIndexBeingTracked
-                                            axis: VerticalSplitAxis];
+                                            axis: dividerAxisBeingTracked];
     
-    CGFloat proposedEdgeBelow = proposedNewPosition;
-    CGFloat proposedHeightBelow = proposedEdgeBelow - absoluteMin;
+    CGFloat proposedEdgeBefore;
+    CGFloat proposedSizeBefore;
+    CGFloat constrainedEdgeBefore;
+    CGFloat constrainedSizeBefore;
+    CGFloat proposedEdgeAfter;
+    CGFloat proposedSizeAfter;
+    CGFloat constrainedEdgeAfter;
+    CGFloat constrainedSizeAfter;
+    if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+        proposedEdgeBefore = proposedNewPosition;
+        proposedSizeBefore = proposedEdgeBefore - absoluteMin;
+        
+        constrainedEdgeBefore = constrainedNewPosition;
+        constrainedSizeBefore = constrainedEdgeBefore - absoluteMin;
+        
+        proposedEdgeAfter = proposedNewPosition + dividerThickness;
+        proposedSizeAfter
+            = absoluteMax + dividerThickness - proposedEdgeAfter;
+        
+        constrainedEdgeAfter = constrainedNewPosition + dividerThickness;
+        constrainedSizeAfter
+            = absoluteMax + dividerThickness - constrainedEdgeAfter;
+    } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+        proposedEdgeBefore = proposedNewPosition + dividerThickness;
+        proposedSizeBefore
+            = absoluteMax + dividerThickness - proposedEdgeBefore;
+        
+        constrainedEdgeBefore = constrainedNewPosition + dividerThickness;
+        constrainedSizeBefore
+            = absoluteMax + dividerThickness - constrainedEdgeBefore;
+         
+        proposedEdgeAfter = proposedNewPosition;
+        proposedSizeAfter = proposedEdgeAfter - absoluteMin;
+        
+        constrainedEdgeAfter = constrainedNewPosition;
+        constrainedSizeAfter = constrainedEdgeAfter - absoluteMin;
+    }
     
-    CGFloat constrainedEdgeBelow = constrainedNewPosition;
-    CGFloat constrainedHeightBelow = constrainedEdgeBelow - absoluteMin;
-    
-    collapsedAbove = NO;
-    collapsedBelow = NO;
+    collapsedBefore = NO;
+    collapsedAfter = NO;
     
     if(!creatingNewDivider) {
         CGFloat actualNewPosition = constrainedNewPosition;
         
         CGFloat subviewCollapseThresholdSize
-            = [self subviewCollapseThresholdSizeForAxis: VerticalSplitAxis];
+            = [self subviewCollapseThresholdSizeForAxis:
+                     dividerAxisBeingTracked];
         
         {
-            if(proposedHeightAbove < subviewCollapseThresholdSize) {
-                actualNewPosition = absoluteMax + dividerThickness;
-                collapsedAbove = YES;
+            if(proposedSizeBefore < subviewCollapseThresholdSize) {
+                if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                    actualNewPosition = absoluteMin - dividerThickness;
+                } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                    actualNewPosition = absoluteMax + dividerThickness;
+                }
+                collapsedBefore = YES;
             }
         }
         
-        if(!collapsedAbove) {
-            if(proposedHeightBelow < subviewCollapseThresholdSize) {
-                actualNewPosition = absoluteMin;
-                collapsedBelow = YES;
+        if(!collapsedBefore) {
+            if(proposedSizeAfter < subviewCollapseThresholdSize) {
+                if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                    actualNewPosition = absoluteMax;
+                } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                    actualNewPosition = absoluteMin;
+                }
+                collapsedAfter = YES;
             }
         }
         
         CGFloat effectiveDividerThickness;
-        if(collapsedAbove || collapsedBelow) {
+        if(collapsedBefore || collapsedAfter) {
             effectiveDividerThickness = 0.0;
         } else {
             effectiveDividerThickness = dividerThickness;
         }
         
-        CGFloat actualEdgeAbove = actualNewPosition + effectiveDividerThickness;
-        frameAbove.size.height
-            = frameAbove.size.height - (actualEdgeAbove - frameAbove.origin.y);
-        frameAbove.origin.y = actualEdgeAbove;
-        [subviewAbove setFrame: frameAbove];
-        
-        CGFloat actualEdgeBelow = actualNewPosition;
-        frameBelow.size.height = actualEdgeBelow - frameBelow.origin.y;
-        if(frameBelow.size.height < 0.0) frameBelow.size.height = 0.0;
-        frameBelow.origin.y = actualEdgeBelow - frameBelow.size.height;
-        if(frameBelow.origin.y < 0.0) frameBelow.origin.y = 0.0;
-        if(subviewBelow)
-            [subviewBelow setFrame: frameBelow];
-        
         NSRect dividerFrame = [dividerSubview frame];
-        dividerFrame.origin.y = actualNewPosition;
-        dividerFrame.size.height = effectiveDividerThickness;
+        
+        if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+            CGFloat actualEdgeBefore = actualNewPosition;
+            CGFloat actualSizeBefore = actualEdgeBefore - absoluteMin;
+            
+            CGFloat actualEdgeAfter
+                = actualNewPosition + effectiveDividerThickness;
+            CGFloat actualSizeAfter
+                = absoluteMax + dividerThickness - actualEdgeAfter;
+            
+            frameBefore.size.width = actualSizeBefore;
+            frameAfter.origin.x = actualEdgeAfter;
+            frameAfter.size.width = actualSizeAfter;
+            dividerFrame.origin.x = actualEdgeBefore;
+            dividerFrame.size.width = actualEdgeAfter - actualEdgeBefore;
+        } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+            CGFloat actualEdgeBefore
+                = actualNewPosition + effectiveDividerThickness;
+            CGFloat actualSizeBefore
+                = absoluteMax + dividerThickness - actualEdgeBefore;
+            
+            CGFloat actualEdgeAfter = actualNewPosition;
+            CGFloat actualSizeAfter = actualEdgeAfter - absoluteMin;
+            
+            frameBefore.origin.y = actualEdgeBefore;
+            frameBefore.size.height = actualSizeBefore;
+            frameAfter.size.height = actualSizeAfter;
+            dividerFrame.origin.y = actualEdgeAfter;
+            dividerFrame.size.height = actualEdgeBefore - actualEdgeAfter;
+        }
+        
+        if(subviewBefore)
+            [subviewBefore setFrame: frameBefore];
+        if(subviewAfter)
+            [subviewAfter setFrame: frameAfter];
         [dividerSubview setFrame: dividerFrame];
         
-        previousDragPoint.x = location.x;
-        if(actualNewPosition != oldPosition) {
-            previousDragPoint.y += actualNewPosition - oldPosition;
+        if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+            previousDragPoint.y = location.y;
+            if(actualNewPosition != oldPosition) {
+                previousDragPoint.x += actualNewPosition - oldPosition;
+            }
+        } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+            previousDragPoint.x = location.x;
+            if(actualNewPosition != oldPosition) {
+                previousDragPoint.y += actualNewPosition - oldPosition;
+            }
         }
     } else {
         CGFloat subviewMinimumSize
-            = [self subviewMinimumSizeForAxis: VerticalSplitAxis];
+            = [self subviewMinimumSizeForAxis: dividerAxisBeingTracked];
         
         CGFloat semiConstrainedNewPosition
             = [self constrainSplitPosition: proposedNewPosition
                     ofDividerAt: dividerIndexBeingTracked
-                    axis: VerticalSplitAxis];
+                    axis: dividerAxisBeingTracked];
+        
+        CGFloat semiConstrainedEdgeBefore;
+        CGFloat semiConstrainedSizeBefore;
+        CGFloat semiConstrainedEdgeAfter;
+        CGFloat semiConstrainedSizeAfter;
+        if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+            semiConstrainedEdgeBefore = semiConstrainedNewPosition;
+            semiConstrainedSizeBefore
+                = semiConstrainedEdgeBefore - absoluteMin;
+            semiConstrainedEdgeAfter
+                = semiConstrainedNewPosition + dividerThickness;
+            semiConstrainedSizeAfter
+                = absoluteMax - semiConstrainedEdgeAfter;
+        } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+            semiConstrainedEdgeBefore
+                = semiConstrainedNewPosition + dividerThickness;
+            semiConstrainedSizeBefore
+                = absoluteMax - semiConstrainedEdgeBefore;
+            semiConstrainedEdgeAfter = semiConstrainedNewPosition;
+            semiConstrainedSizeAfter
+                = semiConstrainedEdgeAfter - absoluteMin;
+        }
         
         {
-            CGFloat thresholdHeightAbove
-                = frameAbove.size.height
-                  - (subviewMinimumSize + dividerThickness);
+            CGFloat thresholdSizeBefore;
+            if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                thresholdSizeBefore
+                    = frameBefore.size.width - subviewMinimumSize;
+            } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                thresholdSizeBefore
+                    = frameBefore.size.height
+                      - (subviewMinimumSize + dividerThickness);
+            }
             
-            if(proposedHeightAbove <= thresholdHeightAbove) {                
+            if(proposedSizeBefore <= thresholdSizeBefore) {                
                 [self cleanupGhostWindow];
                 
-                CGFloat semiConstrainedEdgeAbove
-                    = semiConstrainedNewPosition + dividerThickness;
-                CGFloat semiConstrainedHeightAbove
-                    = absoluteMax - semiConstrainedEdgeAbove;
-                
-                subviewBelow = subviewAbove;
-                subviewAbove = [self newContentSubviewAtIndex:
-                                      dividerIndexBeingTracked
-                                     alongAxis: VerticalSplitAxis];
-                
-                frameBelow = frameAbove;
-                frameBelow.size.height
-                    -= semiConstrainedHeightAbove + dividerThickness;
-                
-                frameAbove.size.height = semiConstrainedHeightAbove;
-                frameAbove.origin.y
-                    += frameBelow.size.height + dividerThickness;
+                subviewAfter = subviewBefore;
+                subviewBefore = [self newContentSubviewAtIndex:
+                                       contentIndexBefore
+                                      alongAxis: dividerAxisBeingTracked];
+                dividerThickness
+                    = [self dividerThicknessForAxis: dividerAxisBeingTracked];
                 
                 NSRect newDividerFrame = [dividerSubview frame];
-                newDividerFrame.origin.y
-                    = frameAbove.origin.y - dividerThickness;
                 
-                dividerSubview
-                    = [dividerSubviewsForVerticalContent
-                        objectAtIndex: dividerIndexBeingTracked];
+                NSView *dividerSubview;
+                if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                    frameAfter = frameBefore;
+                    frameAfter.origin.x = semiConstrainedEdgeAfter;
+                    frameAfter.size.width = semiConstrainedSizeAfter;
+                    
+                    frameBefore.size.width = semiConstrainedSizeBefore;
+                    
+                    newDividerFrame.origin.x
+                        = frameAfter.origin.x - dividerThickness;
+                    
+                    dividerSubview
+                        = [dividerSubviewsForHorizontalContent
+                            objectAtIndex: dividerIndexBeingTracked + 1];
+                } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                    frameAfter = frameBefore;
+                    frameAfter.size.height
+                        -= semiConstrainedSizeBefore + dividerThickness;
+                    
+                    frameBefore.size.height = semiConstrainedSizeBefore;
+                    frameBefore.origin.y
+                        += frameAfter.size.height + dividerThickness;
+                    
+                    newDividerFrame.origin.y
+                        = frameBefore.origin.y - dividerThickness;
+                    
+                    dividerSubview
+                        = [dividerSubviewsForVerticalContent
+                            objectAtIndex: dividerIndexBeingTracked];
+                }
                 
-                [subviewAbove setFrame: frameAbove];
-                [subviewBelow setFrame: frameBelow];
+                if(subviewBefore)
+                    [subviewBefore setFrame: frameBefore];
+                if(subviewAfter)
+                    [subviewAfter setFrame: frameAfter];
                 [dividerSubview setFrame: newDividerFrame];
                 
                 previousDragPoint = location;
-                createdAbove = YES;
+                createdBefore = YES;
                 creatingNewDivider = NO;
                 
                 [self adjustSubviews];
             }
         }
         
-        if(!createdAbove) {
-            CGFloat thresholdHeightBelow
-                = frameBelow.size.height - subviewMinimumSize;
+        if(!createdBefore) {
+            CGFloat thresholdSizeAfter;
+            if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                thresholdSizeAfter
+                    = frameAfter.size.width
+                      - (subviewMinimumSize + dividerThickness);
+            } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                thresholdSizeAfter
+                    = frameAfter.size.height - subviewMinimumSize;
+            }
             
-            if(proposedHeightBelow <= thresholdHeightBelow) {
+            if(proposedSizeAfter <= thresholdSizeAfter) {
                 [self cleanupGhostWindow];
-                
-                CGFloat semiConstrainedEdgeBelow
-                    = semiConstrainedNewPosition;
-                CGFloat semiConstrainedHeightBelow
-                    = semiConstrainedEdgeBelow - absoluteMin;
-                
-                subviewAbove = [self newContentSubviewAtIndex:
-                                      dividerIndexBeingTracked + 1
-                                     alongAxis: VerticalSplitAxis];
-                
-                frameAbove = frameBelow;
-                frameAbove.origin.y += constrainedHeightBelow;
-                frameAbove.size.height -= constrainedHeightBelow;
-                
-                frameBelow.size.height = constrainedHeightBelow;
+                                
+                subviewBefore = [self newContentSubviewAtIndex:
+                                       contentIndexAfter
+                                      alongAxis: dividerAxisBeingTracked];
+                dividerThickness
+                    = [self dividerThicknessForAxis: dividerAxisBeingTracked];
                 
                 NSRect newDividerFrame = [dividerSubview frame];
-                newDividerFrame.origin.y
-                    = frameAbove.origin.y - dividerThickness;
                 
-                dividerSubview
-                    = [dividerSubviewsForVerticalContent
-                        objectAtIndex: dividerIndexBeingTracked + 1];
+                NSView *dividerSubview;
+                if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                    frameBefore = frameAfter;
+                    frameBefore.size.width = semiConstrainedSizeBefore;
+                    
+                    frameAfter.size.width = semiConstrainedSizeAfter;
+                    frameAfter.origin.x
+                        += frameBefore.size.width + dividerThickness;
+                    
+                    newDividerFrame.origin.x
+                        = frameAfter.origin.x - dividerThickness;
+                    
+                    dividerSubview
+                        = [dividerSubviewsForHorizontalContent
+                            objectAtIndex: dividerIndexBeingTracked + 1];
+                } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                    frameBefore = frameAfter;
+                    frameBefore.origin.y += semiConstrainedSizeAfter;
+                    frameBefore.size.height -= semiConstrainedSizeAfter;
+                    
+                    frameAfter.size.height = semiConstrainedSizeAfter;
+                    
+                    newDividerFrame.origin.y
+                        = frameBefore.origin.y - dividerThickness;
+                    
+                    dividerSubview
+                        = [dividerSubviewsForVerticalContent
+                            objectAtIndex: dividerIndexBeingTracked + 1];
+                }
                 
-                [subviewAbove setFrame: frameAbove];
-                if(subviewBelow)
-                    [subviewBelow setFrame: frameBelow];
+                if(subviewBefore)
+                    [subviewBefore setFrame: frameBefore];
+                if(subviewAfter)
+                    [subviewAfter setFrame: frameAfter];
                 [dividerSubview setFrame: newDividerFrame];
                 
                 previousDragPoint = location;
                 dividerIndexBeingTracked++;
-                createdBelow = YES;
+                createdAfter = YES;
                 creatingNewDivider = NO;
                 
                 [self adjustSubviews];
@@ -615,13 +802,26 @@
     }
     
     if(!creatingNewDivider) {
-        if(collapsedAbove) {
-            [self removeContentSubviewAtIndex: dividerIndexBeingTracked];
-        } else if(collapsedBelow) {
-            [self removeContentSubviewAtIndex: dividerIndexBeingTracked + 1];
+        NSUInteger contentSubviewIndex;
+        if(collapsedBefore) {
+            contentSubviewIndex
+                = [self contentIndexBeforeDividerIndex:
+                         dividerIndexBeingTracked
+                        axis: dividerAxisBeingTracked];
+        } else if(collapsedAfter) {
+            contentSubviewIndex
+                = [self contentIndexAfterDividerIndex:
+                         dividerIndexBeingTracked
+                        axis: dividerAxisBeingTracked];
         }
         
-        if(collapsedAbove || collapsedBelow || createdAbove || createdBelow) {
+        if(collapsedBefore || collapsedAfter) {
+            [self removeContentSubviewAtIndex: contentSubviewIndex];
+        }
+        
+        if(collapsedBefore || collapsedAfter
+           || createdBefore || createdAfter)
+        {
             [self adjustSubviews];
         }
     }
@@ -719,7 +919,7 @@
 - (void) adjustSubviewsHorizontalAxis {
     NSUInteger nSubviews = [contentSubviews count];
     
-    if(nSubviews < 2)
+    if(!nSubviews)
         return;
     
     CGFloat totalSubviewWidthBefore = 0.0;
@@ -817,7 +1017,7 @@
 - (void) adjustSubviewsVerticalAxis {
     NSUInteger nSubviews = [contentSubviews count];
     
-    if(nSubviews < 2)
+    if(!nSubviews)
         return;
     
     CGFloat totalSubviewHeightBefore = 0.0;
@@ -1122,7 +1322,51 @@
         return emWidth * 8.0;
     } else if(dividerAxis == VerticalSplitAxis) {
         CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-        return lineHeight * 2.5;
+        return lineHeight * 1.5;
+    }
+}
+
+
+- (BOOL) contentExistsBeforeDividerIndex: (NSUInteger) dividerIndex
+                                    axis: (enum SplitAxis) dividerAxis
+{
+    if(dividerAxis == HorizontalSplitAxis) {
+        return dividerIndex > 0;
+    } else if(dividerAxis == VerticalSplitAxis) {
+        return YES;
+    }
+}
+
+
+- (BOOL) contentExistsAfterDividerIndex: (NSUInteger) dividerIndex
+                                   axis: (enum SplitAxis) dividerAxis
+{
+    if(dividerAxis == HorizontalSplitAxis) {
+        return YES;
+    } else if(dividerAxis == VerticalSplitAxis) {
+        return dividerIndex + 1 < [contentSubviews count];
+    }
+}
+
+
+- (NSUInteger) contentIndexBeforeDividerIndex: (NSUInteger) dividerIndex
+                                         axis: (enum SplitAxis) dividerAxis
+{
+    if(dividerAxis == HorizontalSplitAxis) {
+        return dividerIndex - 1;
+    } else if(dividerAxis == VerticalSplitAxis) {
+        return dividerIndex;
+    }
+}
+
+
+- (NSUInteger) contentIndexAfterDividerIndex: (NSUInteger) dividerIndex
+                                        axis: (enum SplitAxis) dividerAxis
+{
+    if(dividerAxis == HorizontalSplitAxis) {
+        return dividerIndex;
+    } else if(dividerAxis == VerticalSplitAxis) {
+        return dividerIndex + 1;
     }
 }
 
