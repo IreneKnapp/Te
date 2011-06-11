@@ -876,6 +876,12 @@
 }
 
 
+- (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize {
+    [super resizeSubviewsWithOldSize: oldBoundsSize];
+    [self adjustSubviews];
+}
+
+
 - (void) adjustSubviews {
     if(committedAxis == UncommittedSplitAxis) {
         [self adjustSubviewsUncommittedAxis];
