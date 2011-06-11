@@ -9,6 +9,7 @@
 
 @implementation DocumentSplitView
 @synthesize contentSubviews;
+@synthesize committedAxis;
 
 
 + (CGFloat) minimumDividerThicknessForAxis: (enum SplitAxis) dividerAxis {
@@ -32,6 +33,7 @@
     if(self) {
         enforcedAxis = newEnforcedAxis;
         committedAxis = enforcedAxis;
+        usingChildWrappers = NO;
         
         trackingDividerDrag = NO;
         contentSubviews = [NSMutableArray arrayWithCapacity: 16];
@@ -91,9 +93,31 @@
 }
 
 
-- (DocumentContentView *) newContentSubviewAtIndex: (NSUInteger) index
-                          alongAxis: (enum SplitAxis) alongAxis
+- (void) newContentSubviewAtIndex: (NSUInteger) index
+         alongAxis: (enum SplitAxis) alongAxis
 {
+    if(!usingChildWrappers
+       && (committedAxis == UncommittedSplitAxis)
+       && (alongAxis != UncommittedSplitAxis))
+    {
+        if(alongAxis == HorizontalSplitAxis) {
+            [dividerSubviewsForVerticalContent removeAllObjects];
+        } else if(alongAxis == VerticalSplitAxis) {
+            [dividerSubviewsForHorizontalContent removeAllObjects];
+        }
+        
+        committedAxis = alongAxis;
+        
+        enum SplitAxis otherAxis;
+        if(committedAxis == HorizontalSplitAxis) {
+            otherAxis = VerticalSplitAxis;
+        } else if(committedAxis == VerticalSplitAxis) {
+            otherAxis = HorizontalSplitAxis;
+        }
+        
+        [self wrapChildrenWithEnforcedAxis: otherAxis];
+    }
+    
     NSRect initialFrame;
     BOOL setToZeroRectAfterward;
     if([contentSubviews count] == 0) {
@@ -107,13 +131,32 @@
         setToZeroRectAfterward = YES;
     }
     
-    DocumentContentView *newContentSubview
-        = [[DocumentContentView alloc] initWithFrame: initialFrame];
-    if(setToZeroRectAfterward)
-        [newContentSubview setFrame: NSZeroRect];
-    
-    [contentSubviews insertObject: newContentSubview atIndex: index];
-    [self addSubview: newContentSubview];
+    if(!usingChildWrappers) {
+        DocumentContentView *newContentSubview
+            = [[DocumentContentView alloc] initWithFrame: initialFrame];
+        if(setToZeroRectAfterward)
+            [newContentSubview setFrame: NSZeroRect];
+        
+        [contentSubviews insertObject: newContentSubview atIndex: index];
+        [self addSubview: newContentSubview];
+    } else {
+        enum SplitAxis otherAxis;
+        if(committedAxis == HorizontalSplitAxis) {
+            otherAxis = VerticalSplitAxis;
+        } else if(committedAxis == VerticalSplitAxis) {
+            otherAxis = HorizontalSplitAxis;
+        }
+        
+        DocumentSplitView *wrapper
+            = [[DocumentSplitView alloc] initWithFrame: initialFrame
+                                         enforcedAxis: otherAxis];
+        [wrapper newContentSubviewAtIndex: 0 alongAxis: otherAxis];
+        if(setToZeroRectAfterward)
+            [wrapper setFrame: NSZeroRect];
+        
+        [contentSubviews insertObject: wrapper atIndex: index];
+        [self addSubview: wrapper];
+    }
     
     if((alongAxis == UncommittedSplitAxis)
        || (alongAxis == HorizontalSplitAxis))
@@ -132,18 +175,6 @@
                                            atIndex: index];
         [self addSubview: newDividerSubview];
     }
-    
-    if(alongAxis != UncommittedSplitAxis) {
-        if(alongAxis == HorizontalSplitAxis) {
-            [dividerSubviewsForVerticalContent removeAllObjects];
-        } else if(alongAxis == VerticalSplitAxis) {
-            [dividerSubviewsForHorizontalContent removeAllObjects];
-        }
-        
-        committedAxis = alongAxis;
-    }
-    
-    return newContentSubview;
 }
 
 
@@ -177,7 +208,120 @@
         }
         
         committedAxis = enforcedAxis;
+        
+        [self unwrapChildren];
     }
+}
+
+
+- (void) addContentSubview: (NSView *) newChild {
+    [contentSubviews addObject: newChild];
+    [self addSubview: newChild];
+}
+
+
+- (void) recreateDividerSubviews {
+    [dividerSubviewsForHorizontalContent removeAllObjects];
+    [dividerSubviewsForVerticalContent removeAllObjects];
+    
+    if(committedAxis == UncommittedSplitAxis) {
+        NSView *newHorizontalDividerSubview
+            = [[NSView alloc] initWithFrame: NSZeroRect];
+        [dividerSubviewsForHorizontalContent
+          insertObject: newHorizontalDividerSubview
+          atIndex: 0];
+        
+        NSView *newVerticalDividerSubview
+            = [[NSView alloc] initWithFrame: NSZeroRect];
+        [dividerSubviewsForVerticalContent
+          insertObject: newVerticalDividerSubview
+          atIndex: 0];
+    } else if(committedAxis == HorizontalSplitAxis) {
+        NSUInteger count = [contentSubviews count];
+        for(NSUInteger i = 0; i < count; i++) {
+            NSView *newDividerSubview
+                = [[NSView alloc] initWithFrame: NSZeroRect];
+            [dividerSubviewsForHorizontalContent addObject: newDividerSubview];
+        }
+    } else if(committedAxis == VerticalSplitAxis) {
+        NSUInteger count = [contentSubviews count];
+        for(NSUInteger i = 0; i < count; i++) {
+            NSView *newDividerSubview
+                = [[NSView alloc] initWithFrame: NSZeroRect];
+            [dividerSubviewsForVerticalContent addObject: newDividerSubview];
+        }
+    }
+}
+
+
+- (void) wrapChildrenWithEnforcedAxis: (enum SplitAxis) childEnforcedAxis {
+    if(usingChildWrappers)
+        return;
+    
+    NSArray *children = [contentSubviews copyWithZone: nil];
+    
+    [contentSubviews removeAllObjects];
+    
+    for(NSView *child in children) {
+        [child removeFromSuperview];
+        
+        DocumentSplitView *wrapper
+            = [[DocumentSplitView alloc] initWithFrame: [child frame]
+                                         enforcedAxis: childEnforcedAxis];
+        
+        [wrapper addContentSubview: child];
+        [self addSubview: wrapper];
+        [wrapper recreateDividerSubviews];
+        
+        [contentSubviews addObject: wrapper];
+    }
+    
+    [self adjustSubviews];
+    for(DocumentSplitView *wrapper in contentSubviews) {
+        [wrapper adjustSubviews];
+    }
+    
+    usingChildWrappers = YES;
+}
+
+
+- (void) unwrapChildren {
+    if([contentSubviews count] > 1)
+        return;
+    
+    if(!usingChildWrappers)
+        return;
+    
+    NSLog(@"You're on your own!");
+    /*
+    DocumentSplitView *wrapper = [contentSubviews objectAtIndex: 0];
+    
+    [contentSubviews removeAllObjects];
+    
+    [dividerSubviewsForVerticalContent removeAllObjects];
+    [dividerSubviewsForHorizontalContent removeAllObjects];
+    
+    NSView *children = [wrapper contentSubviews];
+    
+    for(NSView *child in children) {
+        [child removeFromSuperview];
+        
+        NSPoint originInWrapper = [child frame].origin;
+        NSPoint originInBase = [wrapper convertPointToBase: originInWrapper];
+        NSPoint originInSelf = [self convertPointFromBase: originInBase];
+        
+        [child setFrameOrigin: originInSelf];
+        
+        [self addSubview: child];
+        
+        [contentSubviews addObject: child];
+        
+        
+    }
+    
+    [wrapper removeFromSuperview];
+    usingChildWrappers = NO;
+    */
 }
 
 
@@ -430,16 +574,12 @@
     BOOL contentExistsAfter
         = [self contentExistsAfterDividerIndex: dividerIndexBeingTracked
                                           axis: dividerAxisBeingTracked];
-    NSUInteger contentIndexBefore;
-    if(contentExistsBefore)
-        contentIndexBefore
-            = [self contentIndexBeforeDividerIndex: dividerIndexBeingTracked
-                                              axis: dividerAxisBeingTracked];
-    NSUInteger contentIndexAfter;
-    if(contentExistsAfter)
-        contentIndexAfter
-            = [self contentIndexAfterDividerIndex: dividerIndexBeingTracked
-                                             axis: dividerAxisBeingTracked];
+    NSUInteger contentIndexBefore
+        = [self contentIndexBeforeDividerIndex: dividerIndexBeingTracked
+                                          axis: dividerAxisBeingTracked];
+    NSUInteger contentIndexAfter
+        = [self contentIndexAfterDividerIndex: dividerIndexBeingTracked
+                                         axis: dividerAxisBeingTracked];
     
     NSView *subviewBefore = nil;
     if(contentExistsBefore)
@@ -691,7 +831,7 @@
             semiConstrainedSizeAfter
                 = semiConstrainedEdgeAfter - absoluteMin;
         }
-        
+                
         {
             CGFloat thresholdSizeBefore;
             if(dividerAxisBeingTracked == HorizontalSplitAxis) {
@@ -705,11 +845,33 @@
             
             if(proposedSizeBefore <= thresholdSizeBefore) {                
                 [self cleanupGhostWindow];
+                                
+                NSUInteger contentIndexForNew;
+                if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                    contentIndexForNew = contentIndexBefore;
+                } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                    contentIndexForNew = contentIndexAfter;
+                }
                 
-                subviewAfter = subviewBefore;
-                subviewBefore = [self newContentSubviewAtIndex:
-                                       contentIndexBefore
-                                      alongAxis: dividerAxisBeingTracked];
+                [self newContentSubviewAtIndex: contentIndexForNew
+                      alongAxis: dividerAxisBeingTracked];
+                contentExistsBefore
+                    = [self contentExistsBeforeDividerIndex:
+                             dividerIndexBeingTracked
+                            axis: dividerAxisBeingTracked];
+                contentExistsAfter
+                    = [self contentExistsAfterDividerIndex:
+                             dividerIndexBeingTracked
+                            axis: dividerAxisBeingTracked];
+                subviewBefore = nil;
+                if(contentExistsBefore)
+                    subviewBefore
+                        = [contentSubviews objectAtIndex: contentIndexBefore];
+                subviewAfter = nil;
+                if(contentExistsAfter)
+                    subviewAfter
+                        = [contentSubviews objectAtIndex: contentIndexAfter];
+                
                 dividerThickness
                     = [self dividerThicknessForAxis: dividerAxisBeingTracked];
                 
@@ -774,9 +936,44 @@
             if(proposedSizeAfter <= thresholdSizeAfter) {
                 [self cleanupGhostWindow];
                 
-                subviewBefore = [self newContentSubviewAtIndex:
-                                       contentIndexAfter
-                                      alongAxis: dividerAxisBeingTracked];
+                dividerIndexBeingTracked++;
+                
+                contentIndexBefore
+                    = [self contentIndexBeforeDividerIndex:
+                             dividerIndexBeingTracked
+                            axis: dividerAxisBeingTracked];
+                contentIndexAfter
+                    = [self contentIndexAfterDividerIndex:
+                             dividerIndexBeingTracked
+                            axis: dividerAxisBeingTracked];
+                
+                NSUInteger contentIndexForNew;
+                if(dividerAxisBeingTracked == HorizontalSplitAxis) {
+                    contentIndexForNew = contentIndexBefore;
+                } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
+                    contentIndexForNew = contentIndexAfter;
+                }
+                
+                [self newContentSubviewAtIndex: contentIndexForNew
+                      alongAxis: dividerAxisBeingTracked];
+                
+                contentExistsBefore
+                    = [self contentExistsBeforeDividerIndex:
+                             dividerIndexBeingTracked
+                            axis: dividerAxisBeingTracked];
+                contentExistsAfter
+                    = [self contentExistsAfterDividerIndex:
+                             dividerIndexBeingTracked
+                            axis: dividerAxisBeingTracked];
+                subviewBefore = nil;
+                if(contentExistsBefore)
+                    subviewBefore
+                        = [contentSubviews objectAtIndex: contentIndexBefore];
+                subviewAfter = nil;
+                if(contentExistsAfter)
+                    subviewAfter
+                        = [contentSubviews objectAtIndex: contentIndexAfter];
+                
                 dividerThickness
                     = [self dividerThicknessForAxis: dividerAxisBeingTracked];
                 
@@ -796,7 +993,7 @@
                     
                     dividerSubview
                         = [dividerSubviewsForHorizontalContent
-                            objectAtIndex: dividerIndexBeingTracked + 1];
+                            objectAtIndex: dividerIndexBeingTracked];
                 } else if(dividerAxisBeingTracked == VerticalSplitAxis) {
                     frameBefore = frameAfter;
                     frameBefore.origin.y += semiConstrainedSizeAfter;
@@ -809,7 +1006,7 @@
                     
                     dividerSubview
                         = [dividerSubviewsForVerticalContent
-                            objectAtIndex: dividerIndexBeingTracked + 1];
+                            objectAtIndex: dividerIndexBeingTracked];
                 }
                 
                 if(subviewBefore)
@@ -819,7 +1016,6 @@
                 [dividerSubview setFrame: newDividerFrame];
                 
                 previousDragPoint = location;
-                dividerIndexBeingTracked++;
                 createdAfter = YES;
                 creatingNewDivider = NO;
                 

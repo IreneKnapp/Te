@@ -62,9 +62,8 @@
                             NSViewWidthSizable | NSViewHeightSizable];
         [[window contentView] addSubview: documentSplitView];
         
-        firstDocumentContentView
-            = [documentSplitView newContentSubviewAtIndex: 0
-                                 alongAxis: UncommittedSplitAxis];
+        [documentSplitView newContentSubviewAtIndex: 0
+                           alongAxis: UncommittedSplitAxis];
         
         [documentSplitView adjustSubviews];
     }

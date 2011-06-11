@@ -11,7 +11,6 @@
 {
     IBOutlet NSTextField *numberOfLinesLabel;
     DocumentSplitView *documentSplitView;
-    DocumentContentView *firstDocumentContentView;
 }
 
 - (id) initWithWindowID: (uuid_t *) newWindowID;

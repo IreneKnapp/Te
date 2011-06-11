@@ -17,7 +17,8 @@ enum SplitAxis {
     
     enum SplitAxis committedAxis;
     enum SplitAxis enforcedAxis;
-    
+    BOOL usingChildWrappers;
+        
     NSMutableDictionary *captionAttributes;
     NSMutableDictionary *titleAttributes;
     NSMutableDictionary *titleUnderprintAttributes;
@@ -43,14 +44,19 @@ enum SplitAxis {
     TransparentHelperWindow *ghostWindow;
 }
 @property (readonly) NSArray *contentSubviews;
+@property (readonly) enum SplitAxis committedAxis;
 
 + (CGFloat) minimumDividerThicknessForAxis: (enum SplitAxis) dividerAxis;
 - (id) initWithFrame: (NSRect) frame;
 - (id) initWithFrame: (NSRect) frame
         enforcedAxis: (enum SplitAxis) newEnforcedAxis;
-- (DocumentContentView *) newContentSubviewAtIndex: (NSUInteger) index
-                          alongAxis: (enum SplitAxis) alongAxis;
+- (void) newContentSubviewAtIndex: (NSUInteger) index
+         alongAxis: (enum SplitAxis) alongAxis;
+- (void) addContentSubview: (NSView *) newChild;
+- (void) recreateDividerSubviews;
 - (void) removeContentSubviewAtIndex: (NSUInteger) index;
+- (void) wrapChildrenWithEnforcedAxis: (enum SplitAxis) childEnforcedAxis;
+- (void) unwrapChildren;
 - (void) drawRect: (NSRect) dirtyRect;
 - (void) drawGhostForHorizontalContent: (NSRect) frame;
 - (void) drawGhostForVerticalContent: (NSRect) frame;
