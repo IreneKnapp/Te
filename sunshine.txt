@@ -1,0 +1,39 @@
+<ddarius> Structure editing: it will work out this time; really!
+<roconnor> structured editing for code or for text?
+<dankna> for code of course
+<dankna> text in general has only very weak structure
+<roconnor> yes
+<ski> iirc, i saw some plugin for GF for Alfa, with structure editing wrt a grammar
+<dankna> it's the future :D
+* ddarius agrees with dankna on the last.
+<dankna> heh, cool
+<dankna> ddarius: I'm definitely curious what problems you feel it has (so I can avoid them or at least think about them) in existing incarnations.
+<ddarius> dankna: My impression is that most programmers find structure editors awkward, limiting, and rigid, but the facts on the ground seem to be that there are very few popular structure editors and even fewer for popular programming languages despite people working on this since the '60s.
+<dankna> that's fair enough
+<dankna> well, I'd say that it's received only very limited attention
+<dankna> I personally /love/ both paredit and nxml-mode (the latter is for XML)
+<dankna> obviously what those have in common is that they're both very simple grammars
+<ddarius> What problems do you view structure editors as solving?
+<dankna> for me the biggest attraction is the ability to write simple scripts to perform custom refactoring operations, as I work
+<dankna> also I freaking hate managing whitespace by hand
+<dankna> and most of the style rules I wish I could have auto-applied pursuant to that need understanding of the full grammar to apply
+<dankna> for example, I have a bunch of code in an old project that I showed off here a few days ago, and someone pointed out that if I used syb on it, I could eliminate half the lines.
+<dankna> but it would be a lot of work to go through it and do that transformation.
+<dankna> with a scriptable structure editor, I could write a script to do it for me.
+<dankna> and then the structure editor would provide a handy diff saying "is this what you meant?" and waiting for my confirmation before actually committing the changes, of course
+<dankna> it could also be useful for maintaining downstream dependencies - when you make breaking API changes, you could ship your upgrade with a set of scripts that the downstream programmer could apply (again, with confirmation before commit) to his own project
+<dankna> that use-case just occurred to me
+<dankna> also also, I view meta-code tools as the future of programming.  someday we may write programs that write programs, instead of writing programs directly :)
+<aavogt> that problem needs some awareness of what a name means in a given context (shadowing for example)
+<ddarius> We do that all the time today.
+<byorgey> uh, don't we already do that?
+<dankna> aavogt: yes, absolutely, it will haev that knowledge
+<dankna> well, yes, haha
+<dankna> but I mean routinely and without the kludge of a textual generation pass
+<dankna> we have parser generators, for example
+<dankna> and planners
+<dankna> but would't it be great if you could say (not in English, but somehow) "I am changing this underlying assumption" and it then finds a list of candidate places where the assumption might be violated, and maybe even suggests transformations on them?
+<dankna> ddarius: anyway, the fact that there are few of them doesn't in any way evidence that people don't like them - it evidences that they haven't had the chance to find out, by and large
+
+<ski> dankna : i've been wanting "ship your upgrade with a set of scripts that the downstream programmer could apply" for some time ..
+<ski> this could also be applicable to upgrading configuration files to new versions of a program
