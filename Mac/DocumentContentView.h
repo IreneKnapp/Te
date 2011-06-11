@@ -12,6 +12,7 @@
 + (CGFloat) leftMarginWidth;
 + (CGFloat) rightMarginWidth;
 - (id) initWithFrame: (NSRect) frame;
+- (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
 - (BOOL) isFlipped;
 - (void) drawRect: (NSRect) dirtyRect;
 - (IBAction) scrollerActivated: (id) sender;

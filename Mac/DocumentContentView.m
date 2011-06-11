@@ -57,6 +57,29 @@
 }
 
 
+- (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize {
+    [super resizeSubviewsWithOldSize: oldBoundsSize];
+    
+    NSRect bounds = [self bounds];
+    
+    if(bounds.size.height > 0.0) {
+        NSView *superview = [self superview];
+        NSWindow *window = [self window];
+        NSView *contentView = nil;
+        if(window)
+            contentView = [window contentView];
+        
+        if(![superview isEqual: contentView]) {
+            NSRect verticalScrollerFrame = [verticalScroller frame];
+            if(verticalScrollerFrame.size.height != bounds.size.height) {
+                verticalScrollerFrame.size.height = bounds.size.height;
+                [verticalScroller setFrame: verticalScrollerFrame];
+            }
+        }
+    }
+}
+
+
 - (BOOL) isFlipped {
     return YES;
 }
