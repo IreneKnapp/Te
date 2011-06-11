@@ -21,8 +21,18 @@
 
 
 - (id) initWithFrame: (NSRect) frame {
+    return [self initWithFrame: frame enforcedAxis: UncommittedSplitAxis];
+}
+
+
+- (id) initWithFrame: (NSRect) frame
+        enforcedAxis: (enum SplitAxis) newEnforcedAxis
+{
     self = [super initWithFrame: frame];
     if(self) {
+        enforcedAxis = newEnforcedAxis;
+        committedAxis = enforcedAxis;
+        
         trackingDividerDrag = NO;
         contentSubviews = [NSMutableArray arrayWithCapacity: 16];
         dividerSubviewsForHorizontalContent
@@ -123,7 +133,15 @@
         [self addSubview: newDividerSubview];
     }
     
-    committedAxis = alongAxis;
+    if(alongAxis != UncommittedSplitAxis) {
+        if(alongAxis == HorizontalSplitAxis) {
+            [dividerSubviewsForVerticalContent removeAllObjects];
+        } else if(alongAxis == VerticalSplitAxis) {
+            [dividerSubviewsForHorizontalContent removeAllObjects];
+        }
+        
+        committedAxis = alongAxis;
+    }
     
     return newContentSubview;
 }
@@ -141,7 +159,24 @@
     }
     
     if([contentSubviews count] < 2) {
-        committedAxis = UncommittedSplitAxis;
+        if((enforcedAxis == UncommittedSplitAxis)
+           && (committedAxis != UncommittedSplitAxis))
+        {
+            NSView *newDividerSubview
+                = [[NSView alloc] initWithFrame: NSZeroRect];
+            if(committedAxis == HorizontalSplitAxis) {
+                [dividerSubviewsForVerticalContent
+                  insertObject: newDividerSubview
+                  atIndex: index];
+            } else if(committedAxis == VerticalSplitAxis) {
+                [dividerSubviewsForHorizontalContent
+                  insertObject: newDividerSubview
+                  atIndex: index];
+            }
+            [self addSubview: newDividerSubview];
+        }
+        
+        committedAxis = enforcedAxis;
     }
 }
 

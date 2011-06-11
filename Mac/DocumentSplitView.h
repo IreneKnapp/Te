@@ -16,6 +16,7 @@ enum SplitAxis {
     NSMutableArray *dividerSubviewsForHorizontalContent;
     
     enum SplitAxis committedAxis;
+    enum SplitAxis enforcedAxis;
     
     NSMutableDictionary *captionAttributes;
     NSMutableDictionary *titleAttributes;
@@ -45,6 +46,8 @@ enum SplitAxis {
 
 + (CGFloat) minimumDividerThicknessForAxis: (enum SplitAxis) dividerAxis;
 - (id) initWithFrame: (NSRect) frame;
+- (id) initWithFrame: (NSRect) frame
+        enforcedAxis: (enum SplitAxis) newEnforcedAxis;
 - (DocumentContentView *) newContentSubviewAtIndex: (NSUInteger) index
                           alongAxis: (enum SplitAxis) alongAxis;
 - (void) removeContentSubviewAtIndex: (NSUInteger) index;
