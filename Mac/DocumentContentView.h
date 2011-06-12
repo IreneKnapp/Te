@@ -15,6 +15,10 @@
 + (CGFloat) leftMarginWidth;
 + (CGFloat) rightMarginWidth;
 + (CGFloat) rightPaddingWidth;
++ (NSUInteger) minimumLines;
++ (NSUInteger) minimumColumns;
++ (CGFloat) collapseLines;
++ (CGFloat) collapseColumns;
 - (id) initWithFrame: (NSRect) frame;
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
 - (NSSize) desiredSize;

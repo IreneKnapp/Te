@@ -138,9 +138,6 @@
     NSSize decorationSize = NSMakeSize(frame.size.width - contentSize.width,
                                        frame.size.height - contentSize.height);
     
-    CGFloat widthDifference = newSize.width - contentSize.width;
-    frame.origin.x -= floor(widthDifference / 2.0);
-    
     CGFloat heightDifference = newSize.height - contentSize.height;
     frame.origin.y -= heightDifference;
     

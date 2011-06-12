@@ -27,6 +27,26 @@
 }
 
 
++ (NSUInteger) minimumLines {
+    return 5;
+}
+
+
++ (NSUInteger) minimumColumns {
+    return 16;
+}
+
+
++ (CGFloat) collapseLines {
+    return 1.5;
+}
+
+
++ (CGFloat) collapseColumns {
+    return 8.0;
+}
+
+
 - (id) initWithFrame: (NSRect) frame {
     self = [super initWithFrame: frame];
     if(self) {
@@ -108,8 +128,20 @@
     CGFloat contentWidth
         = currentSize.width - leftMarginWidth - rightMarginWidth;
     
-    NSUInteger nLines = floor(currentSize.height / lineHeight);
-    NSUInteger nColumns = floor(contentWidth / emWidth);
+    NSUInteger nLines = 0;
+    if(currentSize.height > 0.0)
+        nLines = floor(currentSize.height / lineHeight);
+    NSUInteger nColumns = 0;
+    if(contentWidth > 0.0)
+        nColumns = floor(contentWidth / emWidth);
+    
+    NSUInteger minimumLines = [DocumentContentView minimumLines];
+    if(nLines < minimumLines)
+        nLines = minimumLines;
+    
+    NSUInteger minimumColumns = [DocumentContentView minimumColumns];
+    if(nColumns < minimumColumns)
+        nColumns = minimumColumns;
     
     NSSize result = NSMakeSize(nColumns * emWidth, nLines * lineHeight);
     result.width += [DocumentContentView leftMarginWidth];

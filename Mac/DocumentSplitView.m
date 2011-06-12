@@ -1612,10 +1612,14 @@
 - (CGFloat) subviewMinimumSizeForAxis: (enum SplitAxis) dividerAxis {
     if(dividerAxis == HorizontalSplitAxis) {
         CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
-        return emWidth * 16.0;
+        CGFloat width = emWidth * [DocumentContentView minimumColumns];
+        width += [DocumentContentView leftMarginWidth];
+        width += [DocumentContentView rightMarginWidth];
+        width += [DocumentContentView rightPaddingWidth];
+        return width;
     } else if(dividerAxis == VerticalSplitAxis) {
         CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-        return lineHeight * 5.0;
+        return lineHeight * [DocumentContentView minimumLines];
     }
 }
 
@@ -1624,10 +1628,10 @@
 {
     if(dividerAxis == HorizontalSplitAxis) {
         CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
-        return emWidth * 8.0;
+        return emWidth * [DocumentContentView collapseColumns];
     } else if(dividerAxis == VerticalSplitAxis) {
         CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-        return lineHeight * 1.5;
+        return lineHeight * [DocumentContentView collapseLines];
     }
 }
 
