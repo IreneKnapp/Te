@@ -3,6 +3,7 @@
 #import "Te/ForeignInterface_stub.h"
 #import "AppDelegate.h"
 #import "DocumentContentView.h"
+#import "DocumentWindow.h"
 #import "TransparentHelperWindow.h"
 #import "Utilities.h"
 
@@ -1114,6 +1115,15 @@
 
 
 - (void) adjustSubviews {
+    NSWindow *window = [self window];
+    if(window) {
+        id delegate = [window delegate];
+        if(delegate && [delegate isKindOfClass: [DocumentWindow class]]) {
+            DocumentWindow *documentWindow = (DocumentWindow *) delegate;
+            [documentWindow adjustSizePerContentConstraints];
+        }
+    }
+    
     if(committedAxis == UncommittedSplitAxis) {
         [self adjustSubviewsUncommittedAxis];
     } else if(committedAxis == HorizontalSplitAxis) {
@@ -1358,6 +1368,42 @@
     }
     
     [self adjustSubviews];
+}
+
+
+- (NSSize) desiredSize {
+    if(committedAxis == UncommittedSplitAxis) {
+        id <SizeConstraintParticipant> child
+            = [contentSubviews objectAtIndex: 0];
+        NSSize result = [child desiredSize];
+        result.width += [self dividerThicknessForAxis: HorizontalSplitAxis];
+        result.height += [self dividerThicknessForAxis: VerticalSplitAxis];
+        return result;
+    } else if(committedAxis == HorizontalSplitAxis) {
+        NSSize result = NSZeroSize;
+        for(id <SizeConstraintParticipant> child in contentSubviews) {
+            NSSize childSize = [child desiredSize];
+            result.width += childSize.width;
+            if(result.height < childSize.height)
+                result.height = childSize.height;
+        }
+        NSUInteger nChildren = [contentSubviews count];
+        result.width
+            += [self dividerThicknessForAxis: HorizontalSplitAxis] * nChildren;
+        return result;
+    } else if(committedAxis == VerticalSplitAxis) {
+        NSSize result = NSZeroSize;
+        for(id <SizeConstraintParticipant> child in contentSubviews) {
+            NSSize childSize = [child desiredSize];
+            result.height += childSize.height;
+            if(result.width < childSize.width)
+                result.width = childSize.width;
+        }
+        NSUInteger nChildren = [contentSubviews count];
+        result.height
+            += [self dividerThicknessForAxis: VerticalSplitAxis] * nChildren;
+        return result;
+    }
 }
 
 

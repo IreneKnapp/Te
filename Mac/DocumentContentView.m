@@ -15,7 +15,14 @@
 
 
 + (CGFloat) rightMarginWidth {
-    return 40.0 + [NSScroller scrollerWidth];
+    CGFloat scrollerWidth = [NSScroller scrollerWidth];
+    return scrollerWidth;
+}
+
+
++ (CGFloat) rightPaddingWidth {
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    return emWidth / 2.0;
 }
 
 
@@ -84,6 +91,28 @@
             [verticalScroller setFrame: verticalScrollerFrame];
         }
     }
+}
+
+
+- (NSSize) desiredSize {
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    
+    NSSize currentSize = [self frame].size;
+    
+    CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
+    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
+    CGFloat contentWidth
+        = currentSize.width - leftMarginWidth - rightMarginWidth;
+    
+    NSUInteger nLines = floor(currentSize.height / lineHeight);
+    NSUInteger nColumns = floor(contentWidth / emWidth);
+    
+    NSSize result = NSMakeSize(nColumns * emWidth, nLines * lineHeight);
+    result.width += [DocumentContentView leftMarginWidth];
+    result.width += [DocumentContentView rightMarginWidth];
+    result.width = ceil(result.width);
+    return result;
 }
 
 

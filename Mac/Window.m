@@ -8,6 +8,40 @@
 @implementation Window
 @synthesize alreadyClosing;
 
+
+- (void) initHelper: (uuid_t *) newWindowID {
+    void *applicationState = getApplicationState();
+    if(!applicationState)
+        return;
+    
+    copyUUID(&windowID, newWindowID);
+    
+    alreadyClosing = NO;
+    
+    char *titleCString = teWindowTitle(applicationState, &windowID);
+    NSString *title = @"";
+    if(titleCString) {
+        title = [NSString stringWithUTF8String: titleCString];
+        teStringFree(titleCString);
+    }
+    
+    char *titleIconCString
+        = teWindowTitleIcon(applicationState, &windowID);
+    NSString *titleIcon = @"";
+    if(titleIconCString) {
+        titleIcon = [NSString stringWithUTF8String: titleIconCString];
+        teStringFree(titleIconCString);
+    }
+    
+    NSWindow *window = [self window];
+    [window makeKeyAndOrderFront: self];
+    [window setTitle: title];
+    [window setRepresentedURL: [NSURL URLWithString: @""]];
+    [[window standardWindowButton: NSWindowDocumentIconButton]
+     setImage: [NSImage imageNamed: titleIcon]];
+}
+
+
 - (id) initWithWindowID: (uuid_t *) newWindowID
                 nibName: (NSString *) nibName
 {
@@ -17,31 +51,24 @@
     
     self = [super initWithWindowNibName: nibName];
     if(self) {
-        copyUUID(&windowID, newWindowID);
-        
-        alreadyClosing = NO;
-        
-        char *titleCString = teWindowTitle(applicationState, &windowID);
-        NSString *title = @"";
-        if(titleCString) {
-            title = [NSString stringWithUTF8String: titleCString];
-            teStringFree(titleCString);
-        }
-        
-        char *titleIconCString
-            = teWindowTitleIcon(applicationState, &windowID);
-        NSString *titleIcon = @"";
-        if(titleIconCString) {
-            titleIcon = [NSString stringWithUTF8String: titleIconCString];
-            teStringFree(titleIconCString);
-        }
-        
-        NSWindow *window = [self window];
-        [window makeKeyAndOrderFront: self];
-        [window setTitle: title];
-        [window setRepresentedURL: [NSURL URLWithString: @""]];
-        [[window standardWindowButton: NSWindowDocumentIconButton]
-         setImage: [NSImage imageNamed: titleIcon]];
+        [self initHelper: newWindowID];
+    } else {
+        teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
+    }
+    return self;
+}
+
+
+- (id) initWithWindowID: (uuid_t *) newWindowID
+                 window: (NSWindow *) newWindow
+{
+    void *applicationState = getApplicationState();
+    if(!applicationState)
+        return nil;
+    
+    self = [super initWithWindow: newWindow];
+    if(self) {
+        [self initHelper: newWindowID];
     } else {
         teFrontEndInternalFailure(applicationState, __FILE__, __LINE__);
     }

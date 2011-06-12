@@ -11,11 +11,18 @@
 {
     IBOutlet NSTextField *numberOfLinesLabel;
     DocumentSplitView *documentSplitView;
+    
+    BOOL stillLoading;
+    BOOL adjustingSize;
+    NSSize manuallyAdjustedSize;
 }
 
 - (id) initWithWindowID: (uuid_t *) newWindowID;
-- (void) sizeToDefault;
+- (NSSize) defaultSize;
 - (void) setConstraints;
 - (void) adjustSize: (NSSize) newSize;
+- (void) adjustSizePerContentConstraints;
+- (void) windowWillStartLiveResize: (NSNotification *) notification;
+- (void) windowDidEndLiveResize: (NSNotification *) notification;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
 @end

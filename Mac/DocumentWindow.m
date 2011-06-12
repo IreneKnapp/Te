@@ -14,12 +14,35 @@
     if(!applicationState)
         return nil;
     
-    self = [super initWithWindowID: newWindowID nibName: @"DocumentWindow"];
+    NSUInteger styleMask = NSTitledWindowMask
+                           | NSClosableWindowMask
+                           | NSMiniaturizableWindowMask
+                           | NSResizableWindowMask;
+    
+    NSSize initialSize = [self defaultSize];
+    
+    NSRect visibleFrame = [[NSScreen mainScreen] visibleFrame];
+    
+    NSRect contentRect;
+    contentRect.size = initialSize;
+    contentRect.origin.x
+        = (visibleFrame.size.width - contentRect.size.width) / 2.0
+          + visibleFrame.origin.x;
+    contentRect.origin.y
+        = visibleFrame.size.height - (contentRect.size.height + 22.0)
+          + visibleFrame.origin.y;
+    
+    NSWindow *window = [[NSWindow alloc] initWithContentRect: contentRect
+                                         styleMask: styleMask
+                                         backing: NSBackingStoreBuffered
+                                         defer: YES];
+    
+    self = [super initWithWindowID: newWindowID window: window];
     if(self) {
-        NSWindow *window = [self window];
+        [window setDelegate: self];
         
-        [self sizeToDefault];
-        [self setConstraints];
+        adjustingSize = NO;
+        stillLoading = YES;
         
         NSRect contentFrame = [[window contentView] bounds];
         
@@ -33,12 +56,21 @@
                            alongAxis: UncommittedSplitAxis];
         
         [documentSplitView adjustSubviews];
+        
+        [self setConstraints];
+        
+        stillLoading = NO;
+        
+        manuallyAdjustedSize = initialSize;
+        [self adjustSize: initialSize];
+        
+        [window orderFront: self];
     }
     return self;
 }
 
 
-- (void) sizeToDefault {
+- (NSSize) defaultSize {
     CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
     CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
     
@@ -48,14 +80,26 @@
     CGFloat dividerWidth
         = [DocumentSplitView minimumDividerThicknessForAxis:
                               HorizontalSplitAxis];
-    CGFloat newWidth
+    CGFloat width
         = dividerWidth
           + [DocumentContentView leftMarginWidth]
           + emWidth * 80.0
           + [DocumentContentView rightMarginWidth];
-    CGFloat newHeight = 50.0 * lineHeight + dividerHeight;
+    CGFloat height = 50.0 * lineHeight + dividerHeight;
     
-    [self adjustSize: NSMakeSize(newWidth, newHeight)];
+    NSSize visibleSize = [[NSScreen mainScreen] visibleFrame].size;
+    
+    NSInteger linesToRemove = 0;
+    if(height > visibleSize.height)
+        linesToRemove = ceil((height - visibleSize.height) / lineHeight);
+    height -= linesToRemove * lineHeight;
+    
+    NSInteger columnsToRemove = 0;
+    if(width > visibleSize.width)
+        columnsToRemove = ceil((width - visibleSize.width) / emWidth);
+    width -= columnsToRemove * emWidth;
+    
+    return NSMakeSize(width, height);
 }
 
 
@@ -84,18 +128,62 @@
 
 
 - (void) adjustSize: (NSSize) newSize {
+    BOOL oldAdjustingSize = adjustingSize;
+    adjustingSize = YES;
+    
     NSWindow *window = [self window];
     NSRect frame = [window frame];
+    NSSize contentSize = [window contentRectForFrameRect: frame].size;
+    NSSize decorationSize = NSMakeSize(frame.size.width - contentSize.width,
+                                       frame.size.height - contentSize.height);
     
-    CGFloat widthDifference = newSize.width - frame.size.width;
-    frame.origin.x -= widthDifference / 2.0;
+    CGFloat widthDifference = newSize.width - contentSize.width;
+    frame.origin.x -= floor(widthDifference / 2.0);
     
-    CGFloat heightDifference = newSize.height - frame.size.height;
+    CGFloat heightDifference = newSize.height - contentSize.height;
     frame.origin.y -= heightDifference;
     
-    frame.size = newSize;
+    frame.size.width = newSize.width + decorationSize.width;
+    frame.size.height = newSize.height + decorationSize.height;
     
-    [window setFrame: frame display: YES];
+    [window setFrame: frame display: NO];
+    
+    adjustingSize = oldAdjustingSize;
+}
+
+
+- (void) adjustSizePerContentConstraints {
+    if(!adjustingSize && !stillLoading) {
+        NSSize desiredSize = [documentSplitView desiredSize];
+        
+        CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+        CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+        
+        NSInteger linesToAdd
+            = floor((manuallyAdjustedSize.height - desiredSize.height)
+                    / lineHeight);
+        desiredSize.height += linesToAdd * lineHeight;
+        
+        NSInteger columnsToAdd
+            = floor((manuallyAdjustedSize.width - desiredSize.width)
+                    / emWidth);
+        desiredSize.width += columnsToAdd * emWidth;
+        
+        [self adjustSize: desiredSize];
+    }
+}
+
+
+- (void) windowWillStartLiveResize: (NSNotification *) notification {
+    adjustingSize = YES;
+}
+
+
+- (void) windowDidEndLiveResize: (NSNotification *) notification {
+    if(!adjustingSize && !stillLoading) {
+        manuallyAdjustedSize = [[self window] frame].size;
+    }
+    adjustingSize = NO;
 }
 
 

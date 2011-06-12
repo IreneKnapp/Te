@@ -9,8 +9,11 @@
 }
 @property (assign) BOOL alreadyClosing;
 
+- (void) initHelper: (uuid_t *) newWindowID;
 - (id) initWithWindowID: (uuid_t *) newWindowID
                 nibName: (NSString *) nibName;
+- (id) initWithWindowID: (uuid_t *) newWindowID
+                 window: (NSWindow *) newWindow;
 - (uuid_t *) windowID;
 - (BOOL) windowShouldClose: (id) sender;
 - (void) windowWillClose: (NSNotification *) notification;

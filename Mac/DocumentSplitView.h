@@ -1,4 +1,5 @@
 #import <Cocoa/Cocoa.h>
+#import "SizeConstraintParticipant.h"
 
 
 enum SplitAxis {
@@ -9,7 +10,7 @@ enum SplitAxis {
 
 @class DocumentContentView;
 @class TransparentHelperWindow;
-@interface DocumentSplitView : NSView
+@interface DocumentSplitView : NSView <SizeConstraintParticipant>
 {
     NSMutableArray *contentSubviews;
     NSMutableArray *dividerSubviewsForVerticalContent;
@@ -18,7 +19,7 @@ enum SplitAxis {
     enum SplitAxis committedAxis;
     enum SplitAxis enforcedAxis;
     BOOL usingChildWrappers;
-        
+    
     NSMutableDictionary *captionAttributes;
     NSMutableDictionary *titleAttributes;
     NSMutableDictionary *titleUnderprintAttributes;
@@ -78,6 +79,7 @@ enum SplitAxis {
 - (void) adjustSubviewsHorizontalAxis;
 - (void) adjustSubviewsVerticalAxis;
 - (void) adjustSubviewsToEqualSizes;
+- (NSSize) desiredSize;
 - (CGFloat) dividerThicknessForAxis: (enum SplitAxis) dividerAxis;
 - (CGFloat) absoluteMinCoordinateOfDividerAt: (NSUInteger) dividerIndex
                                         axis: (enum SplitAxis) dividerAxis;
