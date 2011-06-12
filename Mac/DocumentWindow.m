@@ -8,6 +8,7 @@
 
 
 @implementation DocumentWindow
+@synthesize adjustingSize;
 
 - (id) initWithWindowID: (uuid_t *) newWindowID {
     void *applicationState = getApplicationState();
@@ -159,14 +160,18 @@
         CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
         CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
         
-        NSInteger linesToAdd
-            = floor((manuallyAdjustedSize.height - desiredSize.height)
-                    / lineHeight);
+        NSInteger linesToAdd = 0;
+        if(manuallyAdjustedSize.height > desiredSize.height)
+            linesToAdd
+                = floor((manuallyAdjustedSize.height - desiredSize.height)
+                        / lineHeight);
         desiredSize.height += linesToAdd * lineHeight;
         
-        NSInteger columnsToAdd
-            = floor((manuallyAdjustedSize.width - desiredSize.width)
-                    / emWidth);
+        NSInteger columnsToAdd = 0;
+        if(manuallyAdjustedSize.width > desiredSize.width)
+            columnsToAdd
+                = floor((manuallyAdjustedSize.width - desiredSize.width)
+                        / emWidth);
         desiredSize.width += columnsToAdd * emWidth;
         
         [self adjustSize: desiredSize];

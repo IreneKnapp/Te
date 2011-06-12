@@ -95,6 +95,22 @@
 }
 
 
+- (DocumentWindow *) documentWindow {
+    NSWindow *window = [self window];
+    if(window) {
+        id delegate = [window delegate];
+        if(delegate && [delegate isKindOfClass: [DocumentWindow class]]) {
+            DocumentWindow *documentWindow = (DocumentWindow *) delegate;
+            return documentWindow;
+        } else {
+            return nil;
+        }
+    } else {
+        return nil;
+    }
+}
+
+
 - (void) newContentSubviewAtIndex: (NSUInteger) index
          alongAxis: (enum SplitAxis) alongAxis
 {
@@ -1130,13 +1146,9 @@
 
 
 - (void) adjustSubviews {
-    NSWindow *window = [self window];
-    if(window) {
-        id delegate = [window delegate];
-        if(delegate && [delegate isKindOfClass: [DocumentWindow class]]) {
-            DocumentWindow *documentWindow = (DocumentWindow *) delegate;
-            [documentWindow adjustSizePerContentConstraints];
-        }
+    DocumentWindow *documentWindow = [self documentWindow];
+    if(documentWindow) {
+        [documentWindow adjustSizePerContentConstraints];
     }
     
     if(committedAxis == UncommittedSplitAxis) {

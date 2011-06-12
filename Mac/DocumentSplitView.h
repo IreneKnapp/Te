@@ -9,6 +9,7 @@ enum SplitAxis {
 };
 
 @class DocumentContentView;
+@class DocumentWindow;
 @class TransparentHelperWindow;
 @interface DocumentSplitView : NSView <SizeConstraintParticipant>
 {
@@ -51,6 +52,7 @@ enum SplitAxis {
 - (id) initWithFrame: (NSRect) frame;
 - (id) initWithFrame: (NSRect) frame
         enforcedAxis: (enum SplitAxis) newEnforcedAxis;
+- (DocumentWindow *) documentWindow;
 - (void) newContentSubviewAtIndex: (NSUInteger) index
          alongAxis: (enum SplitAxis) alongAxis;
 - (void) addContentSubview: (NSView *) newChild;

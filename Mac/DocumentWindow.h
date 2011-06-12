@@ -16,6 +16,7 @@
     BOOL adjustingSize;
     NSSize manuallyAdjustedSize;
 }
+@property (assign) BOOL adjustingSize;
 
 - (id) initWithWindowID: (uuid_t *) newWindowID;
 - (NSSize) defaultSize;
