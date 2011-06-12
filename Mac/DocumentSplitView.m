@@ -1169,11 +1169,15 @@
         
         NSRect verticalDividerFrame = [self bounds];
         verticalDividerFrame.size.height = dividerHeight;
+        verticalDividerFrame.origin.x += dividerWidth;
+        verticalDividerFrame.size.width -= dividerWidth;
         [[dividerSubviewsForVerticalContent objectAtIndex: 0]
           setFrame: verticalDividerFrame];
         
         NSRect horizontalDividerFrame = [self bounds];
         horizontalDividerFrame.size.width = dividerWidth;
+        horizontalDividerFrame.origin.y += dividerHeight;
+        horizontalDividerFrame.size.height -= dividerHeight;
         [[dividerSubviewsForHorizontalContent objectAtIndex: 0]
           setFrame: horizontalDividerFrame];
     }
@@ -1204,11 +1208,13 @@
         }
     }
     
-    CGFloat dividerThickness
+    CGFloat dividerWidth
         = [self dividerThicknessForAxis: HorizontalSplitAxis];
+    CGFloat dividerHeight
+        = [self dividerThicknessForAxis: VerticalSplitAxis];
     NSRect bounds = [self bounds];
     CGFloat totalSubviewWidthAfter
-        = bounds.size.width - nSubviews * dividerThickness;
+        = bounds.size.width - nSubviews * dividerWidth;
     
     CGFloat subviewRight = [self bounds].size.width;
     for(NSUInteger nMinusI = 0; nMinusI < nSubviews; nMinusI++) {
@@ -1222,7 +1228,7 @@
         subviewFrame.size.width = subviewWidth;
         [subview setFrame: subviewFrame];
         
-        CGFloat dividerLeft = subviewLeft - dividerThickness;
+        CGFloat dividerLeft = subviewLeft - dividerWidth;
         
         dividerLeft = [self constrainSplitPosition: dividerLeft
                             ofDividerAt: i
@@ -1240,7 +1246,7 @@
         if(dividerLeft > maxDividerLeft)
             dividerLeft = maxDividerLeft;
         
-        subviewLeft = dividerLeft + dividerThickness;
+        subviewLeft = dividerLeft + dividerWidth;
         subviewWidth = subviewRight - subviewLeft;
         
         subviewFrame.origin.x = subviewLeft;
@@ -1248,7 +1254,7 @@
         [subview setFrame: subviewFrame];
         
         subviewRight -= subviewWidth;
-        subviewRight -= dividerThickness;
+        subviewRight -= dividerWidth;
     }
     
     free(proportions);
@@ -1303,11 +1309,13 @@
         }
     }
     
-    CGFloat dividerThickness
+    CGFloat dividerWidth
+        = [self dividerThicknessForAxis: HorizontalSplitAxis];
+    CGFloat dividerHeight
         = [self dividerThicknessForAxis: VerticalSplitAxis];
     NSRect bounds = [self bounds];
     CGFloat totalSubviewHeightAfter
-        = bounds.size.height - nSubviews * dividerThickness;
+        = bounds.size.height - nSubviews * dividerHeight;
     
     CGFloat subviewTop = bounds.size.height;
     for(NSUInteger i = 0; i < nSubviews; i++) {
@@ -1320,7 +1328,7 @@
         subviewFrame.size.height = subviewHeight;
         [subview setFrame: subviewFrame];
         
-        CGFloat dividerBottom = subviewBottom - dividerThickness;
+        CGFloat dividerBottom = subviewBottom - dividerHeight;
         
         dividerBottom = [self constrainSplitPosition: dividerBottom
                               ofDividerAt: i
@@ -1338,7 +1346,7 @@
         if(dividerBottom > maxDividerBottom)
             dividerBottom = maxDividerBottom;
         
-        subviewBottom = dividerBottom + dividerThickness;
+        subviewBottom = dividerBottom + dividerHeight;
         subviewHeight = subviewTop - subviewBottom;
         
         subviewFrame.origin.y = subviewBottom;
@@ -1346,7 +1354,7 @@
         [subview setFrame: subviewFrame];
         
         subviewTop -= subviewHeight;
-        subviewTop -= dividerThickness;
+        subviewTop -= dividerHeight;
     }
     
     free(proportions);
