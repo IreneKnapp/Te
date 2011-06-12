@@ -2,4 +2,6 @@
 
 @protocol SizeConstraintParticipant
 - (NSSize) desiredSize;
+- (void) showResizingTips;
+- (void) hideResizingTips;
 @end

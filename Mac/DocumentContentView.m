@@ -2,6 +2,7 @@
 #import <HsFFI.h>
 #import "Te/ForeignInterface_stub.h"
 #import "AppDelegate.h"
+#import "TransparentHelperWindow.h"
 #import "Utilities.h"
 
 
@@ -65,6 +66,8 @@
         textContainer
             = [[NSTextContainer alloc] initWithContainerSize: containerSize];
         [layoutManager addTextContainer: textContainer];
+        
+        resizingTip = nil;
     }
     return self;
 }
@@ -220,6 +223,63 @@
                                             lineNumberTopOffset + lineTop)];
         
         upcomingLineTop = lineTop + lineHeight;
+    }
+}
+
+
+- (void) showResizingTips {
+    if(resizingTip)
+        [self hideResizingTips];
+    
+    NSWindow *window = [self window];
+    if(!window)
+        return;
+    
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    
+    CGFloat horizontalPadding = emWidth * 0.5;
+    CGFloat verticalPadding = lineHeight * 0.5;
+    CGFloat border = 1.0;
+    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
+    
+    NSRect contentRect;
+    contentRect.size.width
+        = emWidth * 9.0 + (horizontalPadding + border) * 2.0;
+    contentRect.size.height
+        = lineHeight + (verticalPadding + border) * 2.0;
+    contentRect.origin.x
+        = [self frame].size.width - contentRect.size.width - rightMarginWidth;
+    contentRect.origin.y = [self frame].size.height - contentRect.size.height;
+    contentRect = [self convertRectToBase: contentRect];
+    
+    void (^drawHelper)(NSRect frame)
+        = ^(NSRect frame) {
+            [[NSColor colorWithDeviceWhite: 1.0 alpha: 1.0] set];
+            [NSBezierPath fillRect: frame];
+            
+            [[NSColor colorWithDeviceWhite: 0.5 alpha: 1.0] set];
+            [NSBezierPath strokeRect: frame];
+            
+            [[NSColor redColor] set];
+            [NSBezierPath fillRect: frame];
+        };
+    
+    resizingTip = [[TransparentHelperWindow alloc]
+                    initWithContentRect: contentRect
+                    drawHelper: drawHelper
+                    aboveWindow: window];
+    [resizingTip setAlphaValue: 1.0];
+    [resizingTip setOpaque: YES];
+    [resizingTip startTrackingView: self
+                 resizingMask: NSViewMinXMargin | NSViewMaxYMargin];
+}
+
+
+- (void) hideResizingTips {
+    if(resizingTip) {
+        [resizingTip remove];
+        resizingTip = nil;
     }
 }
 

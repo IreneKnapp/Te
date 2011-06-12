@@ -1108,6 +1108,20 @@
 }
 
 
+- (void) showResizingTips {
+    for(id <SizeConstraintParticipant> subview in contentSubviews) {
+        [subview showResizingTips];
+    }
+}
+
+
+- (void) hideResizingTips {
+    for(id <SizeConstraintParticipant> subview in contentSubviews) {
+        [subview hideResizingTips];
+    }
+}
+
+
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize {
     [super resizeSubviewsWithOldSize: oldBoundsSize];
     [self adjustSubviews];

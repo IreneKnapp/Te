@@ -175,12 +175,16 @@
 
 
 - (void) windowWillStartLiveResize: (NSNotification *) notification {
-    adjustingSize = YES;
+    if(!stillLoading) {
+        [documentSplitView showResizingTips];
+        adjustingSize = YES;
+    }
 }
 
 
 - (void) windowDidEndLiveResize: (NSNotification *) notification {
-    if(!adjustingSize && !stillLoading) {
+    if(!stillLoading) {
+        [documentSplitView hideResizingTips];
         manuallyAdjustedSize = [[self window] frame].size;
     }
     adjustingSize = NO;

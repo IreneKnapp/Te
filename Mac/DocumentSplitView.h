@@ -73,6 +73,8 @@ enum SplitAxis {
 - (void) createGhostWindowWithDividerAt: (NSUInteger) dividerIndex
                                    axis: (enum SplitAxis) dividerAxis;
 - (void) cleanupGhostWindow;
+- (void) showResizingTips;
+- (void) hideResizingTips;
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
 - (void) adjustSubviews;
 - (void) adjustSubviewsUncommittedAxis;
