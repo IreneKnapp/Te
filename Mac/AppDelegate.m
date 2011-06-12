@@ -13,6 +13,9 @@
 @synthesize lineNumberFont;
 @synthesize lineNumberEmWidth;
 @synthesize lineNumberLineHeight;
+@synthesize captionFont;
+@synthesize captionEmWidth;
+@synthesize captionLineHeight;
 
 - (NSMapTable *) newMapTable {
     if(!keyFunctions) {
@@ -131,6 +134,10 @@
     lineNumberFont = [NSFont fontWithName: @"Monaco" size: 10.0];
     lineNumberEmWidth = [self measureEmWidth: lineNumberFont];
     lineNumberLineHeight = [self measureLineHeight: lineNumberFont];
+    
+    captionFont = lineNumberFont;
+    captionEmWidth = lineNumberEmWidth;
+    captionLineHeight = lineNumberLineHeight;
 }
 
 

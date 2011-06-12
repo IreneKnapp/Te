@@ -44,7 +44,7 @@
             = [NSMutableArray arrayWithCapacity: 16];
         ghostWindow = nil;
 
-        NSFont *captionFont = [(AppDelegate *) [NSApp delegate] baseFont];
+        NSFont *captionFont = [(AppDelegate *) [NSApp delegate] captionFont];
         captionAttributes
             = [NSMutableDictionary dictionaryWithCapacity: 1];
         [captionAttributes setObject: captionFont forKey: NSFontAttributeName];
@@ -87,7 +87,8 @@
         
         baselineOffset = 3.0;
         captionInset = [DocumentContentView leftMarginWidth] + 5.0;
-        captionLineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+        captionLineHeight
+            = [(AppDelegate *) [NSApp delegate] captionLineHeight];
         titleLineHeight = [@"M" sizeWithAttributes: titleAttributes].height;
     }
     return self;

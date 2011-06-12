@@ -25,16 +25,23 @@
     CGFloat lineNumberEmWidth;
     CGFloat lineNumberLineHeight;
     
+    NSFont *captionFont;
+    CGFloat captionEmWidth;
+    CGFloat captionLineHeight;
+    
     int hsArgc;
     char **hsArgv;
 }
 @property (assign) void *applicationState;
 @property (assign) NSFont *baseFont;
-@property (assign) NSFont *lineNumberFont;
 @property (assign) CGFloat emWidth;
 @property (assign) CGFloat lineHeight;
+@property (assign) NSFont *lineNumberFont;
 @property (assign) CGFloat lineNumberEmWidth;
 @property (assign) CGFloat lineNumberLineHeight;
+@property (assign) NSFont *captionFont;
+@property (assign) CGFloat captionEmWidth;
+@property (assign) CGFloat captionLineHeight;
 
 - (NSMapTable *) newMapTable;
 - (CGFloat) measureEmWidth: (NSFont *) font;
