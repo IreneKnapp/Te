@@ -15,12 +15,6 @@
 }
 
 
-+ (CGFloat) rightMarginWidth {
-    CGFloat scrollerWidth = [NSScroller scrollerWidth];
-    return scrollerWidth;
-}
-
-
 + (CGFloat) rightPaddingWidth {
     CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
     return emWidth / 2.0;
@@ -50,7 +44,13 @@
 - (id) initWithFrame: (NSRect) frame {
     self = [super initWithFrame: frame];
     if(self) {
-        CGFloat scrollerWidth = [NSScroller scrollerWidth];
+        NSScrollerStyle preferredScrollerStyle
+            = [NSScroller preferredScrollerStyle];
+        
+        CGFloat scrollerWidth
+            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
+                          scrollerStyle: preferredScrollerStyle];
+        CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
         
         NSRect bounds = [self bounds];
         
@@ -62,7 +62,7 @@
         verticalScroller
             = [[NSScroller alloc] initWithFrame: verticalScrollerFrame];
         verticalScrollerFrame.size.width = scrollerWidth;
-        verticalScrollerFrame.size.height = bounds.size.height;
+        verticalScrollerFrame.size.height = bounds.size.height - scrollerWidth;
         verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
         verticalScrollerFrame.origin.y = 0.0;
         [verticalScroller setFrame: verticalScrollerFrame];
@@ -75,7 +75,35 @@
         [verticalScroller setTarget: self];
         [verticalScroller setAction: @selector(scrollerActivated:)];
         [verticalScroller setEnabled: YES];
+        [verticalScroller setScrollerStyle: preferredScrollerStyle];
+        [verticalScroller setKnobStyle: NSScrollerKnobStyleDark];
         [self addSubview: verticalScroller];
+        
+        NSRect horizontalScrollerFrame;
+        horizontalScrollerFrame.size.width = scrollerWidth * 10.0;
+        horizontalScrollerFrame.size.height = scrollerWidth;
+        horizontalScrollerFrame.origin.x = 0.0;
+        horizontalScrollerFrame.origin.y = 0.0;
+        horizontalScroller
+            = [[NSScroller alloc] initWithFrame: horizontalScrollerFrame];
+        horizontalScrollerFrame.size.width
+            = bounds.size.width - scrollerWidth - leftMarginWidth;
+        horizontalScrollerFrame.size.height = scrollerWidth;
+        horizontalScrollerFrame.origin.x = leftMarginWidth;
+        horizontalScrollerFrame.origin.y = bounds.size.height - scrollerWidth;
+        [horizontalScroller setFrame: horizontalScrollerFrame];
+        
+        [horizontalScroller setAutoresizingMask:
+                             NSViewMinYMargin | NSViewWidthSizable];
+        [horizontalScroller setArrowsPosition: NSScrollerArrowsDefaultSetting];
+        [horizontalScroller setKnobProportion: 0.75];
+        [horizontalScroller setDoubleValue: 0.0];
+        [horizontalScroller setTarget: self];
+        [horizontalScroller setAction: @selector(scrollerActivated:)];
+        [horizontalScroller setEnabled: YES];
+        [horizontalScroller setScrollerStyle: preferredScrollerStyle];
+        [horizontalScroller setKnobStyle: NSScrollerKnobStyleDark];
+        [self addSubview: horizontalScroller];
         
         textStorage = [[NSTextStorage alloc] init];
         
@@ -87,6 +115,15 @@
             = [[NSTextContainer alloc] initWithContainerSize: containerSize];
         [layoutManager addTextContainer: textContainer];
         
+        NSNotificationCenter *notificationCenter
+            = [NSNotificationCenter defaultCenter];
+        
+        [notificationCenter
+          addObserver: self
+          selector: @selector(preferredScrollerStyleDidChange:)
+          name: NSPreferredScrollerStyleDidChangeNotification
+          object: nil];
+        
         resizingTip = nil;
     }
     return self;
@@ -96,23 +133,27 @@
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize {
     NSRect bounds = [self bounds];
     
-    if(bounds.size.height > 0.0) {
-        NSView *superview = [self superview];
-        NSWindow *window = [self window];
-        NSView *contentView = nil;
-        if(window)
-            contentView = [window contentView];
-        
-        if(superview && ![superview isEqual: contentView]) {
-            CGFloat scrollerWidth = [NSScroller scrollerWidth];
-            
-            NSRect verticalScrollerFrame;
-            verticalScrollerFrame.size.width = scrollerWidth;
-            verticalScrollerFrame.size.height = bounds.size.height;
-            verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
-            verticalScrollerFrame.origin.y = 0.0;
-            [verticalScroller setFrame: verticalScrollerFrame];
-        }
+    CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
+    
+    if(horizontalScroller) {
+        NSRect horizontalScrollerFrame = [horizontalScroller frame];
+        CGFloat scrollerHeight = horizontalScrollerFrame.size.height;
+        horizontalScrollerFrame.size.width
+            = bounds.size.width - scrollerHeight - leftMarginWidth;
+        horizontalScrollerFrame.origin.x = leftMarginWidth;
+        horizontalScrollerFrame.origin.y = bounds.size.height - scrollerHeight;
+        [horizontalScroller setFrame: horizontalScrollerFrame];
+        [horizontalScroller setNeedsDisplay: YES];
+    }
+    
+    if(verticalScroller) {
+        NSRect verticalScrollerFrame = [verticalScroller frame];
+        CGFloat scrollerWidth = verticalScrollerFrame.size.width;
+        verticalScrollerFrame.size.height = bounds.size.height - scrollerWidth;
+        verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
+        verticalScrollerFrame.origin.y = 0.0;
+        [verticalScroller setFrame: verticalScrollerFrame];
+        [verticalScroller setNeedsDisplay: YES];
     }
 }
 
@@ -124,9 +165,9 @@
     NSSize currentSize = [self frame].size;
     
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
-    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
+    CGFloat rightPaddingWidth = [DocumentContentView rightPaddingWidth];
     CGFloat contentWidth
-        = currentSize.width - leftMarginWidth - rightMarginWidth;
+        = currentSize.width - leftMarginWidth - rightPaddingWidth;
     
     NSUInteger nLines = 0;
     if(currentSize.height > 0.0)
@@ -144,8 +185,7 @@
         nColumns = minimumColumns;
     
     NSSize result = NSMakeSize(nColumns * emWidth, nLines * lineHeight);
-    result.width += [DocumentContentView leftMarginWidth];
-    result.width += [DocumentContentView rightMarginWidth];
+    result.width += leftMarginWidth + rightPaddingWidth;
     result.width = ceil(result.width);
     return result;
 }
@@ -169,15 +209,14 @@
         = [(AppDelegate *) [NSApp delegate] lineNumberEmWidth];
     
     CGFloat farLeft = 0.0;
+    CGFloat farRight = [self bounds].size.width;
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
     CGFloat leftMarginLineNumberAreaWidth = 4.0 * lineNumberEmWidth;
     CGFloat leftMarginStatusAreaWidth
         = leftMarginWidth - leftMarginLineNumberAreaWidth;
     CGFloat contentAreaLeft = farLeft + leftMarginWidth;
-    CGFloat contentAreaWidth = ceil(emWidth * 80.0);
-    CGFloat contentAreaRight = contentAreaLeft + contentAreaWidth;
-    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
-    CGFloat farRight = contentAreaRight + rightMarginWidth;
+    CGFloat contentAreaRight = farRight;
+    CGFloat contentAreaWidth = contentAreaRight - contentAreaLeft;
     
     CGFloat totalHeight = [self bounds].size.height;
     NSUInteger nLines = floor(totalHeight / lineHeight);
@@ -194,16 +233,16 @@
     NSRect leftMarginStatusArea
         = NSMakeRect(farLeft + leftMarginLineNumberAreaWidth, contentAreaTop,
                      leftMarginStatusAreaWidth, contentAreaHeight);
-    NSRect rightMarginArea
-        = NSMakeRect(contentAreaRight, contentAreaTop,
-                     rightMarginWidth, contentAreaHeight);
+    NSRect rightMarginBorder
+        = NSMakeRect(emWidth * 80.0, contentAreaTop,
+                     1.0, contentAreaHeight);
     
     [[NSColor whiteColor] set];
     [NSBezierPath fillRect: contentArea];
     
     [[NSColor colorWithDeviceWhite: 0.90 alpha: 1.0] set];
     [NSBezierPath fillRect: leftMarginStatusArea];
-    [NSBezierPath fillRect: rightMarginArea];
+    [NSBezierPath fillRect: rightMarginBorder];
     
     [[NSColor colorWithDeviceWhite: 1.00 alpha: 1.0] set];
     [NSBezierPath fillRect: leftMarginLineNumberArea];
@@ -269,11 +308,12 @@
     
     CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
     CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    CGFloat scrollerWidth = [horizontalScroller frame].size.width;
+    CGFloat scrollerHeight = [horizontalScroller frame].size.height;
     
     CGFloat horizontalPadding = emWidth * 0.5;
     CGFloat verticalPadding = lineHeight * 0.5;
     CGFloat border = 1.0;
-    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
     
     NSRect contentRect;
     contentRect.size.width
@@ -281,8 +321,9 @@
     contentRect.size.height
         = lineHeight + (verticalPadding + border) * 2.0;
     contentRect.origin.x
-        = [self frame].size.width - contentRect.size.width - rightMarginWidth;
-    contentRect.origin.y = [self frame].size.height - contentRect.size.height;
+        = [self frame].size.width - contentRect.size.width - scrollerWidth;
+    contentRect.origin.y
+        = [self frame].size.height - contentRect.size.height - scrollerHeight;
     contentRect = [self convertRectToBase: contentRect];
     
     void (^drawHelper)(NSRect frame)
@@ -317,7 +358,42 @@
 
 
 - (IBAction) scrollerActivated: (id) sender {
-    if([sender isEqual: verticalScroller]) {
+    if([sender isEqual: horizontalScroller]) {
+    } else if([sender isEqual: verticalScroller]) {
+    }
+}
+
+
+- (void) preferredScrollerStyleDidChange: (NSNotification *) notification {
+    NSScrollerStyle preferredScrollerStyle
+        = [NSScroller preferredScrollerStyle];
+    
+    if(horizontalScroller) {
+        [horizontalScroller setScrollerStyle: preferredScrollerStyle];
+        
+        CGFloat newHeight
+            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
+                          scrollerStyle: preferredScrollerStyle];
+        
+        NSRect frame = [horizontalScroller frame];
+        CGFloat heightDifference = newHeight - frame.size.height;
+        frame.origin.y -= heightDifference;
+        frame.size.height += heightDifference;
+        [horizontalScroller setFrame: frame];
+    }
+    
+    if(verticalScroller) {
+        [verticalScroller setScrollerStyle: preferredScrollerStyle];
+        
+        CGFloat newWidth
+            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
+                          scrollerStyle: preferredScrollerStyle];
+        
+        NSRect frame = [verticalScroller frame];
+        CGFloat widthDifference = newWidth - frame.size.width;
+        frame.origin.x -= widthDifference;
+        frame.size.width += widthDifference;
+        [verticalScroller setFrame: frame];
     }
 }
 

@@ -23,9 +23,6 @@
       location = "group:Window.m">
    </FileRef>
    <FileRef
-      location = "group:Resources/DocumentWindow.xib">
-   </FileRef>
-   <FileRef
       location = "group:AppDelegate.h">
    </FileRef>
    <FileRef

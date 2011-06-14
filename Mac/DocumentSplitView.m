@@ -1073,7 +1073,10 @@
         if(collapsedBefore || collapsedAfter
            || createdBefore || createdAfter)
         {
-            [self adjustSubviews];
+            DocumentWindow *documentWindow = [self documentWindow];
+            if(documentWindow) {
+                [documentWindow adjustSizePerContentConstraints];
+            }    
         }
     }
     trackingDividerDrag = NO;
@@ -1146,11 +1149,6 @@
 
 
 - (void) adjustSubviews {
-    DocumentWindow *documentWindow = [self documentWindow];
-    if(documentWindow) {
-        [documentWindow adjustSizePerContentConstraints];
-    }
-    
     if(committedAxis == UncommittedSplitAxis) {
         [self adjustSubviewsUncommittedAxis];
     } else if(committedAxis == HorizontalSplitAxis) {
@@ -1614,7 +1612,6 @@
         CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
         CGFloat width = emWidth * [DocumentContentView minimumColumns];
         width += [DocumentContentView leftMarginWidth];
-        width += [DocumentContentView rightMarginWidth];
         width += [DocumentContentView rightPaddingWidth];
         return width;
     } else if(dividerAxis == VerticalSplitAxis) {

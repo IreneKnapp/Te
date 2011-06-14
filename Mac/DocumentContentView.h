@@ -6,6 +6,7 @@
 @interface DocumentContentView : NSView <SizeConstraintParticipant>
 {
     NSScroller *verticalScroller;
+    NSScroller *horizontalScroller;
     NSTextStorage *textStorage;
     NSLayoutManager *layoutManager;
     NSTextContainer *textContainer;
@@ -13,7 +14,6 @@
 }
 
 + (CGFloat) leftMarginWidth;
-+ (CGFloat) rightMarginWidth;
 + (CGFloat) rightPaddingWidth;
 + (NSUInteger) minimumLines;
 + (NSUInteger) minimumColumns;
@@ -27,5 +27,6 @@
 - (void) showResizingTips;
 - (void) hideResizingTips;
 - (IBAction) scrollerActivated: (id) sender;
+- (void) preferredScrollerStyleDidChange: (NSNotification *) notification;
 - (void) mouseDown: (NSEvent *) event;
 @end
