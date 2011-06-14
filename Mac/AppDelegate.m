@@ -67,7 +67,7 @@
     CGFloat totalAdvancement = 0.0;
     for(NSUInteger i = 0; i < numberOfGlyphs; i++) {
         NSSize incrementalAdvancement
-            = [baseFont advancementForGlyph: glyphBuffer[i]];
+            = [font advancementForGlyph: glyphBuffer[i]];
         totalAdvancement += incrementalAdvancement.width;
     }
     free(glyphBuffer);

@@ -9,9 +9,16 @@
 @implementation DocumentContentView
 
 + (CGFloat) leftMarginWidth {
+    CGFloat lineNumberPaddingWidth
+        = [DocumentContentView lineNumberPaddingWidth];
     CGFloat lineNumberEmWidth
         = [(AppDelegate *) [NSApp delegate] lineNumberEmWidth];
-    return 4.0 * lineNumberEmWidth + 16.0;
+    return lineNumberPaddingWidth + 4.0 * lineNumberEmWidth + 16.0;
+}
+
+
++ (CGFloat) lineNumberPaddingWidth {
+    return 2.0;
 }
 
 
@@ -27,7 +34,7 @@
 
 
 + (NSUInteger) minimumColumns {
-    return 16;
+    return 25;
 }
 
 
@@ -37,7 +44,7 @@
 
 
 + (CGFloat) collapseColumns {
-    return 8.0;
+    return 13.0;
 }
 
 
@@ -113,6 +120,7 @@
         NSSize containerSize = NSMakeSize(INFINITY, INFINITY);
         textContainer
             = [[NSTextContainer alloc] initWithContainerSize: containerSize];
+        [textContainer setLineFragmentPadding: 0.0];
         [layoutManager addTextContainer: textContainer];
         
         NSNotificationCenter *notificationCenter
@@ -211,7 +219,10 @@
     CGFloat farLeft = 0.0;
     CGFloat farRight = [self bounds].size.width;
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
-    CGFloat leftMarginLineNumberAreaWidth = 4.0 * lineNumberEmWidth;
+    CGFloat lineNumberPaddingWidth
+        = [DocumentContentView lineNumberPaddingWidth];
+    CGFloat leftMarginLineNumberAreaWidth
+        = ceil(lineNumberPaddingWidth + 4.0 * lineNumberEmWidth);
     CGFloat leftMarginStatusAreaWidth
         = leftMarginWidth - leftMarginLineNumberAreaWidth;
     CGFloat contentAreaLeft = farLeft + leftMarginWidth;
@@ -258,20 +269,12 @@
     NSColor *lineNumberColor = [NSColor colorWithDeviceWhite: 0.65 alpha: 1.0];
     [lineNumberAttributes setObject: lineNumberColor
                           forKey: NSForegroundColorAttributeName];
-    NSMutableParagraphStyle *lineNumberParagraphStyle
-        = [[NSParagraphStyle defaultParagraphStyle] mutableCopyWithZone: nil];
-    [lineNumberParagraphStyle setAlignment: NSRightTextAlignment];
-    [lineNumberAttributes setObject: lineNumberParagraphStyle
-                          forKey: NSParagraphStyleAttributeName];
     
     CGFloat upcomingLineTop = 0.0;
     for(NSUInteger i = 0; i < nLines; i++) {
         CGFloat lineTop = upcomingLineTop;
         
-        NSString *contentString =
-            [NSString stringWithFormat:
-                       @"Colorless green ideas sleep furiously.",
-                       i];
+        NSString *contentString = @"Colorless green ideas sleep furiously.";
         NSAttributedString *attributedString
             = [[NSAttributedString alloc] initWithString: contentString
                                           attributes: contentAttributes];
@@ -290,7 +293,7 @@
         
         allGlyphs = NSMakeRange(0, [layoutManager numberOfGlyphs]);
         [layoutManager drawGlyphsForGlyphRange: allGlyphs
-                       atPoint: NSMakePoint(farLeft,
+                       atPoint: NSMakePoint(farLeft + lineNumberPaddingWidth,
                                             lineNumberTopOffset + lineTop)];
         
         upcomingLineTop = lineTop + lineHeight;

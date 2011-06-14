@@ -86,7 +86,7 @@
                                   endingColor: titleGradientBottomColor];
         
         baselineOffset = 3.0;
-        captionInset = [DocumentContentView leftMarginWidth] + 5.0;
+        captionInset = 5.0;
         captionLineHeight
             = [(AppDelegate *) [NSApp delegate] captionLineHeight];
         titleLineHeight = [@"M" sizeWithAttributes: titleAttributes].height;
@@ -402,11 +402,10 @@
     CGFloat leftX = dividerFrame.origin.x;
     CGFloat rightX = dividerFrame.origin.x + dividerFrame.size.width;
     
-    CGFloat curveMiddleX
-        = (dividerFrame.size.width - captionInset) / 4.0
-          + dividerFrame.origin.x + captionInset;
-    CGFloat curveLeftX = curveMiddleX - 50.0;
-    CGFloat curveRightX = curveMiddleX + 50.0;
+    CGFloat captionEmWidth = [(AppDelegate *) [NSApp delegate] captionEmWidth];
+    
+    CGFloat curveLeftX = ceil(leftX + captionInset + captionEmWidth * 18.0);
+    CGFloat curveRightX = curveLeftX + 50.0;
     CGFloat lowerControlPointX
         = (curveRightX - curveLeftX) * 0.75 + curveLeftX;
     CGFloat upperControlPointX
