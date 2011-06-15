@@ -59,6 +59,11 @@
         [titleUnderprintAttributes
           setObject: [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0]
           forKey: NSForegroundColorAttributeName];
+        inactiveTitleAttributes
+            = [titleAttributes mutableCopyWithZone: nil];
+        [inactiveTitleAttributes
+          setObject: [NSColor colorWithDeviceWhite: 0.61 alpha: 1.0]
+          forKey: NSForegroundColorAttributeName];
         
         topBorderColor
             = [NSColor colorWithDeviceWhite: 0.89 alpha: 1.0];
@@ -83,6 +88,26 @@
         resizeIndicatorDarkColor
             = [NSColor colorWithDeviceWhite: 0.25 alpha: 1.0];
         resizeIndicatorLightColor
+            = [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0];
+        
+        inactiveTopBorderColor
+            = [NSColor colorWithDeviceWhite: 0.95 alpha: 1.0];
+        inactiveBottomBorderColor
+            = [NSColor colorWithDeviceWhite: 0.65 alpha: 1.0];
+        NSColor *inactiveTitleGradientTopColor
+            = [NSColor colorWithDeviceWhite: 0.95 alpha: 1.0];
+        NSColor *inactiveTitleGradientBottomColor
+            = [NSColor colorWithDeviceWhite: 0.90 alpha: 1.0];
+        inactiveCurvyBorderColor
+            = [NSColor colorWithDeviceWhite: 0.5 alpha: 0.5];
+        inactiveTitleGradient
+            = [[NSGradient alloc] initWithStartingColor:
+                                   inactiveTitleGradientTopColor
+                                  endingColor:
+                                   inactiveTitleGradientBottomColor];
+        inactiveResizeIndicatorDarkColor
+            = [NSColor colorWithDeviceWhite: 0.65 alpha: 1.0];
+        inactiveResizeIndicatorLightColor
             = [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0];
         
         baselineOffset = 3.0;
@@ -349,6 +374,10 @@
     if(window && [[self superview] isEqual: [window contentView]])
         isTopLevel = YES;
     
+    BOOL activeState = YES;
+    if(window && ![window isMainWindow])
+        activeState = NO;
+    
     NSUInteger nDividersForHorizontalContent
         = [dividerSubviewsForHorizontalContent count];
     for(NSUInteger i = 0; i < nDividersForHorizontalContent; i++) {
@@ -377,10 +406,11 @@
         }
         
         [self drawDividerForVerticalContentInFrame: dividerFrame
-                                          isBottom: isBottom
-                                        isTopLevel: isTopLevel
-                                           caption: caption
-                                     documentTitle: @"Document Title"];
+              isBottom: isBottom
+              isTopLevel: isTopLevel
+              activeState: activeState
+              caption: caption
+              documentTitle: @"Document Title"];
     }
 }
 
@@ -395,6 +425,7 @@
     [self drawDividerForVerticalContentInFrame: frame
           isBottom: NO
           isTopLevel: NO
+          activeState: YES
           caption: nil
           documentTitle: nil];
 }
@@ -414,6 +445,7 @@
 - (void) drawDividerForVerticalContentInFrame: (NSRect) dividerFrame
                                      isBottom: (BOOL) isBottom
                                    isTopLevel: (BOOL) isTopLevel
+                                  activeState: (BOOL) activeState
                                       caption: (NSString *) caption
                                 documentTitle: (NSString *) documentTitle
 {
@@ -464,18 +496,34 @@
                  controlPoint2: NSMakePoint(upperControlPointX, topY)];
     [curvyBorder lineToPoint: NSMakePoint(rightX, topY)];
     
-    [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
+    if(activeState) {
+        [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
+    } else {
+        [inactiveTitleGradient drawInBezierPath: bottomRegion angle: -90.0];
+    }
     
     [captionGradient drawInBezierPath: topRegion angle: -90.0];
     
-    [topBorderColor set];
+    if(activeState) {
+        [topBorderColor set];
+    } else {
+        [inactiveTopBorderColor set];
+    }
     [NSBezierPath fillRect: topBorderRect];
     
-    [curvyBorderColor set];
+    if(activeState) {
+        [curvyBorderColor set];
+    } else {
+        [inactiveCurvyBorderColor set];
+    }
     [curvyBorder stroke];
     
     if(!isBottom) {
-        [bottomBorderColor set];
+        if(activeState) {
+            [bottomBorderColor set];
+        } else {
+            [inactiveBottomBorderColor set];
+        }
         [NSBezierPath fillRect: bottomBorderRect];
     }
     
@@ -525,14 +573,19 @@
         [documentTitle drawInRect: titleUnderprintRect
                        withAttributes: titleUnderprintAttributes];
         
-        [documentTitle drawInRect: titleRect
-                       withAttributes: titleAttributes];
-                       
+        if(activeState) {
+            [documentTitle drawInRect: titleRect
+                           withAttributes: titleAttributes];
+        } else {
+            [documentTitle drawInRect: titleRect
+                           withAttributes: inactiveTitleAttributes];
+        }
+        
         [NSGraphicsContext restoreGraphicsState];
     }
     
     if(isBottom && isTopLevel) {
-        [self drawBottomRightCornerResizeIndicator];
+        [self drawBottomRightCornerResizeIndicatorActiveState: activeState];
     } else {
         NSRect indicatorFrame = dividerFrame;
         indicatorFrame.origin.x += indicatorFrame.size.width - 1.0;
@@ -540,12 +593,13 @@
         indicatorFrame.origin.x -= indicatorFrame.size.width;
         indicatorFrame.origin.y += 2.0;
         indicatorFrame.size.height -= 4.0;
-        [self drawVerticalResizeIndicatorInFrame: indicatorFrame];
+        [self drawVerticalResizeIndicatorInFrame: indicatorFrame
+              activeState: activeState];
     }
 }
 
 
-- (void) drawBottomRightCornerResizeIndicator {
+- (void) drawBottomRightCornerResizeIndicatorActiveState: (BOOL) activeState {
     CGFloat bottom = 1.0;
     CGFloat right = [self bounds].size.width - 1.0;
     
@@ -565,14 +619,24 @@
                                   NSMakePoint(right, bottom + i - 1)];
     }
     
-    [resizeIndicatorDarkColor set];
+    if(activeState) {
+        [resizeIndicatorDarkColor set];
+    } else {
+        [inactiveResizeIndicatorDarkColor set];
+    }
     [indicatorPath stroke];
-    [resizeIndicatorLightColor set];
+    if(activeState) {
+        [resizeIndicatorLightColor set];
+    } else {
+        [inactiveResizeIndicatorLightColor set];
+    }
     [indicatorUnderprintPath stroke];
 }
 
 
-- (void) drawVerticalResizeIndicatorInFrame: (NSRect) frame {
+- (void) drawVerticalResizeIndicatorInFrame: (NSRect) frame
+                                activeState: (BOOL) activeState
+{
     CGFloat originalHeight = frame.size.height;
     CGFloat newHeight = 3.0 * 3;
     frame.origin.y
@@ -584,14 +648,25 @@
     for(CGFloat i = 1.0; i < frame.size.height; i += 3.0) {
         NSRect line = NSMakeRect(frame.origin.x, frame.origin.y + i,
                                       frame.size.width - 1.0, 1.0);
-        [resizeIndicatorDarkColor set];
+        
+        if(activeState) {
+            [resizeIndicatorDarkColor set];
+        } else {
+            [inactiveResizeIndicatorDarkColor set];
+        }
+        
         [NSBezierPath fillRect: line];
         
         NSRect underprintLine = line;
         underprintLine.origin.x += 1.0;
         underprintLine.origin.y -= 1.0;
         
-        [resizeIndicatorLightColor set];
+        if(activeState) {
+            [resizeIndicatorLightColor set];
+        } else {
+            [inactiveResizeIndicatorLightColor set];
+        }
+        
         [NSBezierPath fillRect: underprintLine];
     }
 }

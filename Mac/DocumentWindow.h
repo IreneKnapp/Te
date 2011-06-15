@@ -25,5 +25,7 @@
 - (void) adjustSizePerContentConstraints;
 - (void) windowWillStartLiveResize: (NSNotification *) notification;
 - (void) windowDidEndLiveResize: (NSNotification *) notification;
+- (void) windowDidBecomeMain: (NSNotification *) notification;
+- (void) windowDidResignMain: (NSNotification *) notification;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
 @end

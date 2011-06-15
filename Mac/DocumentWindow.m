@@ -194,6 +194,20 @@
 }
 
 
+- (void) windowDidBecomeMain: (NSNotification *) notification {
+    if(!stillLoading) {
+        [documentSplitView setNeedsDisplay: YES];
+    }
+}
+
+
+- (void) windowDidResignMain: (NSNotification *) notification {
+    if(!stillLoading) {
+        [documentSplitView setNeedsDisplay: YES];
+    }
+}
+
+
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result {
     void *applicationState = getApplicationState();
     if(!applicationState)

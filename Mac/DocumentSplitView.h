@@ -37,6 +37,14 @@ enum SplitAxis {
     CGFloat captionLineHeight;
     CGFloat titleLineHeight;
     
+    NSMutableDictionary *inactiveTitleAttributes;
+    NSColor *inactiveTopBorderColor;
+    NSColor *inactiveBottomBorderColor;
+    NSColor *inactiveCurvyBorderColor;
+    NSGradient *inactiveTitleGradient;
+    NSColor *inactiveResizeIndicatorDarkColor;
+    NSColor *inactiveResizeIndicatorLightColor;
+    
     BOOL trackingDividerDrag;
     NSUInteger dividerIndexBeingTracked;
     enum SplitAxis dividerAxisBeingTracked;
@@ -71,10 +79,12 @@ enum SplitAxis {
 - (void) drawDividerForVerticalContentInFrame: (NSRect) dividerFrame
                                      isBottom: (BOOL) isBottom
                                    isTopLevel: (BOOL) isTopLevel
+                                  activeState: (BOOL) activeState
                                       caption: (NSString *) caption
                                 documentTitle: (NSString *) documentTitle;
-- (void) drawBottomRightCornerResizeIndicator;
-- (void) drawVerticalResizeIndicatorInFrame: (NSRect) frame;
+- (void) drawBottomRightCornerResizeIndicatorActiveState: (BOOL) activeState;
+- (void) drawVerticalResizeIndicatorInFrame: (NSRect) frame
+                                activeState: (BOOL) activeState;
 - (NSView *) hitTest: (NSPoint) point;
 - (void) mouseDown: (NSEvent *) event;
 - (void) mouseDragged: (NSEvent *) event;
