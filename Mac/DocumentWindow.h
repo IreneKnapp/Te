@@ -27,5 +27,6 @@
 - (void) windowDidEndLiveResize: (NSNotification *) notification;
 - (void) windowDidBecomeMain: (NSNotification *) notification;
 - (void) windowDidResignMain: (NSNotification *) notification;
+- (void) preferredScrollerStyleDidChange: (NSNotification *) notification;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
 @end

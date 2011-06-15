@@ -26,6 +26,7 @@
 + (CGFloat) collapseColumns;
 - (id) initWithFrame: (NSRect) frame;
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
+- (void) repackScrollbars;
 - (NSSize) minimumSize;
 - (NSSize) desiredSize;
 - (NSString *) caption;

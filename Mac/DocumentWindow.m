@@ -65,6 +65,15 @@
         manuallyAdjustedSize = initialSize;
         [self adjustSize: initialSize withAnimation: NO];
         
+        NSNotificationCenter *notificationCenter
+            = [NSNotificationCenter defaultCenter];
+        
+        [notificationCenter
+          addObserver: self
+          selector: @selector(preferredScrollerStyleDidChange:)
+          name: NSPreferredScrollerStyleDidChangeNotification
+          object: nil];
+        
         [window orderFront: self];
     }
     return self;
@@ -208,6 +217,11 @@
     if(!stillLoading) {
         [documentSplitView setNeedsDisplay: YES];
     }
+}
+
+
+- (void) preferredScrollerStyleDidChange: (NSNotification *) notification {
+    [self adjustSizePerContentConstraints];
 }
 
 

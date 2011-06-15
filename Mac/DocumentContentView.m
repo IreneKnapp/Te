@@ -189,14 +189,25 @@
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize {
     NSRect bounds = [self bounds];
     
+    [self repackScrollbars];
+}
+
+
+- (void) repackScrollbars {
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
+    NSScrollerStyle preferredScrollerStyle
+        = [NSScroller preferredScrollerStyle];
+    CGFloat scrollerSize
+        = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
+                      scrollerStyle: preferredScrollerStyle];
+    NSRect bounds = [self bounds];
     
     if(horizontalScroller) {
-        NSRect horizontalScrollerFrame = [horizontalScroller frame];
-        CGFloat scrollerHeight = horizontalScrollerFrame.size.height;
-        horizontalScrollerFrame.size.width = bounds.size.width - scrollerHeight;
+        NSRect horizontalScrollerFrame;
+        horizontalScrollerFrame.size.width = bounds.size.width - scrollerSize;
+        horizontalScrollerFrame.size.height = scrollerSize;
         horizontalScrollerFrame.origin.x = 0.0;
-        horizontalScrollerFrame.origin.y = bounds.size.height - scrollerHeight;
+        horizontalScrollerFrame.origin.y = bounds.size.height - scrollerSize;
         if([NSScroller preferredScrollerStyle] != NSScrollerStyleLegacy) {
             horizontalScrollerFrame.origin.x += leftMarginWidth;
             horizontalScrollerFrame.size.width -= leftMarginWidth;
@@ -206,10 +217,10 @@
     }
     
     if(verticalScroller) {
-        NSRect verticalScrollerFrame = [verticalScroller frame];
-        CGFloat scrollerWidth = verticalScrollerFrame.size.width;
-        verticalScrollerFrame.size.height = bounds.size.height - scrollerWidth;
-        verticalScrollerFrame.origin.x = bounds.size.width - scrollerWidth;
+        NSRect verticalScrollerFrame;
+        verticalScrollerFrame.size.height = bounds.size.height - scrollerSize;
+        verticalScrollerFrame.size.width = scrollerSize;
+        verticalScrollerFrame.origin.x = bounds.size.width - scrollerSize;
         verticalScrollerFrame.origin.y = 0.0;
         [verticalScroller setFrame: verticalScrollerFrame];
         [verticalScroller setNeedsDisplay: YES];
@@ -518,18 +529,9 @@
             [horizontalScroller setWantsLayer: YES];
             [horizontalScroller setAlphaValue: 0.0];
         } else {
+            [horizontalScroller setAlphaValue: 1.0];
             [horizontalScroller setWantsLayer: NO];
         }
-        
-        CGFloat newHeight
-            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
-                          scrollerStyle: preferredScrollerStyle];
-        
-        NSRect frame = [horizontalScroller frame];
-        CGFloat heightDifference = newHeight - frame.size.height;
-        frame.origin.y -= heightDifference;
-        frame.size.height += heightDifference;
-        [horizontalScroller setFrame: frame];
     }
     
     if(verticalScroller) {
@@ -538,19 +540,12 @@
             [verticalScroller setWantsLayer: YES];
             [verticalScroller setAlphaValue: 0.0];
         } else {
+            [verticalScroller setAlphaValue: 1.0];
             [verticalScroller setWantsLayer: NO];
         }
-        
-        CGFloat newWidth
-            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
-                          scrollerStyle: preferredScrollerStyle];
-        
-        NSRect frame = [verticalScroller frame];
-        CGFloat widthDifference = newWidth - frame.size.width;
-        frame.origin.x -= widthDifference;
-        frame.size.width += widthDifference;
-        [verticalScroller setFrame: frame];
     }
+    
+    [self repackScrollbars];
 }
 
 
