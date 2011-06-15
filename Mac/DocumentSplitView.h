@@ -30,6 +30,8 @@ enum SplitAxis {
     NSColor *curvyBorderColor;
     NSGradient *captionGradient;
     NSGradient *titleGradient;
+    NSColor *resizeIndicatorDarkColor;
+    NSColor *resizeIndicatorLightColor;
     CGFloat baselineOffset;
     CGFloat captionInset;
     CGFloat captionLineHeight;
@@ -64,11 +66,15 @@ enum SplitAxis {
 - (void) drawRect: (NSRect) dirtyRect;
 - (void) drawGhostForHorizontalContent: (NSRect) frame;
 - (void) drawGhostForVerticalContent: (NSRect) frame;
-- (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame;
+- (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame
+                                     isLeftmost: (BOOL) isLeftmost;
 - (void) drawDividerForVerticalContentInFrame: (NSRect) dividerFrame
                                      isBottom: (BOOL) isBottom
+                                   isTopLevel: (BOOL) isTopLevel
                                       caption: (NSString *) caption
                                 documentTitle: (NSString *) documentTitle;
+- (void) drawBottomRightCornerResizeIndicator;
+- (void) drawVerticalResizeIndicatorInFrame: (NSRect) frame;
 - (NSView *) hitTest: (NSPoint) point;
 - (void) mouseDown: (NSEvent *) event;
 - (void) mouseDragged: (NSEvent *) event;

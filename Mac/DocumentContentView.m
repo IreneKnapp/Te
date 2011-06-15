@@ -9,16 +9,27 @@
 @implementation DocumentContentView
 
 + (CGFloat) leftMarginWidth {
-    CGFloat lineNumberPaddingWidth
-        = [DocumentContentView lineNumberPaddingWidth];
-    CGFloat lineNumberEmWidth
-        = [(AppDelegate *) [NSApp delegate] lineNumberEmWidth];
-    return lineNumberPaddingWidth + 4.0 * lineNumberEmWidth + 16.0;
+    CGFloat lineNumberAreaWidth = [DocumentContentView lineNumberAreaWidth];
+    return lineNumberAreaWidth + 16.0;
 }
 
 
 + (CGFloat) lineNumberPaddingWidth {
     return 2.0;
+}
+
+
++ (CGFloat) lineNumberAreaWidth {
+    CGFloat lineNumberPaddingWidth
+        = [DocumentContentView lineNumberPaddingWidth];
+    CGFloat lineNumberEmWidth
+        = [(AppDelegate *) [NSApp delegate] lineNumberEmWidth];
+    return lineNumberPaddingWidth + 4.0 * lineNumberEmWidth;
+}
+
+
++ (CGFloat) leftPaddingWidth {
+    return 1.0;
 }
 
 
@@ -182,6 +193,7 @@
     NSUInteger minimumColumns = [DocumentContentView minimumColumns];
     
     CGFloat width = [DocumentContentView leftMarginWidth]
+                    + [DocumentContentView leftPaddingWidth]
                     + emWidth * minimumColumns
                     + [DocumentContentView rightPaddingWidth];
     CGFloat height = lineHeight * minimumLines;
@@ -196,9 +208,11 @@
     NSSize currentSize = [self frame].size;
     
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
+    CGFloat leftPaddingWidth = [DocumentContentView leftPaddingWidth];
     CGFloat rightPaddingWidth = [DocumentContentView rightPaddingWidth];
     CGFloat contentWidth
-        = currentSize.width - leftMarginWidth - rightPaddingWidth;
+        = currentSize.width
+          - (leftMarginWidth + leftPaddingWidth + rightPaddingWidth);
     
     NSUInteger nLines = 0;
     if(currentSize.height > 0.0)
@@ -216,7 +230,7 @@
         nColumns = minimumColumns;
     
     NSSize result = NSMakeSize(nColumns * emWidth, nLines * lineHeight);
-    result.width += leftMarginWidth + rightPaddingWidth;
+    result.width += leftMarginWidth + leftPaddingWidth + rightPaddingWidth;
     result.width = ceil(result.width);
     return result;
 }
@@ -234,9 +248,11 @@
     NSSize currentSize = [self frame].size;
     
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
+    CGFloat leftPaddingWidth = [DocumentContentView leftPaddingWidth];
     CGFloat rightPaddingWidth = [DocumentContentView rightPaddingWidth];
     CGFloat contentWidth
-        = currentSize.width - leftMarginWidth - rightPaddingWidth;
+        = currentSize.width
+          - (leftMarginWidth + leftPaddingWidth + rightPaddingWidth);
     
     NSUInteger nLines = 0;
     if(currentSize.height > 0.0)
@@ -281,6 +297,7 @@
     CGFloat contentAreaRight = farRight;
     CGFloat contentAreaWidth = contentAreaRight - contentAreaLeft;
     CGFloat rightMarginStart = emWidth * 80.0;
+    CGFloat leftPaddingWidth = [DocumentContentView leftPaddingWidth];
     
     CGFloat totalHeight = [self bounds].size.height;
     NSUInteger nLines = floor(totalHeight / lineHeight);
@@ -335,7 +352,8 @@
         
         NSRange allGlyphs = NSMakeRange(0, [layoutManager numberOfGlyphs]);
         [layoutManager drawGlyphsForGlyphRange: allGlyphs
-                       atPoint: NSMakePoint(contentAreaLeft, lineTop)];
+                       atPoint: NSMakePoint(contentAreaLeft + leftPaddingWidth,
+                                            lineTop)];
         
         NSString *lineNumberString
             = [NSString stringWithFormat: @"%4u", i + 1];

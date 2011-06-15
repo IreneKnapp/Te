@@ -15,6 +15,8 @@
 
 + (CGFloat) leftMarginWidth;
 + (CGFloat) lineNumberPaddingWidth;
++ (CGFloat) lineNumberAreaWidth;
++ (CGFloat) leftPaddingWidth;
 + (CGFloat) rightPaddingWidth;
 + (NSUInteger) minimumLines;
 + (NSUInteger) minimumColumns;

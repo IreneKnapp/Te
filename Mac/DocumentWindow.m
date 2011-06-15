@@ -84,6 +84,7 @@
     CGFloat width
         = dividerWidth
           + [DocumentContentView leftMarginWidth]
+          + [DocumentContentView leftPaddingWidth]
           + emWidth * 80.0
           + [DocumentContentView rightPaddingWidth];
     CGFloat height = 50.0 * lineHeight + dividerHeight;

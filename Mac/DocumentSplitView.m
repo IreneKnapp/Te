@@ -15,7 +15,7 @@
 
 + (CGFloat) minimumDividerThicknessForAxis: (enum SplitAxis) dividerAxis {
     if(dividerAxis == HorizontalSplitAxis) {
-        return 8.0;
+        return 1.0;
     } else if(dividerAxis == VerticalSplitAxis) {
         return 22.0;
     }
@@ -54,11 +54,6 @@
         titleAttributes
             = [NSMutableDictionary dictionaryWithCapacity: 3];
         [titleAttributes setObject: titleFont forKey: NSFontAttributeName];
-        NSMutableParagraphStyle *titleParagraphStyle
-            = [[NSParagraphStyle defaultParagraphStyle] mutableCopyWithZone: nil];
-        [titleParagraphStyle setAlignment: NSCenterTextAlignment];
-        [titleAttributes setObject: titleParagraphStyle
-                         forKey: NSParagraphStyleAttributeName];
         titleUnderprintAttributes
             = [titleAttributes mutableCopyWithZone: nil];
         [titleUnderprintAttributes
@@ -85,6 +80,10 @@
         titleGradient
             = [[NSGradient alloc] initWithStartingColor: titleGradientTopColor
                                   endingColor: titleGradientBottomColor];
+        resizeIndicatorDarkColor
+            = [NSColor colorWithDeviceWhite: 0.25 alpha: 1.0];
+        resizeIndicatorLightColor
+            = [NSColor colorWithDeviceWhite: 0.81 alpha: 1.0];
         
         baselineOffset = 3.0;
         captionInset = 5.0;
@@ -344,14 +343,21 @@
 }
 
 
-- (void) drawRect: (NSRect) dirtyRect {    
+- (void) drawRect: (NSRect) dirtyRect {
+    BOOL isTopLevel = NO;
+    NSWindow *window = [self window];
+    if(window && [[self superview] isEqual: [window contentView]])
+        isTopLevel = YES;
+    
     NSUInteger nDividersForHorizontalContent
         = [dividerSubviewsForHorizontalContent count];
     for(NSUInteger i = 0; i < nDividersForHorizontalContent; i++) {
         NSRect dividerFrame
             = [[dividerSubviewsForHorizontalContent objectAtIndex: i] frame];
+        BOOL isLeftmost = i == 0;
         
-        [self drawDividerForHorizontalContentInFrame: dividerFrame];
+        [self drawDividerForHorizontalContentInFrame: dividerFrame
+                                          isLeftmost: isLeftmost];
     }
     
     NSUInteger nDividersForVerticalContent
@@ -372,6 +378,7 @@
         
         [self drawDividerForVerticalContentInFrame: dividerFrame
                                           isBottom: isBottom
+                                        isTopLevel: isTopLevel
                                            caption: caption
                                      documentTitle: @"Document Title"];
     }
@@ -379,26 +386,34 @@
 
 
 - (void) drawGhostForHorizontalContent: (NSRect) frame {
-    [self drawDividerForHorizontalContentInFrame: frame];
+    [self drawDividerForHorizontalContentInFrame: frame
+                                      isLeftmost: NO];
 }
 
 
 - (void) drawGhostForVerticalContent: (NSRect) frame {
     [self drawDividerForVerticalContentInFrame: frame
           isBottom: NO
+          isTopLevel: NO
           caption: nil
           documentTitle: nil];
 }
 
 
-- (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame {
-    [[NSColor redColor] set];
+- (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame
+                                     isLeftmost: (BOOL) isLeftmost
+{
+    if(isLeftmost)
+        [[NSColor whiteColor] set];
+    else
+        [[NSColor colorWithDeviceWhite: 0.25 alpha: 1.0] set];
     [NSBezierPath fillRect: dividerFrame];
 }
 
 
 - (void) drawDividerForVerticalContentInFrame: (NSRect) dividerFrame
                                      isBottom: (BOOL) isBottom
+                                   isTopLevel: (BOOL) isTopLevel
                                       caption: (NSString *) caption
                                 documentTitle: (NSString *) documentTitle
 {
@@ -468,11 +483,23 @@
         NSRect captionRect = dividerFrame;
         captionRect.origin.y += baselineOffset;
         captionRect.size.height = captionLineHeight;
+        captionRect.size.width = curveLeftX;
         captionRect.origin.x += captionInset;
         captionRect.size.width -= captionInset;
         
+        CGFloat newWidth
+            = [caption sizeWithAttributes: captionAttributes].width;
+        captionRect.origin.x = (captionRect.size.width - newWidth) / 2.0;
+        captionRect.size.width = newWidth;
+        
+        [NSGraphicsContext saveGraphicsState];
+        
+        [topRegion addClip];
+        
         [caption drawInRect: captionRect
                  withAttributes: captionAttributes];
+        
+        [NSGraphicsContext restoreGraphicsState];
     }
     
     if(!isBottom && documentTitle) {
@@ -480,14 +507,92 @@
         titleRect.origin.y += baselineOffset;
         titleRect.size.height = titleLineHeight;
         
+        CGFloat newWidth
+            = [documentTitle sizeWithAttributes: titleAttributes].width;
+        titleRect.origin.x = (titleRect.size.width - newWidth) / 2.0;
+        titleRect.size.width = newWidth;
+        
+        if(titleRect.origin.x < curveRightX)
+            titleRect.origin.x = curveRightX;
+        
         NSRect titleUnderprintRect = titleRect;
         titleUnderprintRect.origin.y -= 1.0;
+        
+        [NSGraphicsContext saveGraphicsState];
+        
+        [bottomRegion addClip];
         
         [documentTitle drawInRect: titleUnderprintRect
                        withAttributes: titleUnderprintAttributes];
         
         [documentTitle drawInRect: titleRect
                        withAttributes: titleAttributes];
+                       
+        [NSGraphicsContext restoreGraphicsState];
+    }
+    
+    if(isBottom && isTopLevel) {
+        [self drawBottomRightCornerResizeIndicator];
+    } else {
+        NSRect indicatorFrame = dividerFrame;
+        indicatorFrame.origin.x += indicatorFrame.size.width - 1.0;
+        indicatorFrame.size.width = 30.0;
+        indicatorFrame.origin.x -= indicatorFrame.size.width;
+        indicatorFrame.origin.y += 2.0;
+        indicatorFrame.size.height -= 4.0;
+        [self drawVerticalResizeIndicatorInFrame: indicatorFrame];
+    }
+}
+
+
+- (void) drawBottomRightCornerResizeIndicator {
+    CGFloat bottom = 1.0;
+    CGFloat right = [self bounds].size.width - 1.0;
+    
+    CGFloat dividerHeight
+        = [DocumentSplitView minimumDividerThicknessForAxis:
+                              VerticalSplitAxis];
+    
+    NSBezierPath *indicatorPath = [NSBezierPath bezierPath];
+    NSBezierPath *indicatorUnderprintPath = [NSBezierPath bezierPath];
+    for(CGFloat i = 4.0; i < dividerHeight - 2.0; i += 4.0) {
+        [indicatorPath moveToPoint: NSMakePoint(right - i, bottom)];
+        [indicatorPath lineToPoint: NSMakePoint(right, bottom + i)];
+        
+        [indicatorUnderprintPath moveToPoint:
+                                  NSMakePoint(right - i + 1, bottom)];
+        [indicatorUnderprintPath lineToPoint:
+                                  NSMakePoint(right, bottom + i - 1)];
+    }
+    
+    [resizeIndicatorDarkColor set];
+    [indicatorPath stroke];
+    [resizeIndicatorLightColor set];
+    [indicatorUnderprintPath stroke];
+}
+
+
+- (void) drawVerticalResizeIndicatorInFrame: (NSRect) frame {
+    CGFloat originalHeight = frame.size.height;
+    CGFloat newHeight = 3.0 * 3;
+    frame.origin.y
+        = ceil(frame.origin.y + (frame.size.height - newHeight) / 2.0);
+    frame.size.height = newHeight;
+    
+    frame.size.width -= (originalHeight - newHeight) / 2.0;
+    
+    for(CGFloat i = 1.0; i < frame.size.height; i += 3.0) {
+        NSRect line = NSMakeRect(frame.origin.x, frame.origin.y + i,
+                                      frame.size.width - 1.0, 1.0);
+        [resizeIndicatorDarkColor set];
+        [NSBezierPath fillRect: line];
+        
+        NSRect underprintLine = line;
+        underprintLine.origin.x += 1.0;
+        underprintLine.origin.y -= 1.0;
+        
+        [resizeIndicatorLightColor set];
+        [NSBezierPath fillRect: underprintLine];
     }
 }
 
@@ -498,6 +603,16 @@
        || [dividerSubviewsForVerticalContent containsObject: superResult])
     {
         return self;
+    } else if([superResult isKindOfClass: [DocumentContentView class]]) {
+        NSPoint basePoint = [self convertPointToBase: point];
+        NSPoint contentPoint = [superResult convertPointFromBase: basePoint];
+        CGFloat lineNumberAreaWidth
+            = [DocumentContentView lineNumberAreaWidth];
+        if(contentPoint.x < lineNumberAreaWidth) {
+            return self;
+        } else {
+            return superResult;
+        }
     } else {
         return superResult;
     }
@@ -507,6 +622,8 @@
 - (void) mouseDown: (NSEvent *) event {
     NSPoint location = [self convertPoint: [event locationInWindow]
                              fromView: nil];
+        
+    CGFloat lineNumberAreaWidth = [DocumentContentView lineNumberAreaWidth];
     
     BOOL found = NO;
     NSUInteger foundIndex;
@@ -519,6 +636,7 @@
             NSView *dividerSubview 
                 = [dividerSubviewsForHorizontalContent objectAtIndex: i];
             NSRect dividerFrame = [dividerSubview frame];
+            dividerFrame.size.width += lineNumberAreaWidth;
             if(NSPointInRect(location, dividerFrame)) {
                 found = YES;
                 foundIndex = i;
@@ -1110,6 +1228,7 @@
     
     void (^drawHelper)(NSRect drawFrame) = nil;
     if(dividerAxis == HorizontalSplitAxis) {
+        dividerFrame.size.width += [DocumentContentView leftMarginWidth];
         drawHelper = ^(NSRect drawFrame)
                      {
                          [self drawGhostForHorizontalContent: drawFrame];
@@ -1628,7 +1747,7 @@
                         axis: dividerAxis];
             CGFloat minimumWidth
                 = [self subviewMinimumSizeForAxis: dividerAxis];
-            enforcedLeft = absoluteLeft + minimumWidth;
+            enforcedLeft = ceil(absoluteLeft + minimumWidth);
         }
         
         if(proposedPosition < enforcedLeft)
@@ -1645,7 +1764,7 @@
                         axis: dividerAxis];
             CGFloat minimumHeight
                 = [self subviewMinimumSizeForAxis: dividerAxis];
-            enforcedBottom = absoluteBottom + minimumHeight;
+            enforcedBottom = ceil(absoluteBottom + minimumHeight);
         }
         
         if(proposedPosition < enforcedBottom)
@@ -1667,7 +1786,7 @@
             = [self absoluteMaxCoordinateOfDividerAt: dividerIndex
                     axis: dividerAxis];
         CGFloat minimumWidth = [self subviewMinimumSizeForAxis: dividerAxis];
-        CGFloat enforcedRight = absoluteRight - minimumWidth;
+        CGFloat enforcedRight = floor(absoluteRight - minimumWidth);
         
         if(proposedPosition > enforcedRight)
             return [self constrainSplitPosition: enforcedRight
@@ -1680,7 +1799,7 @@
             = [self absoluteMaxCoordinateOfDividerAt: dividerIndex
                     axis: dividerAxis];
         CGFloat minimumHeight = [self subviewMinimumSizeForAxis: dividerAxis];
-        CGFloat enforcedTop = absoluteTop - minimumHeight;
+        CGFloat enforcedTop = floor(absoluteTop - minimumHeight);
         
         if(proposedPosition > enforcedTop)
             return [self constrainSplitPosition: enforcedTop
@@ -1704,7 +1823,7 @@
         CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
         CGFloat proposedWidth = proposedPosition - absoluteLeft;
         CGFloat constrainedWidth = round(proposedWidth / emWidth) * emWidth;
-        CGFloat constrainedPosition = absoluteLeft + constrainedWidth;
+        CGFloat constrainedPosition = ceil(absoluteLeft + constrainedWidth);
         
         return constrainedPosition;
     } else if(dividerAxis == VerticalSplitAxis) {
@@ -1716,7 +1835,7 @@
         CGFloat proposedHeight = absoluteTop - proposedPosition;
         CGFloat constrainedHeight
             = round(proposedHeight / lineHeight) * lineHeight;
-        CGFloat constrainedPosition = absoluteTop - constrainedHeight;
+        CGFloat constrainedPosition = floor(absoluteTop - constrainedHeight);
         
         return constrainedPosition;
     }
@@ -1728,6 +1847,7 @@
         CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
         CGFloat width = emWidth * [DocumentContentView minimumColumns];
         width += [DocumentContentView leftMarginWidth];
+        width += [DocumentContentView leftPaddingWidth];
         width += [DocumentContentView rightPaddingWidth];
         return width;
     } else if(dividerAxis == VerticalSplitAxis) {
