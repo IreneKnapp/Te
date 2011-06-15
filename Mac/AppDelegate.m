@@ -58,20 +58,22 @@
     NSLayoutManager *layoutManager = [[NSLayoutManager alloc] init];
     [textStorage addLayoutManager: layoutManager];
     NSTextContainer *textContainer = [[NSTextContainer alloc] init];
+    [textContainer setLineFragmentPadding: 0.0];
     [layoutManager addTextContainer: textContainer];
     NSUInteger numberOfGlyphs = [layoutManager numberOfGlyphs];
     NSRange allGlyphRange = NSMakeRange(0, numberOfGlyphs);
     [layoutManager ensureLayoutForGlyphRange: allGlyphRange];
-    NSGlyph *glyphBuffer = malloc(sizeof(NSGlyph) * numberOfGlyphs);
-    [layoutManager getGlyphs: glyphBuffer range: allGlyphRange];
-    CGFloat totalAdvancement = 0.0;
-    for(NSUInteger i = 0; i < numberOfGlyphs; i++) {
-        NSSize incrementalAdvancement
-            = [font advancementForGlyph: glyphBuffer[i]];
-        totalAdvancement += incrementalAdvancement.width;
-    }
-    free(glyphBuffer);
-    return totalAdvancement;
+    CGFloat insertionPointBuffer[2];
+    NSUInteger characterIndexBuffer[2];
+    NSUInteger nInsertionPoints
+        = [layoutManager getLineFragmentInsertionPointsForCharacterAtIndex: 0
+                         alternatePositions: NO
+                         inDisplayOrder: NO
+                         positions: insertionPointBuffer
+                         characterIndexes: characterIndexBuffer];
+    CGFloat result = insertionPointBuffer[nInsertionPoints - 1];
+    NSLog(@"measured width of %@ at %lf", font, result);
+    return result;
 }
 
 

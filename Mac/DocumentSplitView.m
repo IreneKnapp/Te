@@ -47,8 +47,13 @@
 
         NSFont *captionFont = [(AppDelegate *) [NSApp delegate] captionFont];
         captionAttributes
-            = [NSMutableDictionary dictionaryWithCapacity: 1];
+            = [NSMutableDictionary dictionaryWithCapacity: 2];
         [captionAttributes setObject: captionFont forKey: NSFontAttributeName];
+        inactiveCaptionAttributes
+            = [captionAttributes mutableCopyWithZone: nil];
+        [inactiveCaptionAttributes
+          setObject: [NSColor colorWithDeviceWhite: 0.61 alpha: 1.0]
+          forKey: NSForegroundColorAttributeName];
         
         NSFont *titleFont = [NSFont titleBarFontOfSize: 13.0];
         titleAttributes
@@ -386,7 +391,8 @@
         BOOL isLeftmost = i == 0;
         
         [self drawDividerForHorizontalContentInFrame: dividerFrame
-                                          isLeftmost: isLeftmost];
+              isLeftmost: isLeftmost
+              activeState: activeState];
     }
     
     NSUInteger nDividersForVerticalContent
@@ -417,7 +423,8 @@
 
 - (void) drawGhostForHorizontalContent: (NSRect) frame {
     [self drawDividerForHorizontalContentInFrame: frame
-                                      isLeftmost: NO];
+          isLeftmost: NO
+          activeState: YES];
 }
 
 
@@ -433,11 +440,15 @@
 
 - (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame
                                      isLeftmost: (BOOL) isLeftmost
+                                    activeState: (BOOL) activeState
 {
-    if(isLeftmost)
+    if(isLeftmost) {
         [[NSColor whiteColor] set];
-    else
+    } else if(activeState) {
         [[NSColor colorWithDeviceWhite: 0.25 alpha: 1.0] set];
+    } else {
+        [[NSColor colorWithDeviceWhite: 0.50 alpha: 1.0] set];
+    }
     [NSBezierPath fillRect: dividerFrame];
 }
 
@@ -544,8 +555,13 @@
         
         [topRegion addClip];
         
-        [caption drawInRect: captionRect
-                 withAttributes: captionAttributes];
+        if(activeState) {
+            [caption drawInRect: captionRect
+                     withAttributes: captionAttributes];
+        } else {
+            [caption drawInRect: captionRect
+                     withAttributes: inactiveCaptionAttributes];
+        }
         
         [NSGraphicsContext restoreGraphicsState];
     }
@@ -570,10 +586,10 @@
         
         [bottomRegion addClip];
         
-        [documentTitle drawInRect: titleUnderprintRect
-                       withAttributes: titleUnderprintAttributes];
-        
         if(activeState) {
+            [documentTitle drawInRect: titleUnderprintRect
+                           withAttributes: titleUnderprintAttributes];
+            
             [documentTitle drawInRect: titleRect
                            withAttributes: titleAttributes];
         } else {

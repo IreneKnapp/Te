@@ -37,6 +37,7 @@ enum SplitAxis {
     CGFloat captionLineHeight;
     CGFloat titleLineHeight;
     
+    NSMutableDictionary *inactiveCaptionAttributes;
     NSMutableDictionary *inactiveTitleAttributes;
     NSColor *inactiveTopBorderColor;
     NSColor *inactiveBottomBorderColor;
@@ -75,7 +76,8 @@ enum SplitAxis {
 - (void) drawGhostForHorizontalContent: (NSRect) frame;
 - (void) drawGhostForVerticalContent: (NSRect) frame;
 - (void) drawDividerForHorizontalContentInFrame: (NSRect) dividerFrame
-                                     isLeftmost: (BOOL) isLeftmost;
+                                     isLeftmost: (BOOL) isLeftmost
+                                    activeState: (BOOL) activeState;
 - (void) drawDividerForVerticalContentInFrame: (NSRect) dividerFrame
                                      isBottom: (BOOL) isBottom
                                    isTopLevel: (BOOL) isTopLevel

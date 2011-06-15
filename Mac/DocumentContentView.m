@@ -24,7 +24,7 @@
         = [DocumentContentView lineNumberPaddingWidth];
     CGFloat lineNumberEmWidth
         = [(AppDelegate *) [NSApp delegate] lineNumberEmWidth];
-    return lineNumberPaddingWidth + 4.0 * lineNumberEmWidth;
+    return lineNumberPaddingWidth + ceil(4.0 * lineNumberEmWidth);
 }
 
 
@@ -287,17 +287,18 @@
     CGFloat farLeft = 0.0;
     CGFloat farRight = [self bounds].size.width;
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
+    CGFloat contentAreaLeft = farLeft + leftMarginWidth;
+    CGFloat leftPaddingWidth = [DocumentContentView leftPaddingWidth];
+    CGFloat textLeft = contentAreaLeft + leftPaddingWidth;
+    CGFloat contentAreaRight
+        = ceil(contentAreaLeft + leftPaddingWidth + emWidth * 80.0);
+    
     CGFloat lineNumberPaddingWidth
         = [DocumentContentView lineNumberPaddingWidth];
     CGFloat leftMarginLineNumberAreaWidth
-        = ceil(lineNumberPaddingWidth + 4.0 * lineNumberEmWidth);
+        = [DocumentContentView lineNumberAreaWidth];
     CGFloat leftMarginStatusAreaWidth
         = leftMarginWidth - leftMarginLineNumberAreaWidth;
-    CGFloat contentAreaLeft = farLeft + leftMarginWidth;
-    CGFloat contentAreaRight = farRight;
-    CGFloat contentAreaWidth = contentAreaRight - contentAreaLeft;
-    CGFloat rightMarginStart = emWidth * 80.0;
-    CGFloat leftPaddingWidth = [DocumentContentView leftPaddingWidth];
     
     CGFloat totalHeight = [self bounds].size.height;
     NSUInteger nLines = floor(totalHeight / lineHeight);
@@ -307,7 +308,7 @@
     
     NSRect contentArea
         = NSMakeRect(contentAreaLeft, contentAreaTop,
-                     contentAreaWidth, contentAreaHeight);
+                     contentAreaRight - contentAreaLeft, contentAreaHeight);
     NSRect leftMarginLineNumberArea
         = NSMakeRect(farLeft, contentAreaTop,
                      leftMarginLineNumberAreaWidth, contentAreaHeight);
@@ -315,18 +316,16 @@
         = NSMakeRect(farLeft + leftMarginLineNumberAreaWidth, contentAreaTop,
                      leftMarginStatusAreaWidth, contentAreaHeight);
     NSRect rightMarginArea
-        = NSMakeRect(rightMarginStart, contentAreaTop,
-                     contentAreaRight - rightMarginStart, contentAreaHeight);
+        = NSMakeRect(contentAreaRight, contentAreaTop,
+                     farRight - contentAreaRight, contentAreaHeight);
     
     [[NSColor whiteColor] set];
     [NSBezierPath fillRect: contentArea];
+    [NSBezierPath fillRect: leftMarginLineNumberArea];
     
     [[NSColor colorWithDeviceWhite: 0.90 alpha: 1.0] set];
     [NSBezierPath fillRect: leftMarginStatusArea];
     [NSBezierPath fillRect: rightMarginArea];
-    
-    [[NSColor colorWithDeviceWhite: 1.00 alpha: 1.0] set];
-    [NSBezierPath fillRect: leftMarginLineNumberArea];
     
     NSMutableDictionary *contentAttributes
         = [NSMutableDictionary dictionaryWithCapacity: 1];
@@ -345,6 +344,12 @@
         CGFloat lineTop = upcomingLineTop;
         
         NSString *contentString = @"Colorless green ideas sleep furiously.";
+        if(i == 0)
+            contentString = @"1234567890123456789012345678901234567890"
+                             "1234567890123456789012345678901234567890";
+        if(i == 1)
+            contentString = @"         1         2         3         4"
+                             "         5         6         7         8";
         NSAttributedString *attributedString
             = [[NSAttributedString alloc] initWithString: contentString
                                           attributes: contentAttributes];
@@ -352,8 +357,7 @@
         
         NSRange allGlyphs = NSMakeRange(0, [layoutManager numberOfGlyphs]);
         [layoutManager drawGlyphsForGlyphRange: allGlyphs
-                       atPoint: NSMakePoint(contentAreaLeft + leftPaddingWidth,
-                                            lineTop)];
+                       atPoint: NSMakePoint(textLeft, lineTop)];
         
         NSString *lineNumberString
             = [NSString stringWithFormat: @"%4u", i + 1];
