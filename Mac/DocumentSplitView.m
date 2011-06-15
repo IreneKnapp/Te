@@ -50,7 +50,7 @@
             = [NSMutableDictionary dictionaryWithCapacity: 1];
         [captionAttributes setObject: captionFont forKey: NSFontAttributeName];
         
-        NSFont *titleFont = [NSFont titleBarFontOfSize: 14.0];
+        NSFont *titleFont = [NSFont titleBarFontOfSize: 13.0];
         titleAttributes
             = [NSMutableDictionary dictionaryWithCapacity: 3];
         [titleAttributes setObject: titleFont forKey: NSFontAttributeName];
@@ -1296,8 +1296,13 @@
         NSView *leftmostSubview = [contentSubviews objectAtIndex: 0];
         
         NSRect leftmostSubviewFrame = [leftmostSubview frame];
-        leftmostSubviewFrame.origin.x -= dividerWidth;
-        leftmostSubviewFrame.size.width += dividerWidth;
+        if(subviewRight < dividerWidth - 1.0) {
+            leftmostSubviewFrame.origin.x -= subviewRight;
+            leftmostSubviewFrame.size.width += subviewRight;
+        } else {
+            leftmostSubviewFrame.origin.x -= dividerWidth;
+            leftmostSubviewFrame.size.width += dividerWidth;
+        }
         [leftmostSubview setFrame: leftmostSubviewFrame];
     }
     
@@ -1405,8 +1410,13 @@
         NSView *bottomSubview = [contentSubviews lastObject];
         
         NSRect bottomSubviewFrame = [bottomSubview frame];
-        bottomSubviewFrame.origin.y -= dividerHeight;
-        bottomSubviewFrame.size.height += dividerHeight;
+        if(subviewTop < dividerHeight - 1.0) {
+            bottomSubviewFrame.origin.y -= subviewTop;
+            bottomSubviewFrame.size.height += subviewTop;
+        } else {
+            bottomSubviewFrame.origin.y -= dividerHeight;
+            bottomSubviewFrame.size.height += dividerHeight;
+        }
         [bottomSubview setFrame: bottomSubviewFrame];
     }
     
