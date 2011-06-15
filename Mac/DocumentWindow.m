@@ -85,9 +85,12 @@
         = dividerWidth
           + [DocumentContentView leftMarginWidth]
           + [DocumentContentView leftPaddingWidth]
-          + emWidth * 80.0
-          + [DocumentContentView rightPaddingWidth];
-    CGFloat height = 50.0 * lineHeight + dividerHeight;
+          + emWidth * 81.0
+          + [DocumentContentView rightPaddingWidth]
+          + [DocumentContentView rightMarginWidth];
+    CGFloat height = 50.0 * lineHeight
+                     + dividerHeight
+                     + [DocumentContentView bottomMarginWidth];
     
     NSSize visibleSize = [[NSScreen mainScreen] visibleFrame].size;
     

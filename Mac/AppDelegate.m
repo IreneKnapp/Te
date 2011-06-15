@@ -72,7 +72,6 @@
                          positions: insertionPointBuffer
                          characterIndexes: characterIndexBuffer];
     CGFloat result = insertionPointBuffer[nInsertionPoints - 1];
-    NSLog(@"measured width of %@ at %lf", font, result);
     return result;
 }
 

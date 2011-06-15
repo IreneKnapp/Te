@@ -39,6 +39,32 @@
 }
 
 
++ (CGFloat) rightMarginWidth {
+    NSScrollerStyle scrollerStyle = [NSScroller preferredScrollerStyle];
+    if(scrollerStyle == NSScrollerStyleLegacy) {
+        CGFloat scrollerWidth
+            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
+                          scrollerStyle: scrollerStyle];
+        return scrollerWidth;
+    } else {
+        return 0.0;
+    }
+}
+
+
++ (CGFloat) bottomMarginWidth {
+    NSScrollerStyle scrollerStyle = [NSScroller preferredScrollerStyle];
+    if(scrollerStyle == NSScrollerStyleLegacy) {
+        CGFloat scrollerWidth
+            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
+                          scrollerStyle: scrollerStyle];
+        return scrollerWidth;
+    } else {
+        return 0.0;
+    }
+}
+
+
 + (NSUInteger) minimumLines {
     return 5;
 }
@@ -108,11 +134,14 @@
         horizontalScrollerFrame.origin.y = 0.0;
         horizontalScroller
             = [[NSScroller alloc] initWithFrame: horizontalScrollerFrame];
-        horizontalScrollerFrame.size.width
-            = bounds.size.width - scrollerWidth - leftMarginWidth;
+        horizontalScrollerFrame.size.width = bounds.size.width - scrollerWidth;
         horizontalScrollerFrame.size.height = scrollerWidth;
-        horizontalScrollerFrame.origin.x = leftMarginWidth;
+        horizontalScrollerFrame.origin.x = 0.0;
         horizontalScrollerFrame.origin.y = bounds.size.height - scrollerWidth;
+        if([NSScroller preferredScrollerStyle] != NSScrollerStyleLegacy) {
+            horizontalScrollerFrame.origin.x += leftMarginWidth;
+            horizontalScrollerFrame.size.width -= leftMarginWidth;
+        }
         [horizontalScroller setFrame: horizontalScrollerFrame];
         
         [horizontalScroller setAutoresizingMask:
@@ -165,10 +194,13 @@
     if(horizontalScroller) {
         NSRect horizontalScrollerFrame = [horizontalScroller frame];
         CGFloat scrollerHeight = horizontalScrollerFrame.size.height;
-        horizontalScrollerFrame.size.width
-            = bounds.size.width - scrollerHeight - leftMarginWidth;
-        horizontalScrollerFrame.origin.x = leftMarginWidth;
+        horizontalScrollerFrame.size.width = bounds.size.width - scrollerHeight;
+        horizontalScrollerFrame.origin.x = 0.0;
         horizontalScrollerFrame.origin.y = bounds.size.height - scrollerHeight;
+        if([NSScroller preferredScrollerStyle] != NSScrollerStyleLegacy) {
+            horizontalScrollerFrame.origin.x += leftMarginWidth;
+            horizontalScrollerFrame.size.width -= leftMarginWidth;
+        }
         [horizontalScroller setFrame: horizontalScrollerFrame];
         [horizontalScroller setNeedsDisplay: YES];
     }
@@ -195,8 +227,10 @@
     CGFloat width = [DocumentContentView leftMarginWidth]
                     + [DocumentContentView leftPaddingWidth]
                     + emWidth * minimumColumns
-                    + [DocumentContentView rightPaddingWidth];
-    CGFloat height = lineHeight * minimumLines;
+                    + [DocumentContentView rightPaddingWidth]
+                    + [DocumentContentView rightMarginWidth];
+    CGFloat height = lineHeight * minimumLines
+                     + [DocumentContentView bottomMarginWidth];
     return NSMakeSize(width, height);
 }
 
@@ -210,13 +244,18 @@
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
     CGFloat leftPaddingWidth = [DocumentContentView leftPaddingWidth];
     CGFloat rightPaddingWidth = [DocumentContentView rightPaddingWidth];
-    CGFloat contentWidth
-        = currentSize.width
-          - (leftMarginWidth + leftPaddingWidth + rightPaddingWidth);
+    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
+    CGFloat contentWidth = currentSize.width - (leftMarginWidth
+                                                + leftPaddingWidth
+                                                + rightPaddingWidth
+                                                + rightMarginWidth);
+    
+    CGFloat bottomMarginWidth = [DocumentContentView bottomMarginWidth];
+    CGFloat contentHeight = currentSize.height - (bottomMarginWidth);
     
     NSUInteger nLines = 0;
     if(currentSize.height > 0.0)
-        nLines = floor(currentSize.height / lineHeight);
+        nLines = floor(contentHeight / lineHeight);
     NSUInteger nColumns = 0;
     if(contentWidth > 0.0)
         nColumns = floor(contentWidth / emWidth);
@@ -229,9 +268,16 @@
     if(nColumns < minimumColumns)
         nColumns = minimumColumns;
     
-    NSSize result = NSMakeSize(nColumns * emWidth, nLines * lineHeight);
-    result.width += leftMarginWidth + leftPaddingWidth + rightPaddingWidth;
+    NSSize result;
+    result.width = nColumns * emWidth;
+    result.width += leftMarginWidth;
+    result.width += leftPaddingWidth;
+    result.width += rightPaddingWidth;
+    result.width += rightMarginWidth;
     result.width = ceil(result.width);
+    result.height = nLines * lineHeight;
+    result.height += bottomMarginWidth;
+    result.height = ceil(result.height);
     return result;
 }
 
@@ -250,13 +296,18 @@
     CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
     CGFloat leftPaddingWidth = [DocumentContentView leftPaddingWidth];
     CGFloat rightPaddingWidth = [DocumentContentView rightPaddingWidth];
-    CGFloat contentWidth
-        = currentSize.width
-          - (leftMarginWidth + leftPaddingWidth + rightPaddingWidth);
+    CGFloat rightMarginWidth = [DocumentContentView rightMarginWidth];
+    CGFloat contentWidth = currentSize.width - (leftMarginWidth
+                                                + leftPaddingWidth
+                                                + rightPaddingWidth
+                                                + rightMarginWidth);
+    
+    CGFloat bottomMarginWidth = [DocumentContentView bottomMarginWidth];
+    CGFloat contentHeight = currentSize.height - (bottomMarginWidth);
     
     NSUInteger nLines = 0;
     if(currentSize.height > 0.0)
-        nLines = floor(currentSize.height / lineHeight);
+        nLines = floor(contentHeight / lineHeight);
     NSUInteger nColumns = 0;
     if(contentWidth > 0.0)
         nColumns = floor(contentWidth / emWidth);
@@ -301,27 +352,36 @@
         = leftMarginWidth - leftMarginLineNumberAreaWidth;
     
     CGFloat totalHeight = [self bounds].size.height;
-    NSUInteger nLines = floor(totalHeight / lineHeight);
     CGFloat contentAreaTop = 0.0;
-    CGFloat contentAreaBottom = totalHeight;
-    CGFloat contentAreaHeight = contentAreaBottom - contentAreaTop;
+    CGFloat bottomMarginWidth = [DocumentContentView bottomMarginWidth];
+    CGFloat contentAreaBottom = totalHeight - bottomMarginWidth;
+    NSUInteger nLines
+        = floor((contentAreaBottom - contentAreaTop) / lineHeight);
     
     NSRect contentArea
         = NSMakeRect(contentAreaLeft, contentAreaTop,
-                     contentAreaRight - contentAreaLeft, contentAreaHeight);
+                     contentAreaRight - contentAreaLeft,
+                     contentAreaBottom - contentAreaTop);
     NSRect leftMarginLineNumberArea
         = NSMakeRect(farLeft, contentAreaTop,
-                     leftMarginLineNumberAreaWidth, contentAreaHeight);
+                     leftMarginLineNumberAreaWidth,
+                     contentAreaBottom - contentAreaTop);
     NSRect leftMarginStatusArea
         = NSMakeRect(farLeft + leftMarginLineNumberAreaWidth, contentAreaTop,
-                     leftMarginStatusAreaWidth, contentAreaHeight);
+                     leftMarginStatusAreaWidth,
+                     contentAreaBottom - contentAreaTop);
     NSRect rightMarginArea
         = NSMakeRect(contentAreaRight, contentAreaTop,
-                     farRight - contentAreaRight, contentAreaHeight);
+                     farRight - contentAreaRight,
+                     contentAreaBottom - contentAreaTop);
+    NSRect bottomMarginArea
+        = NSMakeRect(farLeft, contentAreaBottom,
+                     farRight - farLeft, totalHeight - contentAreaBottom);
     
     [[NSColor whiteColor] set];
     [NSBezierPath fillRect: contentArea];
     [NSBezierPath fillRect: leftMarginLineNumberArea];
+    [NSBezierPath fillRect: bottomMarginArea];
     
     [[NSColor colorWithDeviceWhite: 0.90 alpha: 1.0] set];
     [NSBezierPath fillRect: leftMarginStatusArea];
