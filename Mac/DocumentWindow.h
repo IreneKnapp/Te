@@ -21,7 +21,7 @@
 - (id) initWithWindowID: (uuid_t *) newWindowID;
 - (NSSize) defaultSize;
 - (void) setConstraints;
-- (void) adjustSize: (NSSize) newSize;
+- (void) adjustSize: (NSSize) newSize withAnimation: (BOOL) withAnimation;
 - (void) adjustSizePerContentConstraints;
 - (void) windowWillStartLiveResize: (NSNotification *) notification;
 - (void) windowDidEndLiveResize: (NSNotification *) notification;

@@ -34,7 +34,7 @@
 
 
 + (NSUInteger) minimumColumns {
-    return 25;
+    return 35;
 }
 
 
@@ -44,7 +44,7 @@
 
 
 + (CGFloat) collapseColumns {
-    return 13.0;
+    return 17.5;
 }
 
 
@@ -84,6 +84,10 @@
         [verticalScroller setEnabled: YES];
         [verticalScroller setScrollerStyle: preferredScrollerStyle];
         [verticalScroller setKnobStyle: NSScrollerKnobStyleDark];
+        if(preferredScrollerStyle == NSScrollerStyleOverlay) {
+            [verticalScroller setWantsLayer: YES];
+            [verticalScroller setAlphaValue: 0.0];
+        }
         [self addSubview: verticalScroller];
         
         NSRect horizontalScrollerFrame;
@@ -110,7 +114,13 @@
         [horizontalScroller setEnabled: YES];
         [horizontalScroller setScrollerStyle: preferredScrollerStyle];
         [horizontalScroller setKnobStyle: NSScrollerKnobStyleDark];
+        if(preferredScrollerStyle == NSScrollerStyleOverlay) {
+            [horizontalScroller setWantsLayer: YES];
+            [horizontalScroller setAlphaValue: 0.0];
+        }
         [self addSubview: horizontalScroller];
+        
+        scrollerHidingTimer = nil;
         
         textStorage = [[NSTextStorage alloc] init];
         
@@ -131,8 +141,6 @@
           selector: @selector(preferredScrollerStyleDidChange:)
           name: NSPreferredScrollerStyleDidChangeNotification
           object: nil];
-        
-        resizingTip = nil;
     }
     return self;
 }
@@ -163,6 +171,21 @@
         [verticalScroller setFrame: verticalScrollerFrame];
         [verticalScroller setNeedsDisplay: YES];
     }
+}
+
+
+- (NSSize) minimumSize {
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    
+    NSUInteger minimumLines = [DocumentContentView minimumLines];
+    NSUInteger minimumColumns = [DocumentContentView minimumColumns];
+    
+    CGFloat width = [DocumentContentView leftMarginWidth]
+                    + emWidth * minimumColumns
+                    + [DocumentContentView rightPaddingWidth];
+    CGFloat height = lineHeight * minimumLines;
+    return NSMakeSize(width, height);
 }
 
 
@@ -199,6 +222,35 @@
 }
 
 
+- (NSString *) caption {
+    return @"(12, 13) in 1980";
+}
+
+
+- (NSString *) sizeReport {
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    
+    NSSize currentSize = [self frame].size;
+    
+    CGFloat leftMarginWidth = [DocumentContentView leftMarginWidth];
+    CGFloat rightPaddingWidth = [DocumentContentView rightPaddingWidth];
+    CGFloat contentWidth
+        = currentSize.width - leftMarginWidth - rightPaddingWidth;
+    
+    NSUInteger nLines = 0;
+    if(currentSize.height > 0.0)
+        nLines = floor(currentSize.height / lineHeight);
+    NSUInteger nColumns = 0;
+    if(contentWidth > 0.0)
+        nColumns = floor(contentWidth / emWidth);
+    
+    return [NSString stringWithFormat: @"%lu x %lu",
+                      (unsigned long) nColumns,
+                      (unsigned long) nLines];
+}
+
+
 - (BOOL) isFlipped {
     return YES;
 }
@@ -228,6 +280,7 @@
     CGFloat contentAreaLeft = farLeft + leftMarginWidth;
     CGFloat contentAreaRight = farRight;
     CGFloat contentAreaWidth = contentAreaRight - contentAreaLeft;
+    CGFloat rightMarginStart = emWidth * 80.0;
     
     CGFloat totalHeight = [self bounds].size.height;
     NSUInteger nLines = floor(totalHeight / lineHeight);
@@ -244,16 +297,16 @@
     NSRect leftMarginStatusArea
         = NSMakeRect(farLeft + leftMarginLineNumberAreaWidth, contentAreaTop,
                      leftMarginStatusAreaWidth, contentAreaHeight);
-    NSRect rightMarginBorder
-        = NSMakeRect(emWidth * 80.0, contentAreaTop,
-                     1.0, contentAreaHeight);
+    NSRect rightMarginArea
+        = NSMakeRect(rightMarginStart, contentAreaTop,
+                     contentAreaRight - rightMarginStart, contentAreaHeight);
     
     [[NSColor whiteColor] set];
     [NSBezierPath fillRect: contentArea];
     
     [[NSColor colorWithDeviceWhite: 0.90 alpha: 1.0] set];
     [NSBezierPath fillRect: leftMarginStatusArea];
-    [NSBezierPath fillRect: rightMarginBorder];
+    [NSBezierPath fillRect: rightMarginArea];
     
     [[NSColor colorWithDeviceWhite: 1.00 alpha: 1.0] set];
     [NSBezierPath fillRect: leftMarginLineNumberArea];
@@ -301,69 +354,70 @@
 }
 
 
-- (void) showResizingTips {
-    if(resizingTip)
-        [self hideResizingTips];
-    
-    NSWindow *window = [self window];
-    if(!window)
-        return;
-    
-    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
-    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-    CGFloat scrollerWidth = [horizontalScroller frame].size.width;
-    CGFloat scrollerHeight = [horizontalScroller frame].size.height;
-    
-    CGFloat horizontalPadding = emWidth * 0.5;
-    CGFloat verticalPadding = lineHeight * 0.5;
-    CGFloat border = 1.0;
-    
-    NSRect contentRect;
-    contentRect.size.width
-        = emWidth * 9.0 + (horizontalPadding + border) * 2.0;
-    contentRect.size.height
-        = lineHeight + (verticalPadding + border) * 2.0;
-    contentRect.origin.x
-        = [self frame].size.width - contentRect.size.width - scrollerWidth;
-    contentRect.origin.y
-        = [self frame].size.height - contentRect.size.height - scrollerHeight;
-    contentRect = [self convertRectToBase: contentRect];
-    
-    void (^drawHelper)(NSRect frame)
-        = ^(NSRect frame) {
-            [[NSColor colorWithDeviceWhite: 1.0 alpha: 1.0] set];
-            [NSBezierPath fillRect: frame];
-            
-            [[NSColor colorWithDeviceWhite: 0.5 alpha: 1.0] set];
-            [NSBezierPath strokeRect: frame];
-            
-            [[NSColor redColor] set];
-            [NSBezierPath fillRect: frame];
-        };
-    
-    resizingTip = [[TransparentHelperWindow alloc]
-                    initWithContentRect: contentRect
-                    drawHelper: drawHelper
-                    aboveWindow: window];
-    [resizingTip setAlphaValue: 1.0];
-    [resizingTip setOpaque: YES];
-    [resizingTip startTrackingView: self
-                 resizingMask: NSViewMinXMargin | NSViewMaxYMargin];
-}
-
-
-- (void) hideResizingTips {
-    if(resizingTip) {
-        [resizingTip remove];
-        resizingTip = nil;
-    }
-}
-
-
 - (IBAction) scrollerActivated: (id) sender {
+    NSScrollerPart part = [sender hitPart];
+    if(part == NSScrollerKnob) {
+        [self showScrollers];
+    } else if(part == NSScrollerKnobSlot) {
+        [self hideScrollersAfterDelay];
+    } else {
+        [self flashScrollers];
+    }
+    
     if([sender isEqual: horizontalScroller]) {
     } else if([sender isEqual: verticalScroller]) {
     }
+}
+
+
+- (void) showScrollers {
+    if([NSScroller preferredScrollerStyle] != NSScrollerStyleOverlay)
+        return;
+    
+    if(scrollerHidingTimer) {
+        [scrollerHidingTimer invalidate];
+        scrollerHidingTimer = nil;
+    }
+    
+    [horizontalScroller setAlphaValue: 1.0];
+    [verticalScroller setAlphaValue: 1.0];
+}
+
+
+- (void) hideScrollersAfterDelay {
+    if([NSScroller preferredScrollerStyle] != NSScrollerStyleOverlay)
+        return;
+    
+    if(scrollerHidingTimer) {
+        [scrollerHidingTimer invalidate];
+        scrollerHidingTimer = nil;
+    }
+    
+    scrollerHidingTimer
+        = [NSTimer scheduledTimerWithTimeInterval: 1.5
+                   target: self
+                   selector: @selector(hideScrollersAfterDelayTimerFired:)
+                   userInfo: nil
+                   repeats: NO];
+}
+
+
+- (void) hideScrollersAfterDelayTimerFired: (NSTimer *) timer {
+    if([NSScroller preferredScrollerStyle] != NSScrollerStyleOverlay)
+        return;
+    
+    scrollerHidingTimer = nil;
+    [[horizontalScroller animator] setAlphaValue: 0.0];
+    [[verticalScroller animator] setAlphaValue: 0.0];
+}
+
+
+- (void) flashScrollers {
+    if([NSScroller preferredScrollerStyle] != NSScrollerStyleOverlay)
+        return;
+    
+    [self showScrollers];
+    [self hideScrollersAfterDelay];
 }
 
 
@@ -371,8 +425,19 @@
     NSScrollerStyle preferredScrollerStyle
         = [NSScroller preferredScrollerStyle];
     
+    if(scrollerHidingTimer) {
+        [scrollerHidingTimer invalidate];
+        scrollerHidingTimer = nil;
+    }
+    
     if(horizontalScroller) {
         [horizontalScroller setScrollerStyle: preferredScrollerStyle];
+        if(preferredScrollerStyle == NSScrollerStyleOverlay) {
+            [horizontalScroller setWantsLayer: YES];
+            [horizontalScroller setAlphaValue: 0.0];
+        } else {
+            [horizontalScroller setWantsLayer: NO];
+        }
         
         CGFloat newHeight
             = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
@@ -387,6 +452,12 @@
     
     if(verticalScroller) {
         [verticalScroller setScrollerStyle: preferredScrollerStyle];
+        if(preferredScrollerStyle == NSScrollerStyleOverlay) {
+            [verticalScroller setWantsLayer: YES];
+            [verticalScroller setAlphaValue: 0.0];
+        } else {
+            [verticalScroller setWantsLayer: NO];
+        }
         
         CGFloat newWidth
             = [NSScroller scrollerWidthForControlSize: NSRegularControlSize

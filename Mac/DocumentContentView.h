@@ -10,7 +10,7 @@
     NSTextStorage *textStorage;
     NSLayoutManager *layoutManager;
     NSTextContainer *textContainer;
-    TransparentHelperWindow *resizingTip;
+    NSTimer *scrollerHidingTimer;
 }
 
 + (CGFloat) leftMarginWidth;
@@ -22,12 +22,17 @@
 + (CGFloat) collapseColumns;
 - (id) initWithFrame: (NSRect) frame;
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
+- (NSSize) minimumSize;
 - (NSSize) desiredSize;
+- (NSString *) caption;
+- (NSString *) sizeReport;
 - (BOOL) isFlipped;
 - (void) drawRect: (NSRect) dirtyRect;
-- (void) showResizingTips;
-- (void) hideResizingTips;
 - (IBAction) scrollerActivated: (id) sender;
+- (void) showScrollers;
+- (void) hideScrollersAfterDelay;
+- (void) hideScrollersAfterDelayTimerFired: (NSTimer *) timer;
+- (void) flashScrollers;
 - (void) preferredScrollerStyleDidChange: (NSNotification *) notification;
 - (void) mouseDown: (NSEvent *) event;
 @end

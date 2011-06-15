@@ -1,7 +1,8 @@
 #import <Cocoa/Cocoa.h>
 
 @protocol SizeConstraintParticipant
+- (NSSize) minimumSize;
 - (NSSize) desiredSize;
-- (void) showResizingTips;
-- (void) hideResizingTips;
+- (NSString *) caption;
+- (NSString *) sizeReport;
 @end

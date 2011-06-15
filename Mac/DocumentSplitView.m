@@ -35,6 +35,7 @@
         enforcedAxis = newEnforcedAxis;
         committedAxis = enforcedAxis;
         usingChildWrappers = NO;
+        resizingTipsVisible = NO;
         
         trackingDividerDrag = NO;
         contentSubviews = [NSMutableArray arrayWithCapacity: 16];
@@ -358,11 +359,20 @@
     for(NSUInteger i = 0; i < nDividersForVerticalContent; i++) {
         NSRect dividerFrame
             = [[dividerSubviewsForVerticalContent objectAtIndex: i] frame];
+        id <SizeConstraintParticipant> contentSubviewAbove
+            = [contentSubviews objectAtIndex: i];
         BOOL isBottom = i + 1 == nDividersForVerticalContent;
+        
+        NSString *caption;
+        if(!resizingTipsVisible) {
+            caption = [contentSubviewAbove caption];
+        } else {
+            caption = [contentSubviewAbove sizeReport];
+        }
         
         [self drawDividerForVerticalContentInFrame: dividerFrame
                                           isBottom: isBottom
-                                           caption: @"(12, 13) in 1980"
+                                           caption: caption
                                      documentTitle: @"Document Title"];
     }
 }
@@ -1128,15 +1138,29 @@
 
 
 - (void) showResizingTips {
-    for(id <SizeConstraintParticipant> subview in contentSubviews) {
-        [subview showResizingTips];
+    resizingTipsVisible = YES;
+    [self setNeedsDisplay: YES];
+    
+    for(id subview in contentSubviews) {
+        if([subview isKindOfClass: [DocumentSplitView class]]) {
+            DocumentSplitView *documentSplitView
+                = (DocumentSplitView *) subview;
+            [documentSplitView showResizingTips];
+        }
     }
 }
 
 
 - (void) hideResizingTips {
-    for(id <SizeConstraintParticipant> subview in contentSubviews) {
-        [subview hideResizingTips];
+    resizingTipsVisible = NO;
+    [self setNeedsDisplay: YES];
+    
+    for(id <NSObject, SizeConstraintParticipant> subview in contentSubviews) {
+        if([subview isKindOfClass: [DocumentSplitView class]]) {
+            DocumentSplitView *documentSplitView
+                = (DocumentSplitView *) subview;
+            [documentSplitView hideResizingTips];
+        }
     }
 }
 
@@ -1268,6 +1292,15 @@
     
     free(proportions);
     
+    if(subviewRight > 0.0) {
+        NSView *leftmostSubview = [contentSubviews objectAtIndex: 0];
+        
+        NSRect leftmostSubviewFrame = [leftmostSubview frame];
+        leftmostSubviewFrame.origin.x -= dividerWidth;
+        leftmostSubviewFrame.size.width += dividerWidth;
+        [leftmostSubview setFrame: leftmostSubviewFrame];
+    }
+    
     for(NSUInteger i = 0; i < nSubviews; i++) {
         NSView *subviewToLeft = nil;
         if(i > 0)
@@ -1368,6 +1401,15 @@
     
     free(proportions);
     
+    if(subviewTop > 0.0) {
+        NSView *bottomSubview = [contentSubviews lastObject];
+        
+        NSRect bottomSubviewFrame = [bottomSubview frame];
+        bottomSubviewFrame.origin.y -= dividerHeight;
+        bottomSubviewFrame.size.height += dividerHeight;
+        [bottomSubview setFrame: bottomSubviewFrame];
+    }
+    
     for(NSUInteger i = 0; i < nSubviews; i++) {
         NSView *subviewAbove = [contentSubviews objectAtIndex: i];
         NSView *subviewBelow = nil;
@@ -1403,6 +1445,51 @@
 }
 
 
+- (NSSize) minimumSize {
+    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
+    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
+    CGFloat dividerHeight
+        = [DocumentSplitView minimumDividerThicknessForAxis:
+                              VerticalSplitAxis];
+    CGFloat dividerWidth
+        = [DocumentSplitView minimumDividerThicknessForAxis:
+                              HorizontalSplitAxis];
+    NSUInteger nDividersForHorizontalContent
+        = [dividerSubviewsForHorizontalContent count];
+    NSUInteger nDividersForVerticalContent
+        = [dividerSubviewsForVerticalContent count];
+    
+    NSSize minimumSize = NSZeroSize;
+    
+    if(committedAxis == UncommittedSplitAxis) {
+        id <SizeConstraintParticipant> subview
+            = [contentSubviews objectAtIndex: 0];
+        NSSize subviewMinimumSize = [subview minimumSize];
+        minimumSize.width += subviewMinimumSize.width;
+        minimumSize.height += subviewMinimumSize.height;
+    } else if(committedAxis == HorizontalSplitAxis) {
+        for(id <SizeConstraintParticipant> subview in contentSubviews) {
+            NSSize subviewMinimumSize = [subview minimumSize];
+            minimumSize.width += subviewMinimumSize.width;
+            if(minimumSize.height < subviewMinimumSize.height)
+                minimumSize.height = subviewMinimumSize.height;
+        }
+    } else if(committedAxis == VerticalSplitAxis) {
+        for(id <SizeConstraintParticipant> subview in contentSubviews) {
+            NSSize subviewMinimumSize = [subview minimumSize];
+            minimumSize.height += subviewMinimumSize.height;
+            if(minimumSize.width < subviewMinimumSize.width)
+                minimumSize.width = subviewMinimumSize.width;
+        }
+    }
+    
+    minimumSize.width += dividerWidth * nDividersForHorizontalContent;
+    minimumSize.height += dividerHeight * nDividersForVerticalContent;
+    
+    return minimumSize;
+}
+
+
 - (NSSize) desiredSize {
     if(committedAxis == UncommittedSplitAxis) {
         id <SizeConstraintParticipant> child
@@ -1435,6 +1522,26 @@
         result.height
             += [self dividerThicknessForAxis: VerticalSplitAxis] * nChildren;
         return result;
+    }
+}
+
+
+- (NSString *) caption {
+    if([contentSubviews count] > 0) {
+        id <SizeConstraintParticipant> subview = [contentSubviews lastObject];
+        return [subview caption];
+    } else {
+        return @"";
+    }
+}
+
+
+- (NSString *) sizeReport {
+    if([contentSubviews count] > 0) {
+        id <SizeConstraintParticipant> subview = [contentSubviews lastObject];
+        return [subview sizeReport];
+    } else {
+        return @"";
     }
 }
 

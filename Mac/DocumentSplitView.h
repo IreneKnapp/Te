@@ -20,6 +20,7 @@ enum SplitAxis {
     enum SplitAxis committedAxis;
     enum SplitAxis enforcedAxis;
     BOOL usingChildWrappers;
+    BOOL resizingTipsVisible;
     
     NSMutableDictionary *captionAttributes;
     NSMutableDictionary *titleAttributes;
@@ -83,7 +84,10 @@ enum SplitAxis {
 - (void) adjustSubviewsHorizontalAxis;
 - (void) adjustSubviewsVerticalAxis;
 - (void) adjustSubviewsToEqualSizes;
+- (NSSize) minimumSize;
 - (NSSize) desiredSize;
+- (NSString *) caption;
+- (NSString *) sizeReport;
 - (CGFloat) dividerThicknessForAxis: (enum SplitAxis) dividerAxis;
 - (CGFloat) absoluteMinCoordinateOfDividerAt: (NSUInteger) dividerIndex
                                         axis: (enum SplitAxis) dividerAxis;
