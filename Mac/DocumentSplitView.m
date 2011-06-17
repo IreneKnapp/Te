@@ -100,9 +100,9 @@
         inactiveBottomBorderColor
             = [NSColor colorWithDeviceWhite: 0.65 alpha: 1.0];
         NSColor *inactiveTitleGradientTopColor
-            = [NSColor colorWithDeviceWhite: 0.95 alpha: 1.0];
+            = [NSColor colorWithDeviceWhite: 0.97 alpha: 1.0];
         NSColor *inactiveTitleGradientBottomColor
-            = [NSColor colorWithDeviceWhite: 0.90 alpha: 1.0];
+            = [NSColor colorWithDeviceWhite: 0.89 alpha: 1.0];
         inactiveCurvyBorderColor
             = [NSColor colorWithDeviceWhite: 0.5 alpha: 0.5];
         inactiveTitleGradient
@@ -204,6 +204,10 @@
         
         [contentSubviews insertObject: wrapper atIndex: index];
         [self addSubview: wrapper];
+        
+        if(resizingTipsVisible) {
+            [wrapper showResizingTips];
+        }
     }
     
     if((alongAxis == UncommittedSplitAxis)
@@ -397,12 +401,21 @@
     
     NSUInteger nDividersForVerticalContent
         = [dividerSubviewsForVerticalContent count];
-    for(NSUInteger i = 0; i < nDividersForVerticalContent; i++) {
+    for(NSUInteger i = 0; i < nDividersForVerticalContent; i++) {        
         NSRect dividerFrame
             = [[dividerSubviewsForVerticalContent objectAtIndex: i] frame];
         id <SizeConstraintParticipant> contentSubviewAbove
             = [contentSubviews objectAtIndex: i];
         BOOL isBottom = i + 1 == nDividersForVerticalContent;
+        
+        if(trackingDividerDrag
+           && !creatingNewDivider
+           && collapsedAfter
+           && (dividerAxisBeingTracked == VerticalSplitAxis)
+           && (i == dividerIndexBeingTracked + 1))
+        {
+            contentSubviewAbove = [contentSubviews objectAtIndex: i - 1];
+        }
         
         NSString *caption;
         if(!resizingTipsVisible) {
@@ -775,6 +788,10 @@
         else
             optionDown = NO;
         
+        DocumentWindow *documentWindow = [self documentWindow];
+        if(documentWindow)
+            [documentWindow showResizingTips];
+        
         if(isTerminalDivider || optionDown) {
             creatingNewDivider = YES;
             
@@ -1026,6 +1043,10 @@
             [subviewAfter setFrame: frameAfter];
         [dividerSubview setFrame: dividerFrame];
         
+        DocumentWindow *documentWindow = [self documentWindow];
+        if(documentWindow)
+            [documentWindow updateResizingTips];
+        
         if(dividerAxisBeingTracked == HorizontalSplitAxis) {
             previousDragPoint.y = location.y;
             if(actualNewPosition != oldPosition) {
@@ -1266,6 +1287,10 @@
     if(!trackingDividerDrag)
         return;
     
+    DocumentWindow *documentWindow = [self documentWindow];
+    if(documentWindow)
+        [documentWindow hideResizingTips];
+    
     if(ghostWindow) {
         [self cleanupGhostWindow];
     }
@@ -1291,10 +1316,7 @@
         if(collapsedBefore || collapsedAfter
            || createdBefore || createdAfter)
         {
-            DocumentWindow *documentWindow = [self documentWindow];
-            if(documentWindow) {
-                [documentWindow adjustSizePerContentConstraints];
-            }    
+            [documentWindow adjustSizePerContentConstraints];
         }
     }
     trackingDividerDrag = NO;
@@ -1370,6 +1392,19 @@
             DocumentSplitView *documentSplitView
                 = (DocumentSplitView *) subview;
             [documentSplitView hideResizingTips];
+        }
+    }
+}
+
+
+- (void) updateResizingTips {
+    [self setNeedsDisplay: YES];
+    
+    for(id <NSObject, SizeConstraintParticipant> subview in contentSubviews) {
+        if([subview isKindOfClass: [DocumentSplitView class]]) {
+            DocumentSplitView *documentSplitView
+                = (DocumentSplitView *) subview;
+            [documentSplitView updateResizingTips];
         }
     }
 }

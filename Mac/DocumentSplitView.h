@@ -96,6 +96,7 @@ enum SplitAxis {
 - (void) cleanupGhostWindow;
 - (void) showResizingTips;
 - (void) hideResizingTips;
+- (void) updateResizingTips;
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
 - (void) adjustSubviews;
 - (void) adjustSubviewsUncommittedAxis;

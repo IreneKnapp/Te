@@ -188,9 +188,30 @@
 }
 
 
-- (void) windowWillStartLiveResize: (NSNotification *) notification {
+- (void) showResizingTips {
     if(!stillLoading) {
         [documentSplitView showResizingTips];
+    }
+}
+
+
+- (void) hideResizingTips {
+    if(!stillLoading) {
+        [documentSplitView hideResizingTips];
+    }
+}
+
+
+- (void) updateResizingTips {
+    if(!stillLoading) {
+        [documentSplitView updateResizingTips];
+    }
+}
+
+
+- (void) windowWillStartLiveResize: (NSNotification *) notification {
+    if(!stillLoading) {
+        [self showResizingTips];
         adjustingSize = YES;
     }
 }
@@ -198,7 +219,7 @@
 
 - (void) windowDidEndLiveResize: (NSNotification *) notification {
     if(!stillLoading) {
-        [documentSplitView hideResizingTips];
+        [self hideResizingTips];
         [self adjustSizePerContentConstraints];
         manuallyAdjustedSize = [[self window] frame].size;
     }

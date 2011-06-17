@@ -23,6 +23,9 @@
 - (void) setConstraints;
 - (void) adjustSize: (NSSize) newSize withAnimation: (BOOL) withAnimation;
 - (void) adjustSizePerContentConstraints;
+- (void) showResizingTips;
+- (void) hideResizingTips;
+- (void) updateResizingTips;
 - (void) windowWillStartLiveResize: (NSNotification *) notification;
 - (void) windowDidEndLiveResize: (NSNotification *) notification;
 - (void) windowDidBecomeMain: (NSNotification *) notification;
