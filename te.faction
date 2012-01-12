@@ -1,14 +1,14 @@
 name: te
 version: 0.1
-cabal-version: >= 1.11
-build-type: Custom
+faction-version: 1.0
+build-type: Simple
 license: AllRightsReserved
 license-file: LICENSE
-copyright: Copyright (c) 2009 Dan Knapp
-author: Dan Knapp
-maintainer: dankna@gmail.com
-homepage: http://dankna.com/software/
-bug-reports: http://dankna.com/issues/create/
+copyright: Copyright (c) 2012 Irene Knapp
+author: Irene Knapp <ireney.knapp@gmail.com>
+maintainer: ireney.knapp@gmail.com
+homepage: http://ireneknapp.com/software/
+bug-reports: http://ireneknapp.com/issues/create/
 category: Network
 synopsis: Structure editor for source code
 description:
@@ -17,13 +17,13 @@ description:
 
 Source-Repository head
   type: darcs
-  location: http://dankna.com/software/darcs/te/
+  location: http://ireneknapp.com/software/darcs/te/
 
 Flag debug
   manual: True
   default: False
 
-Executable Te
+App Te
   hs-source-dirs: Mac
   include-dirs: Mac
   c-source-dirs: Mac
@@ -78,8 +78,7 @@ Executable Te
                  murmur-hash >= 0.1.0.2 && < 1,
                  direct-sqlite >= 1.1 && < 2,
                  containers >= 0.4.0.0 && < 1,
-                 binary >= 0.5.0.2 && < 1,
-                 cabal-app >= 1.0 && < 2
+                 binary >= 0.5.0.2 && < 1
   default-language: Haskell2010
   frameworks: Cocoa
   objc-gc: Mandatory
@@ -88,16 +87,16 @@ Executable Te
     cc-options: -g3
   cc-options: -std=c99
   ghc-options: -threaded
-  x-app-info-plist: Mac/Info.plist
-  x-app-resource-dir: Mac/Resources
-  x-app-xibs: MainMenu.xib,
-              BrowserWindow.xib
-  x-app-other-resources: Application.icns,
-                         Project.icns,
-                         Te.png,
-                         FirstRunAttentionArrow.png,
-                         File.png,
-                         Folder.png,
-                         BadgeNew.png,
-                         BadgeChanged.png,
-                         BadgeMoved.png
+  info-plist: Mac/Info.plist
+  resource-dir: Mac/Resources
+  xibs: MainMenu.xib,
+        BrowserWindow.xib
+  other-resources: Application.icns,
+                   Project.icns,
+                   Te.png,
+                   FirstRunAttentionArrow.png,
+                   File.png,
+                   Folder.png,
+                   BadgeNew.png,
+                   BadgeChanged.png,
+                   BadgeMoved.png
