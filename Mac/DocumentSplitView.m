@@ -239,6 +239,7 @@
         [dividerSubviewsForHorizontalContent removeObjectAtIndex: index];
     } else if(committedAxis == VerticalSplitAxis) {
         [dividerSubviewsForVerticalContent removeObjectAtIndex: index];
+        index--;
     }
     
     if([contentSubviews count] < 2) {
