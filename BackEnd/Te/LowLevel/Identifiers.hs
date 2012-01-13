@@ -5,6 +5,9 @@ module Te.LowLevel.Identifiers
    SubtypeWindowID(..),
    BrowserWindowID,
    DocumentWindowID,
+   DocumentPaneID,
+   DocumentVerticalDividerID,
+   DocumentHorizontalDividerID,
    InodeID,
    newProjectID,
    nullProjectID,
@@ -13,6 +16,12 @@ module Te.LowLevel.Identifiers
    nullBrowserWindowID,
    newDocumentWindowID,
    nullDocumentWindowID,
+   newDocumentPaneID,
+   nullDocumentPaneID,
+   newDocumentVerticalDividerID,
+   nullDocumentVerticalDividerID,
+   newDocumentHorizontalDividerID,
+   nullDocumentHorizontalDividerID,
    newInodeID,
    nullInodeID)
   where
@@ -56,6 +65,19 @@ instance SubtypeWindowID DocumentWindowID where
   fromWindowID (WindowID' uuid) = DocumentWindowID' uuid
 
 
+newtype DocumentPaneID =
+  DocumentPaneID' UUID deriving (Eq, Ord, Binary, Storable, SQLable)
+
+
+newtype DocumentVerticalDividerID =
+  DocumentVerticalDividerID' UUID deriving (Eq, Ord, Binary, Storable, SQLable)
+
+
+newtype DocumentHorizontalDividerID =
+  DocumentHorizontalDividerID' UUID
+  deriving (Eq, Ord, Binary, Storable, SQLable)
+
+
 newtype InodeID =
   InodeID' UUID deriving (Eq, Ord, Binary, Storable, SQLable)
 
@@ -92,6 +114,36 @@ newDocumentWindowID = do
 
 nullDocumentWindowID :: DocumentWindowID
 nullDocumentWindowID = DocumentWindowID' minBound
+
+
+newDocumentPaneID :: IO DocumentPaneID
+newDocumentPaneID = do
+  uuid <- V4.uuid
+  return $ DocumentPaneID' uuid
+
+
+nullDocumentPaneID :: DocumentPaneID
+nullDocumentPaneID = DocumentPaneID' minBound
+
+
+newDocumentVerticalDividerID :: IO DocumentVerticalDividerID
+newDocumentVerticalDividerID = do
+  uuid <- V4.uuid
+  return $ DocumentVerticalDividerID' uuid
+
+
+nullDocumentVerticalDividerID :: DocumentVerticalDividerID
+nullDocumentVerticalDividerID = DocumentVerticalDividerID' minBound
+
+
+newDocumentHorizontalDividerID :: IO DocumentHorizontalDividerID
+newDocumentHorizontalDividerID = do
+  uuid <- V4.uuid
+  return $ DocumentHorizontalDividerID' uuid
+
+
+nullDocumentHorizontalDividerID :: DocumentHorizontalDividerID
+nullDocumentHorizontalDividerID = DocumentHorizontalDividerID' minBound
 
 
 newInodeID :: IO InodeID

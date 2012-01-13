@@ -10,8 +10,11 @@ module Te.Types
    Window(..),
    WindowKind(..),
    BrowserWindow(..),
-   DocumentWindow(..),
    BrowserItem(..),
+   DocumentWindow(..),
+   DocumentPane(..),
+   DocumentVerticalDivider(..),
+   DocumentHorizontalDivider(..),
    DragInformation(..),
    DragOperation(..))
   where
@@ -135,6 +138,27 @@ data DocumentWindow =
   DocumentWindow {
       documentWindowID :: DocumentWindowID,
       documentWindowProject :: Project
+    }
+
+
+data DocumentPane =
+  DocumentPane {
+      documentPaneID :: DocumentPaneID,
+      documentPaneDocumentWindow :: DocumentWindow
+    }
+
+
+data DocumentVerticalDivider =
+  DocumentVerticalDivider {
+      documentVerticalDividerID :: DocumentVerticalDividerID,
+      documentVerticalDividerDocumentWindow :: DocumentWindow
+    }
+
+
+data DocumentHorizontalDivider =
+  DocumentHorizontalDivider {
+      documentHorizontalDividerID :: DocumentHorizontalDividerID,
+      documentHorizontalDividerDocumentWindow :: DocumentWindow
     }
 
 
