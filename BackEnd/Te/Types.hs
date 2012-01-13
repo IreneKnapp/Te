@@ -25,7 +25,7 @@ import Database.SQLite3 (Database)
 import Data.Bitfield
 import Data.ByteSize
 import Data.Timestamp
-import Te.Identifiers
+import Te.LowLevel.Identifiers
 
 
 data ApplicationState =

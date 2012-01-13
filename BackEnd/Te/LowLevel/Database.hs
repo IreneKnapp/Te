@@ -1,5 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
-module Te.Database
+module Te.LowLevel.Database
   (Database,
    newProjectDatabase,
    closeProjectDatabase,
@@ -34,8 +34,8 @@ import Prelude hiding (catch)
 import Data.ByteSize
 import Data.SQLable
 import Data.Timestamp
-import Te.Exceptions
-import Te.Identifiers
+import Te.LowLevel.Exceptions
+import Te.LowLevel.Identifiers
 import Te.Types
 
 

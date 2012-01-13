@@ -1,14 +1,20 @@
 {-# LANGUAGE DeriveDataTypeable #-}
-module Te.Exceptions
+module Te.LowLevel.Exceptions
   (TeException(..),
    exceptionDetails,
-   internalFailure)
+   internalFailure,
+   catchTe)
   where
 
+import Control.Concurrent.MVar
 import Control.Exception
 import Data.Typeable
 import Data.Word
 import Language.Haskell.TH
+import Prelude hiding (catch)
+
+import Te.LowLevel.FrontEndCallbacks
+import Te.Types
 
 
 data TeException
@@ -67,3 +73,11 @@ internalFailure = do
   return $ AppE (AppE (ConE $ mkName "TeExceptionInternal")
                       (LitE $ StringL module'))
                 (LitE $ IntegerL $ fromIntegral lineNumber)
+
+
+catchTe :: MVar ApplicationState -> a -> IO a -> IO a
+catchTe applicationStateMVar defaultValue action = do
+  catch (action)
+        (\e -> do
+           exception applicationStateMVar e
+           return defaultValue)

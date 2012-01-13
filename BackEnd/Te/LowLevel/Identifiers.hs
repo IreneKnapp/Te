@@ -1,8 +1,8 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-module Te.Identifiers
+module Te.LowLevel.Identifiers
   (ProjectID,
    WindowID,
-   WindowTypeID(..),
+   SubtypeWindowID(..),
    BrowserWindowID,
    DocumentWindowID,
    InodeID,
@@ -33,16 +33,16 @@ newtype WindowID =
   WindowID' UUID deriving (Eq, Ord, Binary, Storable, SQLable)
 
 
-class WindowTypeID windowTypeID where
-  toWindowID :: windowTypeID -> WindowID
-  fromWindowID :: WindowID -> windowTypeID
+class SubtypeWindowID subtypeWindowID where
+  toWindowID :: subtypeWindowID -> WindowID
+  fromWindowID :: WindowID -> subtypeWindowID
 
 
 newtype BrowserWindowID =
   BrowserWindowID' UUID deriving (Eq, Ord, Binary, Storable, SQLable)
 
 
-instance WindowTypeID BrowserWindowID where
+instance SubtypeWindowID BrowserWindowID where
   toWindowID (BrowserWindowID' uuid) = WindowID' uuid
   fromWindowID (WindowID' uuid) = BrowserWindowID' uuid
 
@@ -51,7 +51,7 @@ newtype DocumentWindowID =
   DocumentWindowID' UUID deriving (Eq, Ord, Binary, Storable, SQLable)
 
 
-instance WindowTypeID DocumentWindowID where
+instance SubtypeWindowID DocumentWindowID where
   toWindowID (DocumentWindowID' uuid) = WindowID' uuid
   fromWindowID (WindowID' uuid) = DocumentWindowID' uuid
 

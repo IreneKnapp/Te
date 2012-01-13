@@ -1,4 +1,4 @@
-module Te.FrontEndCallbacks
+module Te.LowLevel.FrontEndCallbacks
   (exception,
    confirm,
    noteRecentProjectsChanged,
@@ -13,7 +13,7 @@ module Te.FrontEndCallbacks
 import Control.Concurrent.MVar
 import Data.Word
 
-import Te.Exceptions
+import {-# SOURCE #-} Te.LowLevel.Exceptions
 import Te.Types
 
 

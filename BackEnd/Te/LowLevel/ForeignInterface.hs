@@ -1,5 +1,5 @@
 {-# LANGUAGE ForeignFunctionInterface, TemplateHaskell #-}
-module Te.ForeignInterface () where
+module Te.LowLevel.ForeignInterface () where
 
 import Control.Concurrent.MVar
 import Control.Exception
@@ -17,9 +17,9 @@ import Data.Bitfield
 import Data.ByteSize (ByteSize(..))
 import Data.Timestamp (Timestamp(..))
 import Te
-import Te.Exceptions
-import Te.FrontEndCallbacks
-import Te.Identifiers
+import Te.LowLevel.Exceptions
+import Te.LowLevel.FrontEndCallbacks
+import Te.LowLevel.Identifiers
 import Te.Types
 
 

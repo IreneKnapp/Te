@@ -1,6 +1,6 @@
 #import "DocumentWindow.h"
 #import <HsFFI.h>
-#import "Te/ForeignInterface_stub.h"
+#import "Te/LowLevel/ForeignInterface_stub.h"
 #import "AppDelegate.h"
 #import "DocumentContentView.h"
 #import "DocumentSplitView.h"

@@ -1,6 +1,6 @@
 #import "AppDelegate.h"
 #import <HsFFI.h>
-#import "Te/ForeignInterface_stub.h"
+#import "Te/LowLevel/ForeignInterface_stub.h"
 #import "Window.h"
 #import "BrowserWindow.h"
 #import "DocumentWindow.h"

@@ -1,6 +1,6 @@
 #import "BrowserWindow.h"
 #import <HsFFI.h>
-#import "Te/ForeignInterface_stub.h"
+#import "Te/LowLevel/ForeignInterface_stub.h"
 #import "AppDelegate.h"
 #import "BrowserItem.h"
 #import "FileNameCell.h"
