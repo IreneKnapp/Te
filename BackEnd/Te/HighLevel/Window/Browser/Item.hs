@@ -28,7 +28,7 @@ browserItemNewFolderInside parentBrowserItem = do
                        inodeID = inodeID',
                        inodeProject = inodeProject parentInode
                      }
-    recordNewInode newInode parentInode newName InodeKindDirectory Nothing
+    recordNewInode newInode parentInode newName DirectoryInodeType Nothing
     let browserWindow = browserItemBrowserWindow parentBrowserItem
     noteBrowserItemsChanged browserWindow
     let newBrowserItem = BrowserItem {
@@ -51,7 +51,7 @@ browserItemNewFileInside parentBrowserItem = do
                        inodeID = inodeID',
                        inodeProject = inodeProject parentInode
                      }
-    recordNewInode newInode parentInode newName InodeKindHaskell (Just 0)
+    recordNewInode newInode parentInode newName HaskellInodeType (Just 0)
     let browserWindow = browserItemBrowserWindow parentBrowserItem
     noteBrowserItemsChanged browserWindow
     let newBrowserItem = BrowserItem {

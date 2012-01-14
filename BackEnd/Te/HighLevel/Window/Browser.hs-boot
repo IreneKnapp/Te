@@ -1,16 +1,6 @@
-module Te.HighLevel.Window.Browser
-  (BrowserWindow,
-   BrowserWindowID,
-   browserWindowID,
-   browserWindowRoot)
-  where
+module Te.HighLevel.Window.Browser () where
 
-import {-# SOURCE #-} Te.HighLevel.Window
-import Te.LowLevel.Identifiers
 import Te.Types
 
 
-instance WindowType BrowserWindow
-
-
-browserWindowRoot :: BrowserWindow -> IO BrowserItem
+instance Window BrowserWindow

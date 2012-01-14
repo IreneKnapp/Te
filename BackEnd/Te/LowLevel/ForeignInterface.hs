@@ -25,6 +25,8 @@ import Te.Types
 
 foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
+foreign import ccall "dynamic" mkDoubleCallback
+    :: FunPtr (IO Double) -> IO Double
 foreign import ccall "dynamic" mkVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
 foreign import ccall "dynamic" mkVoidWindowIDPtrCallback
@@ -88,6 +90,12 @@ foreign export ccall "teApplicationInit"
                -> FunPtr (Word64 -> IO ())
                -> IO ())
     -> FunPtr (IO ())
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
@@ -480,6 +488,16 @@ wrapVoidCallback foreignCallback =
   in highLevelCallback
 
 
+wrapDoubleCallback
+    :: FunPtr (IO Double)
+    -> (IO Double)
+wrapDoubleCallback foreignCallback =
+  let lowLevelCallback = mkDoubleCallback foreignCallback
+      highLevelCallback = do
+        lowLevelCallback
+  in highLevelCallback
+
+
 wrapVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ())
     -> (String -> String -> IO ())
@@ -496,7 +514,7 @@ wrapVoidStringStringCallback foreignCallback =
 
 wrapVoidWindowCallback
     :: FunPtr (Ptr WindowID -> IO ())
-    -> (Window -> IO ())
+    -> (AnyWindow -> IO ())
 wrapVoidWindowCallback foreignCallback =
   let lowLevelCallback = mkVoidWindowIDPtrCallback foreignCallback
       highLevelCallback window = do
@@ -571,6 +589,12 @@ foreignApplicationInit
                -> FunPtr (Word64 -> IO ())
                -> IO ())
     -> FunPtr (IO ())
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
+    -> FunPtr (IO Double)
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
@@ -581,6 +605,12 @@ foreignApplicationInit
 foreignApplicationInit foreignException
                        foreignConfirm
                        foreignNoteRecentProjectsChanged
+                       foreignGetEmWidth
+                       foreignGetLineHeight
+                       foreignGetLineNumberEmWidth
+                       foreignGetScrollerWidth
+                       foreignGetVisibleWidth
+                       foreignGetVisibleHeight
                        foreignNoteDeletedWindow
                        foreignActivateWindow
                        foreignNoteNewBrowserWindow
@@ -593,6 +623,18 @@ foreignApplicationInit foreignException
         wrapVoidConfirmationDialogCompletionHandlerCallback foreignConfirm
       callbackNoteRecentProjectsChanged =
         wrapVoidCallback foreignNoteRecentProjectsChanged
+      callbackGetEmWidth =
+        wrapDoubleCallback foreignGetEmWidth
+      callbackGetLineHeight =
+        wrapDoubleCallback foreignGetLineHeight
+      callbackGetLineNumberEmWidth =
+        wrapDoubleCallback foreignGetLineNumberEmWidth
+      callbackGetScrollerWidth =
+        wrapDoubleCallback foreignGetScrollerWidth
+      callbackGetVisibleWidth =
+        wrapDoubleCallback foreignGetVisibleWidth
+      callbackGetVisibleHeight =
+        wrapDoubleCallback foreignGetVisibleHeight
       callbackNoteDeletedWindow =
         wrapVoidWindowCallback foreignNoteDeletedWindow
       callbackActivateWindow =
@@ -612,6 +654,18 @@ foreignApplicationInit foreignException
                         callbackConfirm,
                       frontEndCallbacksNoteRecentProjectsChanged =
                         callbackNoteRecentProjectsChanged,
+                      frontEndCallbacksGetEmWidth =
+                        callbackGetEmWidth,
+                      frontEndCallbacksGetLineHeight =
+                        callbackGetLineHeight,
+                      frontEndCallbacksGetLineNumberEmWidth =
+                        callbackGetLineNumberEmWidth,
+                      frontEndCallbacksGetScrollerWidth =
+                        callbackGetScrollerWidth,
+                      frontEndCallbacksGetVisibleWidth =
+                        callbackGetVisibleWidth,
+                      frontEndCallbacksGetVisibleHeight =
+                        callbackGetVisibleHeight,
                       frontEndCallbacksNoteDeletedWindow =
                         callbackNoteDeletedWindow,
                       frontEndCallbacksActivateWindow =
@@ -713,7 +767,7 @@ foreignWindowTitle applicationStateMVarStablePtr
   maybeWindow <- findWindowByID applicationStateMVar windowID
   case maybeWindow of
     Just window -> do
-      string <- windowTitle window
+      string <- getWindowTitle window
       stringNew string
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
@@ -729,7 +783,7 @@ foreignWindowTitleIcon applicationStateMVarStablePtr
   maybeWindow <- findWindowByID applicationStateMVar windowID
   case maybeWindow of
     Just window -> do
-      string <- windowTitleIcon window
+      string <- getWindowTitleIcon window
       stringNew string
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
@@ -739,7 +793,7 @@ foreignWindowTitleIcon applicationStateMVarStablePtr
 findWindowByID
     :: MVar ApplicationState
     -> WindowID
-    -> IO (Maybe Window)
+    -> IO (Maybe AnyWindow)
 findWindowByID applicationStateMVar windowID' = do
   applicationState <- readMVar applicationStateMVar
   foldM (\maybeWindow project -> do
@@ -761,14 +815,14 @@ findBrowserWindowByID applicationStateMVar
   maybeWindow <- findWindowByID applicationStateMVar
                                 $ toWindowID browserWindowID'
   case maybeWindow of
-    Just window -> getFromWindow window
+    Just window -> browserWindowDo window Nothing (return . Just)
     Nothing -> return Nothing
 
 
 findMaybeWindowFromIDPtr
     :: MVar ApplicationState
     -> Ptr WindowID
-    -> IO (Maybe Window)
+    -> IO (Maybe AnyWindow)
 findMaybeWindowFromIDPtr applicationStateMVar
                          windowIDPtr = do
   if windowIDPtr == nullPtr
@@ -792,7 +846,7 @@ foreignBrowserWindowRoot applicationStateMVarStablePtr
                                               browserWindowID
   inodeID' <- case maybeBrowserWindow of
                 Just browserWindow -> do
-                  browserItem <- browserWindowRoot browserWindow
+                  browserItem <- getBrowserWindowRoot browserWindow
                   return $ inodeID $ browserItemInode browserItem
                 Nothing -> do
                   exception applicationStateMVar $(internalFailure)

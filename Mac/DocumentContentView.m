@@ -8,63 +8,6 @@
 
 @implementation DocumentContentView
 
-+ (CGFloat) leftMarginWidth {
-    CGFloat lineNumberAreaWidth = [DocumentContentView lineNumberAreaWidth];
-    return lineNumberAreaWidth + 16.0;
-}
-
-
-+ (CGFloat) lineNumberPaddingWidth {
-    return 2.0;
-}
-
-
-+ (CGFloat) lineNumberAreaWidth {
-    CGFloat lineNumberPaddingWidth
-        = [DocumentContentView lineNumberPaddingWidth];
-    CGFloat lineNumberEmWidth
-        = [(AppDelegate *) [NSApp delegate] lineNumberEmWidth];
-    return lineNumberPaddingWidth + ceil(4.0 * lineNumberEmWidth);
-}
-
-
-+ (CGFloat) leftPaddingWidth {
-    return 1.0;
-}
-
-
-+ (CGFloat) rightPaddingWidth {
-    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
-    return emWidth / 2.0;
-}
-
-
-+ (CGFloat) rightMarginWidth {
-    NSScrollerStyle scrollerStyle = [NSScroller preferredScrollerStyle];
-    if(scrollerStyle == NSScrollerStyleLegacy) {
-        CGFloat scrollerWidth
-            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
-                          scrollerStyle: scrollerStyle];
-        return scrollerWidth;
-    } else {
-        return 0.0;
-    }
-}
-
-
-+ (CGFloat) bottomMarginWidth {
-    NSScrollerStyle scrollerStyle = [NSScroller preferredScrollerStyle];
-    if(scrollerStyle == NSScrollerStyleLegacy) {
-        CGFloat scrollerWidth
-            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
-                          scrollerStyle: scrollerStyle];
-        return scrollerWidth;
-    } else {
-        return 0.0;
-    }
-}
-
-
 + (NSUInteger) minimumLines {
     return 5;
 }

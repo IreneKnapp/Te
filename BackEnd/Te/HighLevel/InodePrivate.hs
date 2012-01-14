@@ -39,8 +39,8 @@ getInodesRecursiveStatistics inodes = do
   inodesKernel <- getInodesKernel inodes
   let visitInode inode = do
         inodeInformation <- lookupInodeInformation inode
-        let isFolder = inodeInformationKind inodeInformation
-                       == InodeKindDirectory
+        let isFolder = inodeInformationType inodeInformation
+                       == DirectoryInodeType
             size = case inodeInformationSize inodeInformation of
                      Just size -> size
                      Nothing -> 0
@@ -102,9 +102,5 @@ getInodesKernel inodes = do
 noteBrowserItemsChangedInAllBrowserWindows :: Project -> IO ()
 noteBrowserItemsChangedInAllBrowserWindows project = do
   windows <- readMVar $ projectWindows project
-  mapM_ (\window -> do
-           maybeBrowserWindow <- getFromWindow window
-           case maybeBrowserWindow of
-             Just browserWindow -> noteBrowserItemsChanged browserWindow
-             Nothing -> return ())
+  mapM_ (\window -> browserWindowDo window () noteBrowserItemsChanged)
         $ Map.elems windows

@@ -13,13 +13,6 @@
     NSTimer *scrollerHidingTimer;
 }
 
-+ (CGFloat) leftMarginWidth;
-+ (CGFloat) lineNumberPaddingWidth;
-+ (CGFloat) lineNumberAreaWidth;
-+ (CGFloat) leftPaddingWidth;
-+ (CGFloat) rightPaddingWidth;
-+ (CGFloat) rightMarginWidth;
-+ (CGFloat) bottomMarginWidth;
 + (NSUInteger) minimumLines;
 + (NSUInteger) minimumColumns;
 + (CGFloat) collapseLines;

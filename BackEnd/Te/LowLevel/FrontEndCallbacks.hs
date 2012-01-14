@@ -2,6 +2,12 @@ module Te.LowLevel.FrontEndCallbacks
   (exception,
    confirm,
    noteRecentProjectsChanged,
+   getEmWidth,
+   getLineHeight,
+   getLineNumberEmWidth,
+   getScrollerWidth,
+   getVisibleWidth,
+   getVisibleHeight,
    noteNewBrowserWindow,
    noteDeletedWindow,
    activateWindow,
@@ -47,6 +53,54 @@ noteRecentProjectsChanged applicationStateMVar = do
   callback
 
 
+getEmWidth :: MVar ApplicationState -> IO Double
+getEmWidth applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGetEmWidth callbacks
+  callback
+
+
+getLineHeight :: MVar ApplicationState -> IO Double
+getLineHeight applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGetLineHeight callbacks
+  callback
+
+
+getLineNumberEmWidth :: MVar ApplicationState -> IO Double
+getLineNumberEmWidth applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGetLineNumberEmWidth callbacks
+  callback
+
+
+getScrollerWidth :: MVar ApplicationState -> IO Double
+getScrollerWidth applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGetScrollerWidth callbacks
+  callback
+
+
+getVisibleWidth :: MVar ApplicationState -> IO Double
+getVisibleWidth applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGetVisibleWidth callbacks
+  callback
+
+
+getVisibleHeight :: MVar ApplicationState -> IO Double
+getVisibleHeight applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGetVisibleHeight callbacks
+  callback
+
+
 noteNewBrowserWindow :: BrowserWindow -> IO ()
 noteNewBrowserWindow browserWindow = do
   let project = browserWindowProject browserWindow
@@ -57,7 +111,7 @@ noteNewBrowserWindow browserWindow = do
   callback browserWindow
 
 
-noteDeletedWindow :: Window -> IO ()
+noteDeletedWindow :: AnyWindow -> IO ()
 noteDeletedWindow window = do
   let project = windowProject window
       applicationStateMVar = projectApplicationState project
@@ -67,7 +121,7 @@ noteDeletedWindow window = do
   callback window
 
 
-activateWindow :: Window -> IO ()
+activateWindow :: AnyWindow -> IO ()
 activateWindow window = do
   let project = windowProject window
       applicationStateMVar = projectApplicationState project

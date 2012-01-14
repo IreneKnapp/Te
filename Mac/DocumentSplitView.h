@@ -22,30 +22,6 @@ enum SplitAxis {
     BOOL usingChildWrappers;
     BOOL resizingTipsVisible;
     
-    NSMutableDictionary *captionAttributes;
-    NSMutableDictionary *titleAttributes;
-    NSMutableDictionary *titleUnderprintAttributes;
-    NSColor *topBorderColor;
-    NSColor *bottomBorderColor;
-    NSColor *curvyBorderColor;
-    NSGradient *captionGradient;
-    NSGradient *titleGradient;
-    NSColor *resizeIndicatorDarkColor;
-    NSColor *resizeIndicatorLightColor;
-    CGFloat baselineOffset;
-    CGFloat captionInset;
-    CGFloat captionLineHeight;
-    CGFloat titleLineHeight;
-    
-    NSMutableDictionary *inactiveCaptionAttributes;
-    NSMutableDictionary *inactiveTitleAttributes;
-    NSColor *inactiveTopBorderColor;
-    NSColor *inactiveBottomBorderColor;
-    NSColor *inactiveCurvyBorderColor;
-    NSGradient *inactiveTitleGradient;
-    NSColor *inactiveResizeIndicatorDarkColor;
-    NSColor *inactiveResizeIndicatorLightColor;
-    
     BOOL trackingDividerDrag;
     NSUInteger dividerIndexBeingTracked;
     enum SplitAxis dividerAxisBeingTracked;

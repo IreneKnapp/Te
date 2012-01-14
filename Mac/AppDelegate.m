@@ -95,6 +95,12 @@
     applicationState = teApplicationInit((HsFunPtr) exception,
                                          (HsFunPtr) confirm,
                                          (HsFunPtr) noteRecentProjectsChanged,
+                                         (HsFunPtr) getEmWidth,
+                                         (HsFunPtr) getLineHeight,
+                                         (HsFunPtr) getLineNumberEmWidth,
+                                         (HsFunPtr) getScrollerWidth,
+                                         (HsFunPtr) getVisibleWidth,
+                                         (HsFunPtr) getVisibleHeight,
                                          (HsFunPtr) noteDeletedWindow,
                                          (HsFunPtr) activateWindow,
                                          (HsFunPtr) noteNewBrowserWindow,
@@ -467,6 +473,44 @@ void confirm(void *confirmationDialog,
 
 void noteRecentProjectsChanged() {
     [(AppDelegate *) [NSApp delegate] noteRecentProjectsChanged];
+}
+
+
+double getEmWidth() {
+    return [(AppDelegate *) [NSApp delegate] emWidth];
+}
+
+
+double getLineHeight() {
+    return [(AppDelegate *) [NSApp delegate] lineHeight];
+}
+
+
+double getLineNumberEmWidth() {
+    return [(AppDelegate *) [NSApp delegate] lineNumberEmWidth];
+}
+
+
+double getScrollerWidth() {
+    NSScrollerStyle scrollerStyle = [NSScroller preferredScrollerStyle];
+    if(scrollerStyle == NSScrollerStyleLegacy) {
+        CGFloat scrollerWidth
+            = [NSScroller scrollerWidthForControlSize: NSRegularControlSize
+                          scrollerStyle: scrollerStyle];
+        return (double) scrollerWidth;
+    } else {
+        return 0.0;
+    }
+}
+
+
+double getVisibleWidth() {
+    return [[NSScreen mainScreen] visibleFrame].size.width;
+}
+
+
+double getVisibleHeight() {
+    return [[NSScreen mainScreen] visibleFrame].size.height;
 }
 
 

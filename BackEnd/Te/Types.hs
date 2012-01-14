@@ -1,3 +1,4 @@
+{-# LANGUAGE ExistentialQuantification #-}
 module Te.Types
   (ApplicationState(..),
    FrontEndCallbacks(..),
@@ -6,20 +7,22 @@ module Te.Types
    Project(..),
    Inode(..),
    InodeInformation(..),
-   InodeKind(..),
+   InodeType(..),
    Window(..),
-   WindowKind(..),
+   AnyWindow(..),
    BrowserWindow(..),
    BrowserItem(..),
    DocumentWindow(..),
    DocumentPane(..),
    DocumentVerticalDivider(..),
    DocumentHorizontalDivider(..),
+   DividerOrientation(..),
    DragInformation(..),
    DragOperation(..))
   where
 
 import Control.Concurrent.MVar
+import Data.Array.Unboxed
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Word
@@ -45,8 +48,14 @@ data FrontEndCallbacks =
       frontEndCallbacksConfirm
           :: ConfirmationDialog -> (Word64 -> IO ()) -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO (),
-      frontEndCallbacksNoteDeletedWindow :: Window -> IO (),
-      frontEndCallbacksActivateWindow :: Window -> IO (),
+      frontEndCallbacksGetEmWidth :: IO Double,
+      frontEndCallbacksGetLineHeight :: IO Double,
+      frontEndCallbacksGetLineNumberEmWidth :: IO Double,
+      frontEndCallbacksGetScrollerWidth :: IO Double,
+      frontEndCallbacksGetVisibleWidth :: IO Double,
+      frontEndCallbacksGetVisibleHeight :: IO Double,
+      frontEndCallbacksNoteDeletedWindow :: AnyWindow -> IO (),
+      frontEndCallbacksActivateWindow :: AnyWindow -> IO (),
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteBrowserItemsChanged :: BrowserWindow -> IO (),
       frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO (),
@@ -56,7 +65,7 @@ data FrontEndCallbacks =
 
 data ConfirmationDialog =
   ConfirmationDialog {
-      confirmationDialogWindow :: Maybe Window,
+      confirmationDialogWindow :: Maybe AnyWindow,
       confirmationDialogMessage :: String,
       confirmationDialogDetails :: String,
       confirmationDialogDefaultButtonIndex :: Maybe Word64,
@@ -80,7 +89,7 @@ data Project =
       projectDatabase :: Database,
       projectName :: MVar String,
       projectFilePath :: MVar (Maybe FilePath),
-      projectWindows :: MVar (Map WindowID Window)
+      projectWindows :: MVar (Map WindowID AnyWindow)
     }
 
 
@@ -94,29 +103,34 @@ data Inode =
 data InodeInformation =
   InodeInformation {
       inodeInformationName :: String,
-      inodeInformationKind :: InodeKind,
+      inodeInformationType :: InodeType,
       inodeInformationSize :: Maybe ByteSize,
       inodeInformationCreationTimestamp :: Timestamp,
       inodeInformationModificationTimestamp :: Timestamp
     }
 
 
-data InodeKind
-  = InodeKindDirectory
-  | InodeKindHaskell
+data InodeType
+  = DirectoryInodeType
+  | HaskellInodeType
   deriving (Eq)
 
 
-data Window =
-  Window {
-      windowID :: WindowID,
-      windowProject :: Project
-    }
-
-
-data WindowKind
-  = WindowKindBrowser
-  | WindowKindDocument
+class Window window where
+  windowID :: window -> WindowID
+  windowProject :: window -> Project
+  getWindowTitle :: window -> IO String
+  getWindowTitleIcon :: window -> IO String
+  browserWindowDo :: window -> a -> (BrowserWindow -> IO a) -> IO a
+  documentWindowDo :: window -> a -> (DocumentWindow -> IO a) -> IO a
+data AnyWindow = forall window . Window window => AnyWindow window
+instance Window AnyWindow where
+  windowID (AnyWindow window) = windowID window
+  windowProject (AnyWindow window) = windowProject window
+  getWindowTitle (AnyWindow window) = getWindowTitle window
+  getWindowTitleIcon (AnyWindow window) = getWindowTitleIcon window
+  browserWindowDo (AnyWindow window) = browserWindowDo window
+  documentWindowDo (AnyWindow window) = documentWindowDo window
 
 
 data BrowserWindow =
@@ -124,7 +138,6 @@ data BrowserWindow =
       browserWindowID :: BrowserWindowID,
       browserWindowProject :: Project
     }
-
 
 
 data BrowserItem =
@@ -137,29 +150,61 @@ data BrowserItem =
 data DocumentWindow =
   DocumentWindow {
       documentWindowID :: DocumentWindowID,
-      documentWindowProject :: Project
+      documentWindowProject :: Project,
+      documentWindowPanes :: Map DocumentPaneID DocumentPane,
+      documentWindowVerticalDividers
+        :: Map DocumentVerticalDividerID DocumentVerticalDivider,
+      documentWindowHorizontalDividers
+        :: Map DocumentHorizontalDividerID DocumentHorizontalDivider,
+      documentWindowGrid :: Array (Int, Int) DocumentPane,
+      documentWindowColumnWidths :: UArray Int Int,
+      documentWindowRowHeights :: UArray Int Int
     }
 
 
 data DocumentPane =
   DocumentPane {
       documentPaneID :: DocumentPaneID,
-      documentPaneDocumentWindow :: DocumentWindow
+      documentPaneWindow :: DocumentWindow,
+      documentPaneRowTop :: Int,
+      documentPaneColumnLeft :: Int,
+      documentPaneRowSpan :: Int,
+      documentPaneColumnSpan :: Int,
+      documentPaneDividerUp :: Maybe DocumentHorizontalDivider,
+      documentPaneDividerDown :: Maybe DocumentHorizontalDivider,
+      documentPaneDividerLeft :: Maybe DocumentVerticalDivider,
+      documentPaneDividerRight :: Maybe DocumentVerticalDivider
     }
 
 
 data DocumentVerticalDivider =
   DocumentVerticalDivider {
       documentVerticalDividerID :: DocumentVerticalDividerID,
-      documentVerticalDividerDocumentWindow :: DocumentWindow
+      documentVerticalDividerWindow :: DocumentWindow,
+      documentVerticalDividerRowTop :: Int,
+      documentVerticalDividerRowSpan :: Int,
+      documentVerticalDividerColumnRight :: Int,
+      documentVerticalDividerPanesLeft :: [DocumentPane],
+      documentVerticalDividerPanesRight :: [DocumentPane]
     }
 
 
 data DocumentHorizontalDivider =
   DocumentHorizontalDivider {
       documentHorizontalDividerID :: DocumentHorizontalDividerID,
-      documentHorizontalDividerDocumentWindow :: DocumentWindow
+      documentHorizontalDividerWindow :: DocumentWindow,
+      documentHorizontalDividerColumnLeft :: Int,
+      documentHorizontalDividerColumnSpan :: Int,
+      documentHorizontalDividerRowDown :: Int,
+      documentHorizontalDividerPanesUp :: [DocumentPane],
+      documentHorizontalDividerPanesDown :: [DocumentPane]
     }
+
+
+data DividerOrientation
+  = HorizontalOrientation
+  | VerticalOrientation
+  deriving (Eq)
 
 
 data DragInformation

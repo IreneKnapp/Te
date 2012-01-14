@@ -39,7 +39,7 @@ inodeCreationTimestamp :: Inode -> IO Timestamp
 inodeModificationTimestamp :: Inode -> IO Timestamp
 inodeIcon :: Inode -> IO String
 inodeRename :: Inode -> String -> IO ()
-inodeListDelete :: Maybe Window -> [Inode] -> IO ()
+inodeListDelete :: Maybe AnyWindow -> [Inode] -> IO ()
 inodeOpen :: Inode -> IO ()
 inodeValidateDrop
     :: Inode

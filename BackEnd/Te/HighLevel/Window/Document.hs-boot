@@ -1,12 +1,6 @@
-module Te.HighLevel.Window.Document
-  (DocumentWindow,
-   DocumentWindowID,
-   documentWindowID)
-  where
+module Te.HighLevel.Window.Document () where
 
-import {-# SOURCE #-} Te.HighLevel.Window
-import Te.LowLevel.Identifiers
 import Te.Types
 
 
-instance WindowType DocumentWindow
+instance Window DocumentWindow

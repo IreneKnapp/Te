@@ -57,8 +57,8 @@ getDragTargetInode prospectiveTargetInode draggedInodes sameProject = do
   let considerInode prospectiveTargetInode = do
         inodeInformation <-
           lookupInodeInformation prospectiveTargetInode
-        case inodeInformationKind inodeInformation of
-          InodeKindDirectory -> do
+        case inodeInformationType inodeInformation of
+          DirectoryInodeType -> do
             if sameProject
                && any (\draggedInode ->
                          inodeID draggedInode

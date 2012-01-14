@@ -7,8 +7,7 @@ module Te.HighLevel.ApplicationPrivate
    computeNextNumberedName,
    getNextUntitledProjectName,
    computeNameForFilePath,
-   newBrowserWindow,
-   newDocumentWindow)
+   newBrowserWindow)
   where
 
 import Control.Concurrent.MVar
@@ -24,9 +23,8 @@ import Te.LowLevel.Database
 import Te.LowLevel.Exceptions
 import Te.LowLevel.FrontEndCallbacks
 import Te.LowLevel.Identifiers
-import {-# SOURCE #-} Te.HighLevel.Window
-import {-# SOURCE #-} Te.HighLevel.Window.Browser
-import {-# SOURCE #-} Te.HighLevel.Window.Document
+import {-# SOURCE #-} Te.HighLevel.Window.Browser ()
+import {-# SOURCE #-} Te.HighLevel.Window.Document ()
 import Te.Types
 
 
@@ -174,7 +172,7 @@ newBrowserWindow project maybeRootInode = do
                                 browserWindowID = newBrowserWindowID,
                                 browserWindowProject = project
                               }
-        newWindow = toWindow newBrowserWindow'
+        newWindow = AnyWindow newBrowserWindow'
         newWindowID = windowID newWindow
     windows <- takeMVar $ projectWindows project
     let windows' = Map.insert newWindowID newWindow windows
@@ -184,21 +182,3 @@ newBrowserWindow project maybeRootInode = do
                    Nothing -> lookupProjectRoot project
     recordNewBrowserWindow newBrowserWindow' rootInode
     noteNewBrowserWindow newBrowserWindow'
-
-
-newDocumentWindow :: Project -> Inode -> IO ()
-newDocumentWindow project documentInode = do
-  let applicationStateMVar = projectApplicationState project
-  catchTe applicationStateMVar () $ do
-    newDocumentWindowID <- newDocumentWindowID
-    let newDocumentWindow' = DocumentWindow {
-                                documentWindowID = newDocumentWindowID,
-                                documentWindowProject = project
-                              }
-        newWindow = toWindow newDocumentWindow'
-        newWindowID = windowID newWindow
-    windows <- takeMVar $ projectWindows project
-    let windows' = Map.insert newWindowID newWindow windows
-    putMVar (projectWindows project) windows'
-    recordNewDocumentWindow newDocumentWindow' documentInode
-    noteNewDocumentWindow newDocumentWindow'

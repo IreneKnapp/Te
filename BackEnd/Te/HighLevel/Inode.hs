@@ -36,6 +36,7 @@ import Te.HighLevel.ApplicationPrivate
 import Te.HighLevel.DragAndDropPrivate
 import Te.HighLevel.InodePrivate
 import Te.HighLevel.Window
+import Te.HighLevel.Window.DocumentPrivate
 import Te.LowLevel.Database
 import Te.LowLevel.Exceptions
 import Te.LowLevel.FrontEndCallbacks
@@ -57,8 +58,8 @@ inodeExpandable inode = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar False $ do
     inodeInformation <- lookupInodeInformation inode
-    case inodeInformationKind inodeInformation of
-      InodeKindDirectory -> return True
+    case inodeInformationType inodeInformation of
+      DirectoryInodeType -> return True
       _ -> return False
 
 
@@ -98,9 +99,9 @@ inodeKind inode = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "Unknown" $ do
     inodeInformation <- lookupInodeInformation inode
-    case inodeInformationKind inodeInformation of
-      InodeKindDirectory -> return "Folder"
-      InodeKindHaskell -> return "Haskell"
+    case inodeInformationType inodeInformation of
+      DirectoryInodeType -> return "Folder"
+      HaskellInodeType -> return "Haskell"
 
 
 inodeSize :: Inode -> IO (Maybe ByteSize)
@@ -136,9 +137,9 @@ inodeIcon inode = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar "File" $ do
     inodeInformation <- lookupInodeInformation inode
-    case inodeInformationKind inodeInformation of
-      InodeKindDirectory -> return "Folder"
-      InodeKindHaskell -> return "File"
+    case inodeInformationType inodeInformation of
+      DirectoryInodeType -> return "Folder"
+      HaskellInodeType -> return "File"
 
 
 inodeRename :: Inode -> String -> IO ()
@@ -154,7 +155,7 @@ inodeRename inode newName = do
       Nothing -> throwIO $(internalFailure)
 
 
-inodeListDelete :: Maybe Window -> [Inode] -> IO ()
+inodeListDelete :: Maybe AnyWindow -> [Inode] -> IO ()
 inodeListDelete maybeWindow inodes = do
   inodes <- getInodesKernel inodes
   case inodes of
@@ -214,25 +215,22 @@ inodeOpen inode = do
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar () $ do
     inodeInformation <- lookupInodeInformation inode
-    case inodeInformationKind inodeInformation of
-      InodeKindDirectory -> do
+    case inodeInformationType inodeInformation of
+      DirectoryInodeType -> do
         newBrowserWindow project $ Just inode
-      InodeKindHaskell -> do
+      HaskellInodeType -> do
         windowMap <- readMVar $ projectWindows project
         maybeFoundWindow <-
           foldM (\maybeFoundWindow window -> do
                    case maybeFoundWindow of
                      Just _ -> return maybeFoundWindow
                      Nothing -> do
-                       maybeDocumentWindow <- getFromWindow window
-                       case maybeDocumentWindow of
-                         Just documentWindow -> do
-                           documentWindowInode <-
-                             lookupDocumentWindowInode documentWindow
-                           if inodeID documentWindowInode == inodeID inode
-                             then return $ Just window
-                             else return Nothing
-                         Nothing -> return Nothing)
+                       documentWindowDo window Nothing $ \documentWindow -> do
+                         documentWindowInode <-
+                           lookupDocumentWindowInode documentWindow
+                         if inodeID documentWindowInode == inodeID inode
+                           then return $ Just window
+                           else return Nothing)
                 Nothing
                 $ Map.elems windowMap
         case maybeFoundWindow of

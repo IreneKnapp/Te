@@ -16,7 +16,6 @@ module Te.LowLevel.Database
    lookupInodeChildCount,
    lookupInodeChild,
    lookupInodeInformation,
-   lookupWindowKind,
    recordNewBrowserWindow,
    lookupBrowserWindowRoot,
    recordBrowserItemExpanded,
@@ -253,7 +252,7 @@ lookupProjectRoot project = do
 
 
 recordNewInode
-    :: Inode -> Inode -> String -> InodeKind -> Maybe ByteSize -> IO ()
+    :: Inode -> Inode -> String -> InodeType -> Maybe ByteSize -> IO ()
 recordNewInode inode parentInode name inodeKind maybeSize = do
   let project = inodeProject inode
       database = projectDatabase project
@@ -270,8 +269,8 @@ recordNewInode inode parentInode name inodeKind maybeSize = do
               SQLText name,
               sqlParentInodeID,
               case inodeKind of
-                InodeKindDirectory -> SQLText "directory"
-                InodeKindHaskell -> SQLText "haskell",
+                DirectoryInodeType -> SQLText "directory"
+                HaskellInodeType -> SQLText "haskell",
               case maybeSize of
                 Nothing -> SQLNull
                 Just size -> toSQL size,
@@ -433,36 +432,20 @@ lookupInodeInformation inode = do
     [[SQLText name, SQLText kindString, sqlMaybeSize,
       SQLInteger creationTimestamp, SQLInteger modificationTimestamp]] -> do
       let kind = case kindString of
-                   "directory" -> InodeKindDirectory
-                   "haskell" -> InodeKindHaskell
+                   "directory" -> DirectoryInodeType
+                   "haskell" -> HaskellInodeType
           maybeSize = case sqlMaybeSize of
                         SQLNull -> Nothing
                         _ -> fromSQL sqlMaybeSize
       return $ InodeInformation {
                    inodeInformationName = name,
-                   inodeInformationKind = kind,
+                   inodeInformationType = kind,
                    inodeInformationSize = maybeSize,
                    inodeInformationCreationTimestamp =
                      fromIntegral creationTimestamp,
                    inodeInformationModificationTimestamp =
                      fromIntegral modificationTimestamp
                  }
-    _ -> throwIO $(internalFailure)
-
-
-lookupWindowKind :: Window -> IO WindowKind
-lookupWindowKind window = do
-  let project = windowProject window
-      database = projectDatabase project
-  rows <- query database
-                (  "SELECT kind FROM windows WHERE id = ?")
-                [toSQL $ windowID window]
-  case rows of
-    [[SQLText kindString]] ->
-      case lookup kindString [("browser", WindowKindBrowser),
-                              ("document", WindowKindDocument)] of
-        Just kind -> return kind
-        Nothing -> throwIO $(internalFailure)
     _ -> throwIO $(internalFailure)
 
 

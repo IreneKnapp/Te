@@ -2,8 +2,12 @@ module Te.HighLevel.Window.Browser
   (BrowserWindow,
    BrowserWindowID,
    browserWindowID,
-   browserWindowRoot)
+   getBrowserWindowTitle,
+   getBrowserWindowTitleIcon,
+   getBrowserWindowRoot)
   where
+
+import Control.Concurrent.MVar
 
 import Te.HighLevel.Window
 import Te.LowLevel.Database
@@ -12,25 +16,45 @@ import Te.LowLevel.Identifiers
 import Te.Types
 
 
-instance WindowType BrowserWindow where
-  toWindow browserWindow =
-             Window {
-                 windowID = toWindowID $ browserWindowID browserWindow,
-                 windowProject = browserWindowProject browserWindow
-               }
-  getFromWindow window = do
-    kind <- lookupWindowKind window
-    case kind of
-      WindowKindBrowser ->
-        return $ Just $ BrowserWindow {
-                            browserWindowID = fromWindowID $ windowID window,
-                            browserWindowProject = windowProject window
-                          }
-      _ -> return Nothing
+instance Window BrowserWindow where
+  windowID = toWindowID . browserWindowID
+  windowProject = browserWindowProject
+  getWindowTitle = getBrowserWindowTitle
+  getWindowTitleIcon = getBrowserWindowTitleIcon
+  browserWindowDo window _ action = action window
+  documentWindowDo _ default' _ = return default'
 
 
-browserWindowRoot :: BrowserWindow -> IO BrowserItem
-browserWindowRoot browserWindow = do
+getBrowserWindowTitle :: BrowserWindow -> IO String
+getBrowserWindowTitle browserWindow = do
+  let project = browserWindowProject browserWindow
+      applicationStateMVar = projectApplicationState project
+  catchTe applicationStateMVar "Unknown" $ do
+    projectName <- readMVar $ projectName project
+    folderInode <- lookupBrowserWindowRoot browserWindow
+    rootInode <- lookupProjectRoot project
+    if inodeID rootInode == inodeID folderInode
+      then return projectName
+      else do
+        folderInodeInformation <- lookupInodeInformation folderInode
+        let folderName = inodeInformationName folderInodeInformation
+        return $ projectName ++ " - " ++ folderName
+
+
+getBrowserWindowTitleIcon :: BrowserWindow -> IO String
+getBrowserWindowTitleIcon browserWindow = do
+  let project = browserWindowProject browserWindow
+      applicationStateMVar = projectApplicationState project
+  catchTe applicationStateMVar "Project" $ do
+    inode <- lookupBrowserWindowRoot browserWindow
+    rootInode <- lookupProjectRoot project
+    if inodeID rootInode == inodeID inode
+      then return "Project"
+      else return "Folder"
+
+
+getBrowserWindowRoot :: BrowserWindow -> IO BrowserItem
+getBrowserWindowRoot browserWindow = do
   let project = browserWindowProject browserWindow
       applicationStateMVar = projectApplicationState project
   catchTe applicationStateMVar

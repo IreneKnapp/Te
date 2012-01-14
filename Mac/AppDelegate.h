@@ -28,7 +28,7 @@
     NSFont *captionFont;
     CGFloat captionEmWidth;
     CGFloat captionLineHeight;
-    
+        
     int hsArgc;
     char **hsArgv;
 }
@@ -71,6 +71,12 @@ void confirm(void *confirmationDialog,
              void (*completionHandler)(uint64_t result));
 - (void) noteRecentProjectsChanged;
 void noteRecentProjectsChanged();
+double getEmWidth();
+double getLineHeight();
+double getLineNumberEmWidth();
+double getScrollerWidth();
+double getVisibleWidth();
+double getVisibleHeight();
 - (void) noteDeletedWindow: (uuid_t *) windowID;
 void noteDeletedWindow(uuid_t *windowID);
 - (void) activateWindow: (uuid_t *) windowID;
