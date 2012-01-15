@@ -2,9 +2,9 @@
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 
-static DocumentHorizontalDividerManager *sharedManager = nil;
+static HorizontalDividerManager *sharedManager = nil;
 
-@implementation DocumentHorizontalDividerManager
+@implementation HorizontalDividerManager
 @synthesize captionAttributes;
 @synthesize titleAttributes;
 @synthesize titleUnderprintAttributes;

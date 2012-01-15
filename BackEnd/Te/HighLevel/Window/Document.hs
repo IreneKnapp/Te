@@ -46,3 +46,23 @@ getDocumentWindowTitleIcon documentWindow = do
     case documentType of
       DirectoryInodeType -> return "Folder"
       HaskellInodeType -> return "File"
+
+
++ (NSUInteger) minimumLines {
+    return 5;
+}
+
+
++ (NSUInteger) minimumColumns {
+    return 35;
+}
+
+
++ (CGFloat) collapseLines {
+    return 1.5;
+}
+
+
++ (CGFloat) collapseColumns {
+    return 17.5;
+}

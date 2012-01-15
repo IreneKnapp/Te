@@ -13,10 +13,9 @@
     NSTimer *scrollerHidingTimer;
 }
 
-+ (NSUInteger) minimumLines;
-+ (NSUInteger) minimumColumns;
-+ (CGFloat) collapseLines;
-+ (CGFloat) collapseColumns;
++ (id) sharedManager;
++ (id) allocWithZone: (NSZone *) zone;
+- (id) copyWithZone: (NSZone *) zone;
 - (id) initWithFrame: (NSRect) frame;
 - (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
 - (void) repackScrollbars;

@@ -5,26 +5,26 @@
 #import "TransparentHelperWindow.h"
 #import "Utilities.h"
 
+static PaneManager *sharedManager = nil;
 
-@implementation DocumentContentView
 
-+ (NSUInteger) minimumLines {
-    return 5;
+@implementation PaneManager
+
++ (id) sharedManager {
+    if(sharedManager == nil) {
+        sharedManager = [[super allocWithZone: nil] init];
+    }
+    return sharedManager;
 }
 
 
-+ (NSUInteger) minimumColumns {
-    return 35;
++ (id) allocWithZone: (NSZone *) zone {
+    return [self sharedManager];
 }
 
 
-+ (CGFloat) collapseLines {
-    return 1.5;
-}
-
-
-+ (CGFloat) collapseColumns {
-    return 17.5;
+- (id) copyWithZone: (NSZone *) zone {
+    return self;
 }
 
 
@@ -489,11 +489,6 @@
     }
     
     [self repackScrollbars];
-}
-
-
-- (void) mouseDown: (NSEvent *) event {
-    NSLog(@"Click made it to content view.");
 }
 
 @end

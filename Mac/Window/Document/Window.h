@@ -32,4 +32,7 @@
 - (void) windowDidResignMain: (NSNotification *) notification;
 - (void) preferredScrollerStyleDidChange: (NSNotification *) notification;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
+- (void) mouseDown: (NSEvent *) event;
+- (void) mouseDragged: (NSEvent *) event;
+- (void) mouseUp: (NSEvent *) event;
 @end
