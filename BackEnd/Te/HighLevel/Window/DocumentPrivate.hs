@@ -113,6 +113,9 @@ newDocumentWindow project documentInode = do
     putMVar (projectWindows project) windows'
     recordNewDocumentWindow newDocumentWindow' documentInode
     noteNewDocumentWindow newDocumentWindow'
+    noteNewDocumentPane newDocumentWindow'
+                        newDocumentPane'
+                        ((0, 0), (paneWidth, paneHeight))
 
 
 getWindowSizeFromPaneSizes

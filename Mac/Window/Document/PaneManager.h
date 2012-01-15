@@ -21,7 +21,6 @@
         toWindow: (NSWindow *) window
        withFrame: (NSRect) frame;
 - (void) repackScrollbars;
-- (BOOL) isFlipped;
 - (void) drawRect: (NSRect) dirtyRect
          ofWindow: (NSWindow *) window;
 - (IBAction) scrollerActivated: (id) sender;

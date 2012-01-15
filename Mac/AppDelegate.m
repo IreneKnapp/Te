@@ -4,6 +4,7 @@
 #import "Window.h"
 #import "Window/Browser.h"
 #import "Window/Document.h"
+#import "Window/Document/PaneManager.h"
 
 @implementation AppDelegate
 @synthesize applicationState;
@@ -105,7 +106,8 @@
                                          (HsFunPtr) noteNewBrowserWindow,
                                          (HsFunPtr) noteBrowserItemsChanged,
                                          (HsFunPtr) editBrowserItemName,
-                                         (HsFunPtr) noteNewDocumentWindow);
+                                         (HsFunPtr) noteNewDocumentWindow,
+                                         (HsFunPtr) noteNewDocumentPane);
     
     keyFunctions = nil;
     valueFunctions = nil;
@@ -596,6 +598,41 @@ void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID) {
 
 void noteNewDocumentWindow(uuid_t *documentWindowID) {
     [(AppDelegate *) [NSApp delegate] noteNewDocumentWindow: documentWindowID];
+}
+
+
+- (void) noteNewDocumentPane: (uuid_t *) documentPaneID
+                    inWindow: (uuid_t *) documentWindowID
+                   withFrame: (NSRect) frame
+{
+    WindowDocument *windowDocumentObject
+        = [windows objectForKey: (void *) documentWindowID];
+    if(windowDocumentObject) {
+        WindowDocumentPaneManager *paneManager
+            = [WindowDocumentPaneManager sharedManager];
+        [paneManager addPane: documentPaneID
+                    toWindow: [windowDocumentObject window]
+                   withFrame: frame];
+    }
+}
+
+
+void noteNewDocumentPane(uuid_t *documentWindowID,
+                         uuid_t *documentPaneID,
+                         double left,
+                         double top,
+                         double width,
+                         double height)
+{
+    NSRect frame;
+    frame.origin.x = left;
+    frame.origin.y = top;
+    frame.size.width = width;
+    frame.size.height = height;
+    
+    [(AppDelegate *) [NSApp delegate] noteNewDocumentPane: documentPaneID
+                                      inWindow: documentWindowID
+                                      withFrame: frame];
 }
 
 @end

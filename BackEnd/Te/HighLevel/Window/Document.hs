@@ -5,7 +5,6 @@ module Te.HighLevel.Window.Document
    getDocumentWindowDefaultSize,
    getDocumentWindowMinimumSize,
    getDocumentWindowDesiredSize,
-   documentWindowAdjustPanes,
    getDocumentWindowTitle,
    getDocumentWindowTitleIcon,
    documentWindowAdjustPanes)

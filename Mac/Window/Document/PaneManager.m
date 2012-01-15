@@ -206,11 +206,6 @@ static WindowDocumentPaneManager *sharedManager = nil;
 }
 
 
-- (BOOL) isFlipped {
-    return YES;
-}
-
-
 - (void) drawRect: (NSRect) dirtyRect
          ofWindow: (NSWindow *) window
 {

@@ -1,4 +1,8 @@
 #import "Window/Document/View.h"
+#import <HsFFI.h>
+#import "Te/LowLevel/ForeignInterface_stub.h"
+#import "AppDelegate.h"
+#import "Window/Document/PaneManager.h"
 
 
 @implementation WindowDocumentView
@@ -9,6 +13,20 @@
         [self setAutoresizingMask: NSViewWidthSizable | NSViewHeightSizable];
     }
     return self;
+}
+
+
+- (void) drawRect: (NSRect) dirtyRect {
+    NSWindow *window = [self window];
+    
+    WindowDocumentPaneManager *paneManager
+        = [WindowDocumentPaneManager sharedManager];
+    [paneManager drawRect: dirtyRect ofWindow: window];
+}
+
+
+- (BOOL) isFlipped {
+    return YES;
 }
 
 @end

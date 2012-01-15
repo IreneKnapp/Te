@@ -89,4 +89,14 @@ void noteBrowserItemsChanged(uuid_t *browserWindowID);
 void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID);
 - (void) noteNewDocumentWindow: (uuid_t *) documentWindowID;
 void noteNewDocumentWindow(uuid_t *documentWindowID);
+- (void) noteNewDocumentPane: (uuid_t *) documentPaneID
+                    inWindow: (uuid_t *) documentWindowID
+                   withFrame: (NSRect) frame;
+void noteNewDocumentPane(uuid_t *documentWindowID,
+                         uuid_t *documentPaneID,
+                         double left,
+                         double top,
+                         double width,
+                         double height);
+
 @end

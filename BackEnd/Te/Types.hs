@@ -58,7 +58,12 @@ data FrontEndCallbacks =
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteBrowserItemsChanged :: BrowserWindow -> IO (),
       frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO (),
-      frontEndCallbacksNoteNewDocumentWindow :: DocumentWindow -> IO ()
+      frontEndCallbacksNoteNewDocumentWindow :: DocumentWindow -> IO (),
+      frontEndCallbacksNoteNewDocumentPane
+        :: DocumentWindow
+        -> DocumentPane
+        -> ((Double, Double), (Double, Double))
+        -> IO ()
     }
 
 

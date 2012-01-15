@@ -49,6 +49,16 @@ foreign import ccall "dynamic" mkIntConfirmationDialogCompletionHandlerCallback
     -> (StablePtr ConfirmationDialog
         -> FunPtr (Word64 -> IO ())
         -> IO ())
+foreign import ccall "dynamic"
+    mkVoidDocumentWindowIDPtrDocumentPaneIDPtrRectangleCallback
+    :: FunPtr (Ptr DocumentWindowID
+               -> Ptr DocumentPaneID
+               -> Double -> Double -> Double -> Double
+               -> IO ())
+    -> (Ptr DocumentWindowID
+        -> Ptr DocumentPaneID
+        -> Double -> Double -> Double -> Double
+        -> IO ())
 
 
 foreign import ccall "wrapper" wrapCompletionHandler
@@ -104,6 +114,9 @@ foreign export ccall "teApplicationInit"
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> FunPtr (Ptr DocumentWindowID -> IO ())
+    -> FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
+               -> Double -> Double -> Double -> Double
+               -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit"
                      foreignApplicationExit
@@ -684,6 +697,31 @@ wrapVoidDocumentWindowCallback foreignCallback =
   in highLevelCallback
 
 
+wrapVoidDocumentWindowDocumentPaneRectangleCallback
+    :: FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
+               -> Double -> Double -> Double -> Double
+               -> IO ())
+    -> (DocumentWindow
+        -> DocumentPane
+        -> ((Double, Double), (Double, Double))
+        -> IO ())
+wrapVoidDocumentWindowDocumentPaneRectangleCallback foreignCallback =
+  let lowLevelCallback =
+        mkVoidDocumentWindowIDPtrDocumentPaneIDPtrRectangleCallback
+         foreignCallback
+      highLevelCallback documentWindow
+                        documentPane
+                        ((x, y), (width, height)) = do
+        alloca $ \documentWindowIDPtr -> do
+          poke documentWindowIDPtr $ documentWindowID documentWindow
+          alloca $ \documentPaneIDPtr -> do
+            poke documentPaneIDPtr $ documentPaneID documentPane
+            lowLevelCallback documentWindowIDPtr
+                             documentPaneIDPtr
+                             x y width height
+  in highLevelCallback
+
+
 foreignApplicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (StablePtr ConfirmationDialog
@@ -701,6 +739,9 @@ foreignApplicationInit
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> FunPtr (Ptr DocumentWindowID -> IO ())
+    -> FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
+               -> Double -> Double -> Double -> Double
+               -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreignApplicationInit foreignException
                        foreignConfirm
@@ -715,7 +756,8 @@ foreignApplicationInit foreignException
                        foreignNoteNewBrowserWindow
                        foreignNoteBrowserItemsChanged
                        foreignEditBrowserItemName
-                       foreignNoteNewDocumentWindow = do
+                       foreignNoteNewDocumentWindow
+                       foreignNoteNewDocumentPane = do
   let callbackException =
         wrapVoidStringStringCallback foreignException
       callbackConfirm =
@@ -744,6 +786,9 @@ foreignApplicationInit foreignException
         wrapVoidBrowserItemCallback foreignEditBrowserItemName
       callbackNoteNewDocumentWindow =
         wrapVoidDocumentWindowCallback foreignNoteNewDocumentWindow
+      callbackNoteNewDocumentPane =
+        wrapVoidDocumentWindowDocumentPaneRectangleCallback
+         foreignNoteNewDocumentPane
       callbacks = FrontEndCallbacks {
                       frontEndCallbacksException =
                         callbackException,
@@ -772,7 +817,9 @@ foreignApplicationInit foreignException
                       frontEndCallbacksEditBrowserItemName =
                         callbackEditBrowserItemName,
                       frontEndCallbacksNoteNewDocumentWindow =
-                        callbackNoteNewDocumentWindow
+                        callbackNoteNewDocumentWindow,
+                      frontEndCallbacksNoteNewDocumentPane =
+                        callbackNoteNewDocumentPane
                     }
   applicationStateMVar <- applicationInit callbacks
   newStablePtr applicationStateMVar

@@ -12,7 +12,8 @@ module Te.LowLevel.FrontEndCallbacks
    activateWindow,
    noteBrowserItemsChanged,
    editBrowserItemName,
-   noteNewDocumentWindow)
+   noteNewDocumentWindow,
+   noteNewDocumentPane)
   where
 
 import Control.Concurrent.MVar
@@ -151,3 +152,16 @@ noteNewDocumentWindow documentWindow = do
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteNewDocumentWindow callbacks
   callback documentWindow
+
+
+noteNewDocumentPane
+  :: DocumentWindow -> DocumentPane -> ((Int, Int), (Int, Int)) -> IO ()
+noteNewDocumentPane documentWindow documentPane ((x, y), (width, height)) = do
+  let project = documentWindowProject documentWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksNoteNewDocumentPane callbacks
+  callback documentWindow
+           documentPane
+           ((realToFrac x, realToFrac y), (realToFrac width, realToFrac height))

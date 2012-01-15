@@ -6,4 +6,6 @@
 }
 
 - (id) initWithFrame: (NSRect) frame;
+- (void) drawRect: (NSRect) dirtyRect;
+- (BOOL) isFlipped;
 @end
