@@ -1,14 +1,14 @@
 #import <Cocoa/Cocoa.h>
 #import "Utilities.h"
 
-@class BrowserWindow;
-@interface BrowserItem : NSObject {
+@class WindowBrowser;
+@interface WindowBrowserItem : NSObject {
     uuid_t inodeID;
-    BrowserWindow *browserWindowObject;
+    WindowBrowser *windowBrowserObject;
 }
 @property (assign) NSString *path;
 
-- (id) initWithBrowserWindowObject: (BrowserWindow *) newBrowserWindowObject
+- (id) initWithWindowBrowserObject: (WindowBrowser *) newBrowserWindowObject
                            inodeID: (uuid_t *) newInodeID;
 - (uuid_t *) inodeID;
 @end

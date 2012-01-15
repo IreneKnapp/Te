@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import "Utilities.h"
 
-@interface VerticalDividerManager
+@interface VerticalDividerManager : NSObject
 {
 }
 
@@ -10,6 +10,6 @@
 - (id) copyWithZone: (NSZone *) zone;
 - (void) drawGhost: (NSRect) frame;
 - (void) drawInFrame: (NSRect) dividerFrame
-          isLeftmost: (BOOL) isBottom
-         activeState: (BOOL) activeState
+          isLeftmost: (BOOL) isLeftmost
+         activeState: (BOOL) activeState;
 @end

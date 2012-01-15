@@ -2,8 +2,8 @@
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 #import "Window.h"
-#import "BrowserWindow.h"
-#import "DocumentWindow.h"
+#import "Window/Browser.h"
+#import "Window/Document.h"
 
 @implementation AppDelegate
 @synthesize applicationState;
@@ -99,8 +99,7 @@
                                          (HsFunPtr) getLineHeight,
                                          (HsFunPtr) getLineNumberEmWidth,
                                          (HsFunPtr) getScrollerWidth,
-                                         (HsFunPtr) getVisibleWidth,
-                                         (HsFunPtr) getVisibleHeight,
+                                         (HsFunPtr) getVisibleSize,
                                          (HsFunPtr) noteDeletedWindow,
                                          (HsFunPtr) activateWindow,
                                          (HsFunPtr) noteNewBrowserWindow,
@@ -295,9 +294,9 @@
     if(!windowController)
         return;
     
-    if([windowController isKindOfClass: [BrowserWindow class]]) {
-        BrowserWindow *browserWindowObject
-            = (BrowserWindow *) windowController;
+    if([windowController isKindOfClass: [WindowBrowser class]]) {
+        WindowBrowser *browserWindowObject
+            = (WindowBrowser *) windowController;
         uuid_t *browserWindowID = [browserWindowObject windowID];
         uuid_t inodeID;
         if([browserWindowObject getCurrentFolderInodeID: &inodeID]) {
@@ -321,9 +320,9 @@
     if(!windowController)
         return;
     
-    if([windowController isKindOfClass: [BrowserWindow class]]) {
-        BrowserWindow *browserWindowObject
-            = (BrowserWindow *) windowController;
+    if([windowController isKindOfClass: [WindowBrowser class]]) {
+        WindowBrowser *browserWindowObject
+            = (WindowBrowser *) windowController;
         uuid_t *browserWindowID = [browserWindowObject windowID];
         uuid_t inodeID;
         if([browserWindowObject getCurrentFolderInodeID: &inodeID]) {
@@ -347,9 +346,9 @@
     if(!windowController)
         return;
     
-    if([windowController isKindOfClass: [BrowserWindow class]]) {
-        BrowserWindow *browserWindowObject
-            = (BrowserWindow *) windowController;
+    if([windowController isKindOfClass: [WindowBrowser class]]) {
+        WindowBrowser *browserWindowObject
+            = (WindowBrowser *) windowController;
         uuid_t *browserWindowID = [browserWindowObject windowID];
         
         void *inodeList = [browserWindowObject getSelectedInodeList];
@@ -504,13 +503,10 @@ double getScrollerWidth() {
 }
 
 
-double getVisibleWidth() {
-    return [[NSScreen mainScreen] visibleFrame].size.width;
-}
-
-
-double getVisibleHeight() {
-    return [[NSScreen mainScreen] visibleFrame].size.height;
+void getVisibleSize(double *width, double *height) {
+    NSSize size = [[NSScreen mainScreen] visibleFrame].size;
+    *width = (double) size.width;
+    *height = (double) size.height;
 }
 
 
@@ -544,8 +540,8 @@ void activateWindow(uuid_t *windowID) {
 
 
 - (void) noteNewBrowserWindow: (uuid_t *) browserWindowID {
-    BrowserWindow *browserWindowObject
-        = [[BrowserWindow alloc] initWithWindowID: browserWindowID];
+    WindowBrowser *browserWindowObject
+        = [[WindowBrowser alloc] initWithWindowID: browserWindowID];
     if(browserWindowObject)
         [windows setObject: browserWindowObject
                  forKey: (void *) browserWindowID];
@@ -559,8 +555,8 @@ void noteNewBrowserWindow(uuid_t *browserWindowID) {
 
 - (void) noteBrowserItemsChangedInBrowserWindow: (uuid_t *) browserWindowID {
     Window *windowObject = [windows objectForKey: (void *) browserWindowID];
-    if(windowObject && [windowObject isKindOfClass: [BrowserWindow class]]) {
-        BrowserWindow *browserWindowObject = (BrowserWindow *) windowObject;
+    if(windowObject && [windowObject isKindOfClass: [WindowBrowser class]]) {
+        WindowBrowser *browserWindowObject = (WindowBrowser *) windowObject;
         [browserWindowObject noteItemsChanged];
     }
 }
@@ -576,8 +572,8 @@ void noteBrowserItemsChanged(uuid_t *browserWindowID) {
                                       inode: (uuid_t *) inodeID
 {
     Window *windowObject = [windows objectForKey: (void *) browserWindowID];
-    if(windowObject && [windowObject isKindOfClass: [BrowserWindow class]]) {
-        BrowserWindow *browserWindowObject = (BrowserWindow *) windowObject;
+    if(windowObject && [windowObject isKindOfClass: [WindowBrowser class]]) {
+        WindowBrowser *browserWindowObject = (WindowBrowser *) windowObject;
         [browserWindowObject editItemName: inodeID];
     }
 }
@@ -590,10 +586,10 @@ void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID) {
 
 
 - (void) noteNewDocumentWindow: (uuid_t *) documentWindowID {
-    DocumentWindow *documentWindowObject
-        = [[DocumentWindow alloc] initWithWindowID: documentWindowID];
-    if(documentWindowObject)
-        [windows setObject: documentWindowObject
+    WindowDocument *windowDocumentObject
+        = [[WindowDocument alloc] initWithWindowID: documentWindowID];
+    if(windowDocumentObject)
+        [windows setObject: windowDocumentObject
                  forKey: (void *) documentWindowID];
 }
 

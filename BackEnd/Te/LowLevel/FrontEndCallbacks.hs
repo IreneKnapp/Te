@@ -6,8 +6,7 @@ module Te.LowLevel.FrontEndCallbacks
    getLineHeight,
    getLineNumberEmWidth,
    getScrollerWidth,
-   getVisibleWidth,
-   getVisibleHeight,
+   getVisibleSize,
    noteNewBrowserWindow,
    noteDeletedWindow,
    activateWindow,
@@ -85,19 +84,11 @@ getScrollerWidth applicationStateMVar = do
   callback
 
 
-getVisibleWidth :: MVar ApplicationState -> IO Double
-getVisibleWidth applicationStateMVar = do
+getVisibleSize :: MVar ApplicationState -> IO (Double, Double)
+getVisibleSize applicationStateMVar = do
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksGetVisibleWidth callbacks
-  callback
-
-
-getVisibleHeight :: MVar ApplicationState -> IO Double
-getVisibleHeight applicationStateMVar = do
-  applicationState <- readMVar applicationStateMVar
-  let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksGetVisibleHeight callbacks
+      callback = frontEndCallbacksGetVisibleSize callbacks
   callback
 
 

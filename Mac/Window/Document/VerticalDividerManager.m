@@ -1,4 +1,4 @@
-#import "DocumentHorizontalDividerManager.h"
+#import "Window/Document/VerticalDividerManager.h"
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 
@@ -25,14 +25,14 @@ static VerticalDividerManager *sharedManager = nil;
 
 
 - (void) drawGhost: (NSRect) frame {
-    [self drawDividerForHorizontalContentInFrame: frame
+    [self drawInFrame: frame
           isLeftmost: NO
           activeState: YES];         
 }
 
 
 - (void) drawInFrame: (NSRect) dividerFrame
-          isLeftmost: (BOOL) isBottom
+          isLeftmost: (BOOL) isLeftmost
          activeState: (BOOL) activeState
 {
     if(isLeftmost) {

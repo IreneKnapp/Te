@@ -27,6 +27,9 @@ foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
 foreign import ccall "dynamic" mkDoubleCallback
     :: FunPtr (IO Double) -> IO Double
+foreign import ccall "dynamic" mkDoublePairCallback
+    :: FunPtr (Ptr Double -> Ptr Double -> IO ())
+    -> (Ptr Double -> Ptr Double -> IO ())
 foreign import ccall "dynamic" mkVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
 foreign import ccall "dynamic" mkVoidWindowIDPtrCallback
@@ -94,8 +97,7 @@ foreign export ccall "teApplicationInit"
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
-    -> FunPtr (IO Double)
-    -> FunPtr (IO Double)
+    -> FunPtr (Ptr Double -> Ptr Double -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
@@ -164,6 +166,90 @@ foreign export ccall "teBrowserItemSetExpanded"
     -> Ptr InodeID
     -> Word64
     -> IO ()
+foreign export ccall "teDocumentWindowDefaultSize"
+                     foreignDocumentWindowDefaultSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr Double
+    -> Ptr Double
+    -> IO ()
+foreign export ccall "teDocumentWindowMinimumSize"
+                     foreignDocumentWindowMinimumSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentWindowID
+    -> Ptr Double
+    -> Ptr Double
+    -> IO ()
+foreign export ccall "teDocumentWindowDesiredSize"
+                     foreignDocumentWindowDesiredSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentWindowID
+    -> Ptr Double
+    -> Ptr Double
+    -> IO ()
+foreign export ccall "teDocumentWindowAdjustPanes"
+                     foreignDocumentWindowAdjustPanes
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentWindowID
+    -> IO ()
+foreign export ccall "teDocumentPaneLeftMarginWidth"
+                     foreignDocumentPaneLeftMarginWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreign export ccall "teDocumentPaneRightMarginWidth"
+                     foreignDocumentPaneRightMarginWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreign export ccall "teDocumentPaneBottomMarginWidth"
+                     foreignDocumentPaneBottomMarginWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreign export ccall "teDocumentPaneLeftPaddingWidth"
+                     foreignDocumentPaneLeftPaddingWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreign export ccall "teDocumentPaneRightPaddingWidth"
+                     foreignDocumentPaneRightPaddingWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreign export ccall "teDocumentPaneLineNumberPaddingWidth"
+                     foreignDocumentPaneLineNumberPaddingWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreign export ccall "teDocumentPaneLineNumberAreaWidth"
+                     foreignDocumentPaneLineNumberAreaWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreign export ccall "teDocumentPaneMinimumSize"
+                     foreignDocumentPaneMinimumSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> Ptr Int
+    -> Ptr Int
+    -> IO ()
+foreign export ccall "teDocumentPaneDesiredSize"
+                     foreignDocumentPaneDesiredSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> Ptr Int
+    -> Ptr Int
+    -> IO ()
+foreign export ccall "teDocumentPaneCaption"
+                     foreignDocumentPaneCaption
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO CString
+foreign export ccall "teDocumentPaneSizeReport"
+                     foreignDocumentPaneSizeReport
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO CString
 foreign export ccall "teInodeParent"
                      foreignInodeParent
     :: StablePtr (MVar ApplicationState)
@@ -498,6 +584,21 @@ wrapDoubleCallback foreignCallback =
   in highLevelCallback
 
 
+wrapDoublePairCallback
+    :: FunPtr (Ptr Double -> Ptr Double -> IO ())
+    -> (IO (Double, Double))
+wrapDoublePairCallback foreignCallback =
+  let lowLevelCallback = mkDoublePairCallback foreignCallback
+      highLevelCallback = do
+        alloca $ \aPtr -> do
+          alloca $ \bPtr -> do
+            lowLevelCallback aPtr bPtr
+            a <- peek aPtr
+            b <- peek bPtr
+            return (a, b)
+  in highLevelCallback
+
+
 wrapVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ())
     -> (String -> String -> IO ())
@@ -593,8 +694,7 @@ foreignApplicationInit
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
-    -> FunPtr (IO Double)
-    -> FunPtr (IO Double)
+    -> FunPtr (Ptr Double -> Ptr Double -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
@@ -609,8 +709,7 @@ foreignApplicationInit foreignException
                        foreignGetLineHeight
                        foreignGetLineNumberEmWidth
                        foreignGetScrollerWidth
-                       foreignGetVisibleWidth
-                       foreignGetVisibleHeight
+                       foreignGetVisibleSize
                        foreignNoteDeletedWindow
                        foreignActivateWindow
                        foreignNoteNewBrowserWindow
@@ -631,10 +730,8 @@ foreignApplicationInit foreignException
         wrapDoubleCallback foreignGetLineNumberEmWidth
       callbackGetScrollerWidth =
         wrapDoubleCallback foreignGetScrollerWidth
-      callbackGetVisibleWidth =
-        wrapDoubleCallback foreignGetVisibleWidth
-      callbackGetVisibleHeight =
-        wrapDoubleCallback foreignGetVisibleHeight
+      callbackGetVisibleSize =
+        wrapDoublePairCallback foreignGetVisibleSize
       callbackNoteDeletedWindow =
         wrapVoidWindowCallback foreignNoteDeletedWindow
       callbackActivateWindow =
@@ -662,10 +759,8 @@ foreignApplicationInit foreignException
                         callbackGetLineNumberEmWidth,
                       frontEndCallbacksGetScrollerWidth =
                         callbackGetScrollerWidth,
-                      frontEndCallbacksGetVisibleWidth =
-                        callbackGetVisibleWidth,
-                      frontEndCallbacksGetVisibleHeight =
-                        callbackGetVisibleHeight,
+                      frontEndCallbacksGetVisibleSize =
+                        callbackGetVisibleSize,
                       frontEndCallbacksNoteDeletedWindow =
                         callbackNoteDeletedWindow,
                       frontEndCallbacksActivateWindow =
@@ -819,6 +914,19 @@ findBrowserWindowByID applicationStateMVar
     Nothing -> return Nothing
 
 
+findDocumentWindowByID
+    :: MVar ApplicationState
+    -> DocumentWindowID
+    -> IO (Maybe DocumentWindow)
+findDocumentWindowByID applicationStateMVar
+                       documentWindowID' = do
+  maybeWindow <- findWindowByID applicationStateMVar
+                                $ toWindowID documentWindowID'
+  case maybeWindow of
+    Just window -> documentWindowDo window Nothing (return . Just)
+    Nothing -> return Nothing
+
+
 findMaybeWindowFromIDPtr
     :: MVar ApplicationState
     -> Ptr WindowID
@@ -830,6 +938,45 @@ findMaybeWindowFromIDPtr applicationStateMVar
     else do
       windowID <- peek windowIDPtr
       findWindowByID applicationStateMVar windowID
+
+
+findDocumentPaneByID
+    :: MVar ApplicationState
+    -> DocumentPaneID
+    -> IO (Maybe DocumentPane)
+findDocumentPaneByID applicationStateMVar
+                     documentPaneID' = do
+  applicationState <- readMVar applicationStateMVar
+  let visitAllProjects = do
+        foldM (\maybeDocumentPane project -> do
+                 case maybeDocumentPane of
+                   Just _ -> return maybeDocumentPane
+                   Nothing -> visitProject project)
+              Nothing
+              $ Map.elems $ applicationStateProjects applicationState
+      visitProject project = do
+        windowMap <- readMVar $ projectWindows project
+        foldM (\maybeDocumentPane window -> do
+                 case maybeDocumentPane of
+                   Just _ -> return maybeDocumentPane
+                   Nothing -> visitWindow window)
+              Nothing
+              $ Map.elems windowMap
+      visitWindow window = do
+        documentWindowDo window Nothing visitDocumentWindow
+      visitDocumentWindow documentWindow = do
+        panes <- readMVar $ documentWindowPanes documentWindow
+        foldM (\maybeDocumentPane foundPane -> do
+                 case maybeDocumentPane of
+                   Just _ -> return maybeDocumentPane
+                   Nothing -> visitPane foundPane)
+              Nothing
+              $ Map.elems panes
+      visitPane foundPane = do
+        if documentPaneID foundPane == documentPaneID'
+          then return $ Just foundPane
+          else return Nothing
+  visitAllProjects
 
 
 foreignBrowserWindowRoot
@@ -980,6 +1127,303 @@ foreignBrowserItemSetExpanded applicationStateMVarStablePtr
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return ()
+
+
+foreignDocumentWindowDefaultSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr Double
+    -> Ptr Double
+    -> IO ()
+foreignDocumentWindowDefaultSize applicationStateMVarStablePtr
+                                 widthPtr
+                                 heightPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  (width, height) <- getDocumentWindowDefaultSize applicationStateMVar
+  poke widthPtr (realToFrac width)
+  poke heightPtr (realToFrac height)
+  return ()
+
+
+foreignDocumentWindowMinimumSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentWindowID
+    -> Ptr Double
+    -> Ptr Double
+    -> IO ()
+foreignDocumentWindowMinimumSize applicationStateMVarStablePtr
+                                 documentWindowIDPtr
+                                 widthPtr
+                                 heightPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentWindowID <- peek documentWindowIDPtr
+  maybeDocumentWindow <- findDocumentWindowByID applicationStateMVar
+                                                documentWindowID
+  case maybeDocumentWindow of
+    Just documentWindow -> do
+      (width, height) <- getDocumentWindowMinimumSize documentWindow
+      poke widthPtr (realToFrac width)
+      poke heightPtr (realToFrac height)
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      poke widthPtr 0.0
+      poke heightPtr 0.0
+
+
+foreignDocumentWindowDesiredSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentWindowID
+    -> Ptr Double
+    -> Ptr Double
+    -> IO ()
+foreignDocumentWindowDesiredSize applicationStateMVarStablePtr
+                                 documentWindowIDPtr
+                                 widthPtr
+                                 heightPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentWindowID <- peek documentWindowIDPtr
+  maybeDocumentWindow <- findDocumentWindowByID applicationStateMVar
+                                                documentWindowID
+  case maybeDocumentWindow of
+    Just documentWindow -> do
+      (width, height) <- getDocumentWindowDesiredSize documentWindow
+      poke widthPtr (realToFrac width)
+      poke heightPtr (realToFrac height)
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      poke widthPtr 0.0
+      poke heightPtr 0.0
+
+
+foreignDocumentWindowAdjustPanes
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentWindowID
+    -> IO ()
+foreignDocumentWindowAdjustPanes applicationStateMVarStablePtr
+                                 documentWindowIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentWindowID <- peek documentWindowIDPtr
+  maybeDocumentWindow <- findDocumentWindowByID applicationStateMVar
+                                                documentWindowID
+  case maybeDocumentWindow of
+    Just documentWindow -> do
+      documentWindowAdjustPanes documentWindow
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
+
+
+foreignDocumentPaneLeftMarginWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreignDocumentPaneLeftMarginWidth applicationStateMVarStablePtr
+                                   documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      getDocumentPaneLeftMarginWidth documentPane
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
+
+
+foreignDocumentPaneRightMarginWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreignDocumentPaneRightMarginWidth applicationStateMVarStablePtr
+                                    documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      getDocumentPaneRightMarginWidth documentPane
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
+
+
+foreignDocumentPaneBottomMarginWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreignDocumentPaneBottomMarginWidth applicationStateMVarStablePtr
+                                     documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      getDocumentPaneBottomMarginWidth documentPane
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
+
+
+foreignDocumentPaneLeftPaddingWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreignDocumentPaneLeftPaddingWidth applicationStateMVarStablePtr
+                                    documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      getDocumentPaneLeftPaddingWidth documentPane
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
+
+
+foreignDocumentPaneRightPaddingWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreignDocumentPaneRightPaddingWidth applicationStateMVarStablePtr
+                                     documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      getDocumentPaneRightPaddingWidth documentPane
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
+
+
+foreignDocumentPaneLineNumberPaddingWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreignDocumentPaneLineNumberPaddingWidth applicationStateMVarStablePtr
+                                          documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      getDocumentPaneLineNumberPaddingWidth documentPane
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
+
+
+foreignDocumentPaneLineNumberAreaWidth
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO Int
+foreignDocumentPaneLineNumberAreaWidth applicationStateMVarStablePtr
+                                       documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      getDocumentPaneLineNumberAreaWidth documentPane
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return 0
+
+
+foreignDocumentPaneMinimumSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> Ptr Int
+    -> Ptr Int
+    -> IO ()
+foreignDocumentPaneMinimumSize applicationStateMVarStablePtr
+                               documentPaneIDPtr
+                               minimumWidthPtr
+                               minimumHeightPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      (minimumWidth, minimumHeight) <-
+        getDocumentPaneMinimumSize documentPane
+      poke minimumWidthPtr minimumWidth
+      poke minimumHeightPtr minimumHeight
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
+
+
+foreignDocumentPaneDesiredSize
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> Ptr Int
+    -> Ptr Int
+    -> IO ()
+foreignDocumentPaneDesiredSize applicationStateMVarStablePtr
+                               documentPaneIDPtr
+                               desiredWidthPtr
+                               desiredHeightPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      (desiredWidth, desiredHeight) <-
+        getDocumentPaneDesiredSize documentPane
+      poke desiredWidthPtr desiredWidth
+      poke desiredHeightPtr desiredHeight
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
+
+
+foreignDocumentPaneCaption
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO CString
+foreignDocumentPaneCaption applicationStateMVarStablePtr
+                           documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      caption <- getDocumentPaneCaption documentPane
+      newCString caption
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return nullPtr
+
+
+foreignDocumentPaneSizeReport
+    :: StablePtr (MVar ApplicationState)
+    -> Ptr DocumentPaneID
+    -> IO CString
+foreignDocumentPaneSizeReport applicationStateMVarStablePtr
+                              documentPaneIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentPaneID <- peek documentPaneIDPtr
+  maybeDocumentPane <- findDocumentPaneByID applicationStateMVar
+                                            documentPaneID
+  case maybeDocumentPane of
+    Just documentPane -> do
+      sizeReport <- getDocumentPaneCaption documentPane
+      newCString sizeReport
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return nullPtr
 
 
 foreignInodeParent

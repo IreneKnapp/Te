@@ -52,8 +52,7 @@ data FrontEndCallbacks =
       frontEndCallbacksGetLineHeight :: IO Double,
       frontEndCallbacksGetLineNumberEmWidth :: IO Double,
       frontEndCallbacksGetScrollerWidth :: IO Double,
-      frontEndCallbacksGetVisibleWidth :: IO Double,
-      frontEndCallbacksGetVisibleHeight :: IO Double,
+      frontEndCallbacksGetVisibleSize :: IO (Double, Double),
       frontEndCallbacksNoteDeletedWindow :: AnyWindow -> IO (),
       frontEndCallbacksActivateWindow :: AnyWindow -> IO (),
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
@@ -151,14 +150,14 @@ data DocumentWindow =
   DocumentWindow {
       documentWindowID :: DocumentWindowID,
       documentWindowProject :: Project,
-      documentWindowPanes :: Map DocumentPaneID DocumentPane,
+      documentWindowPanes :: MVar (Map DocumentPaneID DocumentPane),
       documentWindowVerticalDividers
-        :: Map DocumentVerticalDividerID DocumentVerticalDivider,
+        :: MVar (Map DocumentVerticalDividerID DocumentVerticalDivider),
       documentWindowHorizontalDividers
-        :: Map DocumentHorizontalDividerID DocumentHorizontalDivider,
-      documentWindowGrid :: Array (Int, Int) DocumentPane,
-      documentWindowColumnWidths :: UArray Int Int,
-      documentWindowRowHeights :: UArray Int Int
+        :: MVar (Map DocumentHorizontalDividerID DocumentHorizontalDivider),
+      documentWindowGrid :: MVar (Array (Int, Int) DocumentPane),
+      documentWindowColumnWidths :: MVar (UArray Int Int),
+      documentWindowRowHeights :: MVar (UArray Int Int)
     }
 
 

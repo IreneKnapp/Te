@@ -1,15 +1,15 @@
-#import "BrowserItem.h"
+#import "Window/Browser/Item.h"
 
-@implementation BrowserItem
+@implementation WindowBrowserItem
 @synthesize path;
 
-- (id) initWithBrowserWindowObject: (BrowserWindow *) newBrowserWindowObject
+- (id) initWithWindowBrowserObject: (WindowBrowser *) newWindowBrowserObject
                            inodeID: (uuid_t *) newInodeID;
 {
     self = [super init];
     if(self) {
         copyUUID(&inodeID, newInodeID);
-        browserWindowObject = newBrowserWindowObject;
+        windowBrowserObject = newWindowBrowserObject;
     }
     return self;
 }

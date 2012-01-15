@@ -4,13 +4,11 @@
 #import "Utilities.h"
 
 
-@class DocumentSplitView;
-@class DocumentContentView;
-@interface DocumentWindow : Window
+@class WindowDocumentView;
+@interface WindowDocument : Window
 <NSOutlineViewDataSource, HasCurrentFolder>
 {
-    IBOutlet NSTextField *numberOfLinesLabel;
-    DocumentSplitView *documentSplitView;
+    WindowDocumentView *documentView;
     
     BOOL stillLoading;
     BOOL adjustingSize;
@@ -19,13 +17,9 @@
 @property (assign) BOOL adjustingSize;
 
 - (id) initWithWindowID: (uuid_t *) newWindowID;
-- (NSSize) defaultSize;
 - (void) setConstraints;
 - (void) adjustSize: (NSSize) newSize withAnimation: (BOOL) withAnimation;
 - (void) adjustSizePerContentConstraints;
-- (void) showResizingTips;
-- (void) hideResizingTips;
-- (void) updateResizingTips;
 - (void) windowWillStartLiveResize: (NSNotification *) notification;
 - (void) windowDidEndLiveResize: (NSNotification *) notification;
 - (void) windowDidBecomeMain: (NSNotification *) notification;

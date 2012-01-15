@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import "Utilities.h"
 
-@interface DocumentHorizontalDividerManager
+@interface WindowDocumentHorizontalDividerManager : NSObject
 {
     NSMutableDictionary *captionAttributes;
     NSMutableDictionary *titleAttributes;
@@ -59,7 +59,8 @@
          activeState: (BOOL) activeState
              caption: (NSString *) caption
        documentTitle: (NSString *) documentTitle;
-- (void) drawBottomRightCornerResizeIndicatorActiveState: (BOOL) activeState;
+- (void) drawBottomRightCornerResizeIndicatorInFrame: (NSRect) frame
+                                         activeState: (BOOL) activeState;
 - (void) drawVerticalResizeIndicatorInFrame: (NSRect) frame
                                 activeState: (BOOL) activeState;
 @end

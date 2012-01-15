@@ -4,8 +4,8 @@
 #import "HasSelectedInodes.h"
 #import "Utilities.h"
 
-@class BrowserItem;
-@interface BrowserWindow : Window
+@class WindowBrowserItem;
+@interface WindowBrowser : Window
 <NSOutlineViewDataSource, HasCurrentFolder, HasSelectedInodes>
 {
     IBOutlet NSOutlineView *filesOutlineView;
@@ -24,7 +24,7 @@
 - (id) initWithWindowID: (uuid_t *) newWindowID;
 - (BOOL) getCurrentFolderInodeID: (uuid_t *) result;
 - (void *) getSelectedInodeList;
-- (BrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID;
+- (WindowBrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID;
 - (void) noteItemsChanged;
 - (void) editItemName: (uuid_t *) inodeID;
 - (id) outlineView: (NSOutlineView *) outlineView
@@ -49,7 +49,7 @@
 - (void) outlineViewItemWillCollapse: (NSNotification *) notification;
 - (void) outlineViewItemDidExpand: (NSNotification *) notification;
 - (void) outlineViewItemDidCollapse: (NSNotification *) notification;
-- (void) fixItemExpansionState: (BrowserItem *) item;
+- (void) fixItemExpansionState: (WindowBrowserItem *) item;
 - (IBAction) doubleClickOutlineView: (id) sender;
 - (BOOL) outlineView: (NSOutlineView *) outlineView
           writeItems: (NSArray *) items

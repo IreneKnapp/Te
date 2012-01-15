@@ -1,10 +1,11 @@
-#import "DocumentHorizontalDividerManager.h"
+#import "Window/Document/HorizontalDividerManager.h"
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
+#import "AppDelegate.h"
 
-static HorizontalDividerManager *sharedManager = nil;
+static WindowDocumentHorizontalDividerManager *sharedManager = nil;
 
-@implementation HorizontalDividerManager
+@implementation WindowDocumentHorizontalDividerManager
 @synthesize captionAttributes;
 @synthesize titleAttributes;
 @synthesize titleUnderprintAttributes;
@@ -109,7 +110,7 @@ static HorizontalDividerManager *sharedManager = nil;
         sharedManager.captionLineHeight
             = [(AppDelegate *) [NSApp delegate] captionLineHeight];
         sharedManager.titleLineHeight
-            = [@"M" sizeWithAttributes: titleAttributes].height;
+            = [@"M" sizeWithAttributes: sharedManager.titleAttributes].height;
     }
     return sharedManager;
 }
@@ -281,7 +282,8 @@ static HorizontalDividerManager *sharedManager = nil;
     }
     
     if(isBottom) {
-        [self drawBottomRightCornerResizeIndicatorActiveState: activeState];
+        [self drawBottomRightCornerResizeIndicatorInFrame: dividerFrame
+              activeState: activeState];
     } else {
         NSRect indicatorFrame = dividerFrame;
         indicatorFrame.origin.x += indicatorFrame.size.width - 1.0;
@@ -295,13 +297,19 @@ static HorizontalDividerManager *sharedManager = nil;
 }
 
 
-- (void) drawBottomRightCornerResizeIndicatorActiveState: (BOOL) activeState {
-    CGFloat bottom = 1.0;
-    CGFloat right = [self bounds].size.width - 1.0;
+- (void) drawBottomRightCornerResizeIndicatorInFrame: (NSRect) frame
+                                         activeState: (BOOL) activeState
+{
+    void *applicationState
+        = [(AppDelegate *) [NSApp delegate] applicationState];
+    if(!applicationState) {
+        return;
+    }
     
-    CGFloat dividerHeight
-        = [DocumentSplitView minimumDividerThicknessForAxis:
-                              VerticalSplitAxis];
+    CGFloat bottom = 1.0;
+    CGFloat right = frame.size.width - 1.0;
+    
+    CGFloat dividerHeight = frame.size.height;
     
     NSBezierPath *indicatorPath = [NSBezierPath bezierPath];
     NSBezierPath *indicatorUnderprintPath = [NSBezierPath bezierPath];

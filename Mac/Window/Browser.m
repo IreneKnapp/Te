@@ -1,13 +1,13 @@
-#import "BrowserWindow.h"
+#import "Window/Browser.h"
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 #import "AppDelegate.h"
-#import "BrowserItem.h"
+#import "Window/Browser/Item.h"
 #import "FileNameCell.h"
 #import "Utilities.h"
 
 
-@implementation BrowserWindow
+@implementation WindowBrowser
 
 - (id) initWithWindowID: (uuid_t *) newWindowID {
     void *applicationState = getApplicationState();
@@ -62,8 +62,8 @@
     } else {
         NSUInteger firstRow = [rowIndices firstIndex];
         id item = [filesOutlineView itemAtRow: firstRow];
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             uuid_t *inodeID = [browserItemObject inodeID];
             if(!teInodeParent(applicationState,
@@ -98,9 +98,11 @@
                         ^(NSUInteger index, BOOL *stop)
                         {
                             id item = [filesOutlineView itemAtRow: index];
-                            if([item isKindOfClass: [BrowserItem class]]) {
-                                BrowserItem *browserItemObject
-                                    = (BrowserItem *) item;
+                            if([item isKindOfClass:
+                                        [WindowBrowserItem class]])
+                            {
+                                WindowBrowserItem *browserItemObject
+                                    = (WindowBrowserItem *) item;
                                 
                                 uuid_t *inodeID = [browserItemObject inodeID];
                                 
@@ -125,12 +127,13 @@
 }
 
 
-- (BrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID {
-    BrowserItem *browserItem = [browserItems objectForKey: (void *) inodeID];
+- (WindowBrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID {
+    WindowBrowserItem *browserItem
+        = [browserItems objectForKey: (void *) inodeID];
     if(!browserItem) {
         browserItem
-            = [[BrowserItem alloc] initWithBrowserWindowObject: self
-                                   inodeID: inodeID];
+            = [[WindowBrowserItem alloc] initWithWindowBrowserObject: self
+                                         inodeID: inodeID];
         [browserItems setObject: browserItem
                       forKey: (void *) inodeID];
     }
@@ -177,8 +180,8 @@
                          &inodeID,
                          index,
                          &inodeChildID);
-        } else if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItem = (BrowserItem *) item;
+        } else if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItem = (WindowBrowserItem *) item;
             
             uuid_t *inodeID = [browserItem inodeID];
             
@@ -211,8 +214,8 @@
         
         uuid_t *browserWindowID = [self windowID];
         
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItem = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItem = (WindowBrowserItem *) item;
             
             uuid_t *inodeID = [browserItem inodeID];
             uint64_t result
@@ -256,8 +259,8 @@
                                     browserWindowID,
                                     &inodeID);
             return count;
-        } else if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItem = (BrowserItem *) item;
+        } else if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItem = (WindowBrowserItem *) item;
             
             uuid_t *inodeID = [browserItem inodeID];
             uint64_t count
@@ -282,14 +285,14 @@
         return nil;
     
     if([outlineView isEqual: filesOutlineView]) {
-        if([item isKindOfClass: [BrowserItem class]]) {            
+        if([item isKindOfClass: [WindowBrowserItem class]]) {            
             void *applicationState = getApplicationState();
             if(!applicationState)
                 return nil;
             
             uuid_t *browserWindowID = [self windowID];
             
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             uuid_t *inodeID = [browserItemObject inodeID];
             
             if([tableColumn isEqual: filesOutlineViewNameColumn]) {
@@ -368,7 +371,7 @@
     
     if([outlineView isEqual: filesOutlineView]) {
         if([tableColumn isEqual: filesOutlineViewNameColumn]) {
-            if([item isKindOfClass: [BrowserItem class]]
+            if([item isKindOfClass: [WindowBrowserItem class]]
                && [cell isKindOfClass: [FileNameCell class]])
             {
                 void *applicationState = getApplicationState();
@@ -377,7 +380,8 @@
                 
                 uuid_t *browserWindowID = [self windowID];
                 
-                BrowserItem *browserItemObject = (BrowserItem *) item;
+                WindowBrowserItem *browserItemObject
+                    = (WindowBrowserItem *) item;
                 FileNameCell *fileNameCell = (FileNameCell *) cell;
                 
                 uuid_t *inodeID = [browserItemObject inodeID];
@@ -422,7 +426,7 @@
     
     if([outlineView isEqual: filesOutlineView]) {
         if([tableColumn isEqual: filesOutlineViewNameColumn]) {
-            if([item isKindOfClass: [BrowserItem class]] &&
+            if([item isKindOfClass: [WindowBrowserItem class]] &&
                [object isKindOfClass: [NSString class]])
             {
                 void *applicationState = getApplicationState();
@@ -431,7 +435,8 @@
                 
                 uuid_t *browserWindowID = [self windowID];
                 
-                BrowserItem *browserItemObject = (BrowserItem *) item;
+                WindowBrowserItem *browserItemObject
+                    = (WindowBrowserItem *) item;
                 NSString *newName = (NSString *) object;
                 
                 uuid_t *inodeID = [browserItemObject inodeID];
@@ -456,8 +461,8 @@
     id item = [[notification userInfo] objectForKey: @"NSObject"];
     
     if([outlineView isEqual: filesOutlineView]) {
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             if(!ignoreItemExpansionDueToNesting)
                 ignoreItemExpansionDueToNesting = item;
@@ -474,8 +479,8 @@
     id item = [[notification userInfo] objectForKey: @"NSObject"];
     
     if([outlineView isEqual: filesOutlineView]) {
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             if(!ignoreItemExpansionDueToNesting)
                 ignoreItemExpansionDueToNesting = item;
@@ -506,8 +511,8 @@
         
         uuid_t *browserWindowID = [self windowID];
         
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             uuid_t *inodeID = [browserItemObject inodeID];
             
@@ -544,8 +549,8 @@
         
         uuid_t *browserWindowID = [self windowID];
         
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             uuid_t *inodeID = [browserItemObject inodeID];
             
@@ -558,19 +563,19 @@
 }
 
 
-- (void) fixItemExpansionState: (BrowserItem *) item {
+- (void) fixItemExpansionState: (WindowBrowserItem *) item {
     if([self alreadyClosing])
         return;
     
     if(item) {
-        if([item isKindOfClass: [BrowserItem class]]) {
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
             void *applicationState = getApplicationState();
             if(!applicationState)
                 return;
             
             uuid_t *browserWindowID = [self windowID];
             
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             uuid_t *inodeID = [browserItemObject inodeID];
             
@@ -617,9 +622,9 @@
             return;
         
         id item = [filesOutlineView itemAtRow: row];
-        if(![item isKindOfClass: [BrowserItem class]])
+        if(![item isKindOfClass: [WindowBrowserItem class]])
             return;
-        BrowserItem *browserItemObject = (BrowserItem *) item;
+        WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
         
         uuid_t *inodeID = [browserItemObject inodeID];
         
@@ -657,7 +662,7 @@
             
             appendWord64(data, [items count]);
             
-            for(BrowserItem *item in items) {
+            for(WindowBrowserItem *item in items) {
                 [data appendBytes: [item inodeID] length: 16];
             }
             
@@ -692,8 +697,8 @@
         teBrowserWindowRoot(applicationState, browserWindowID, &rootInodeID);
         
         uuid_t inodeID;
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             uuid_t *result = [browserItemObject inodeID];
             copyUUID(&inodeID, result);
@@ -757,7 +762,7 @@
             dropChildIndex = resultChildIndex;
             break;
         }
-        BrowserItem *browserItem = nil;
+        WindowBrowserItem *browserItem = nil;
         if(!teUUIDEqual(&resultInodeID, &rootInodeID))
             browserItem = [self getBrowserItemWithInodeID: &resultInodeID];
         [filesOutlineView setDropItem: browserItem
@@ -791,8 +796,8 @@
         teBrowserWindowRoot(applicationState, browserWindowID, &rootInodeID);
         
         uuid_t inodeID;
-        if([item isKindOfClass: [BrowserItem class]]) {
-            BrowserItem *browserItemObject = (BrowserItem *) item;
+        if([item isKindOfClass: [WindowBrowserItem class]]) {
+            WindowBrowserItem *browserItemObject = (WindowBrowserItem *) item;
             
             uuid_t *result = [browserItemObject inodeID];
             copyUUID(&inodeID, result);

@@ -2,25 +2,7 @@
 <Workspace
    version = "1.0">
    <FileRef
-      location = "group:DocumentWindow.h">
-   </FileRef>
-   <FileRef
-      location = "group:DocumentWindow.m">
-   </FileRef>
-   <FileRef
-      location = "group:FileNameCellFieldEditor.h">
-   </FileRef>
-   <FileRef
-      location = "group:FileNameCellFieldEditor.m">
-   </FileRef>
-   <FileRef
-      location = "group:HasSelectedInodes.h">
-   </FileRef>
-   <FileRef
-      location = "group:Window.h">
-   </FileRef>
-   <FileRef
-      location = "group:Window.m">
+      location = "group:main.m">
    </FileRef>
    <FileRef
       location = "group:AppDelegate.h">
@@ -29,10 +11,37 @@
       location = "group:AppDelegate.m">
    </FileRef>
    <FileRef
-      location = "group:BrowserWindow.h">
+      location = "group:FileNameCell.h">
    </FileRef>
    <FileRef
-      location = "group:BrowserWindow.m">
+      location = "group:FileNameCell.m">
+   </FileRef>
+   <FileRef
+      location = "group:FileNameCellFieldEditor.h">
+   </FileRef>
+   <FileRef
+      location = "group:FileNameCellFieldEditor.m">
+   </FileRef>
+   <FileRef
+      location = "group:HasCurrentFolder.h">
+   </FileRef>
+   <FileRef
+      location = "group:HasSelectedInodes.h">
+   </FileRef>
+   <FileRef
+      location = "group:SizeConstraintParticipant.h">
+   </FileRef>
+   <FileRef
+      location = "group:TransparentHelperWindow.h">
+   </FileRef>
+   <FileRef
+      location = "group:TransparentHelperWindow.m">
+   </FileRef>
+   <FileRef
+      location = "group:TransparentHelperWindowView.h">
+   </FileRef>
+   <FileRef
+      location = "group:TransparentHelperWindowView.m">
    </FileRef>
    <FileRef
       location = "group:Utilities.h">
@@ -41,57 +50,18 @@
       location = "group:Utilities.m">
    </FileRef>
    <FileRef
-      location = "group:main.m">
+      location = "group:Window">
+   </FileRef>
+   <FileRef
+      location = "group:Window.h">
+   </FileRef>
+   <FileRef
+      location = "group:Window.m">
    </FileRef>
    <FileRef
       location = "group:Info.plist">
    </FileRef>
    <FileRef
-      location = "group:Resources/Application.icns">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/Project.icns">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/BadgeChanged.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/BadgeMoved.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/BadgeNew.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/File.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/FirstRunAttentionArrow.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/Folder.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/Te.png">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/MainMenu.xib">
-   </FileRef>
-   <FileRef
-      location = "group:FileNameCell.m">
-   </FileRef>
-   <FileRef
-      location = "group:FileNameCell.h">
-   </FileRef>
-   <FileRef
-      location = "group:HasCurrentFolder.h">
-   </FileRef>
-   <FileRef
-      location = "group:BrowserItem.m">
-   </FileRef>
-   <FileRef
-      location = "group:BrowserItem.h">
-   </FileRef>
-   <FileRef
-      location = "group:Resources/BrowserWindow.xib">
+      location = "group:Resources">
    </FileRef>
 </Workspace>

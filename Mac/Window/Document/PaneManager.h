@@ -1,35 +1,34 @@
 #import <Cocoa/Cocoa.h>
-#import "SizeConstraintParticipant.h"
 
 
 @class TransparentHelperWindow;
-@interface DocumentContentView : NSView <SizeConstraintParticipant>
+@interface WindowDocumentPaneManager : NSObject
 {
-    NSScroller *verticalScroller;
-    NSScroller *horizontalScroller;
+    NSMutableArray *panesInformation;
     NSTextStorage *textStorage;
     NSLayoutManager *layoutManager;
     NSTextContainer *textContainer;
-    NSTimer *scrollerHidingTimer;
 }
+@property (assign) NSMutableArray *panesInformation;
+@property (assign) NSTextStorage *textStorage;
+@property (assign) NSLayoutManager *layoutManager;
+@property (assign) NSTextContainer *textContainer;
 
 + (id) sharedManager;
 + (id) allocWithZone: (NSZone *) zone;
 - (id) copyWithZone: (NSZone *) zone;
-- (id) initWithFrame: (NSRect) frame;
-- (void) resizeSubviewsWithOldSize: (NSSize) oldBoundsSize;
+- (void) addPane: (uuid_t *) documentPaneID
+        toWindow: (NSWindow *) window
+       withFrame: (NSRect) frame;
 - (void) repackScrollbars;
-- (NSSize) minimumSize;
-- (NSSize) desiredSize;
-- (NSString *) caption;
-- (NSString *) sizeReport;
 - (BOOL) isFlipped;
-- (void) drawRect: (NSRect) dirtyRect;
+- (void) drawRect: (NSRect) dirtyRect
+         ofWindow: (NSWindow *) window;
 - (IBAction) scrollerActivated: (id) sender;
-- (void) showScrollers;
-- (void) hideScrollersAfterDelay;
+- (void) showScrollersForFrame: (NSUInteger) frameIndex;
+- (void) hideScrollersAfterDelayForFrame: (NSUInteger) frameIndex;
 - (void) hideScrollersAfterDelayTimerFired: (NSTimer *) timer;
-- (void) flashScrollers;
+- (void) flashScrollersForFrame: (NSUInteger) frameIndex;
 - (void) preferredScrollerStyleDidChange: (NSNotification *) notification;
 - (void) mouseDown: (NSEvent *) event;
 @end

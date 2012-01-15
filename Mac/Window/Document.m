@@ -1,13 +1,15 @@
-#import "DocumentWindow.h"
+#import "Window/Document.h"
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 #import "AppDelegate.h"
-#import "DocumentContentView.h"
-#import "DocumentSplitView.h"
+#import "Window/Document/View.h"
+#import "Window/Document/PaneManager.h"
+#import "Window/Document/HorizontalDividerManager.h"
+#import "Window/Document/VerticalDividerManager.h"
 #import "Utilities.h"
 
 
-@implementation DocumentWindow
+@implementation WindowDocument
 @synthesize adjustingSize;
 
 - (id) initWithWindowID: (uuid_t *) newWindowID {
@@ -20,7 +22,9 @@
                            | NSMiniaturizableWindowMask
                            | NSResizableWindowMask;
     
-    NSSize initialSize = [self defaultSize];
+    NSSize initialSize;
+    teDocumentWindowDefaultSize
+        (applicationState, &initialSize.width, &initialSize.height);
     
     NSRect visibleFrame = [[NSScreen mainScreen] visibleFrame];
     
@@ -45,18 +49,14 @@
         adjustingSize = NO;
         stillLoading = YES;
         
-        NSRect contentFrame = [[window contentView] bounds];
+        NSRect contentFrame = [[window contentView] frame];
         
-        documentSplitView
-            = [[DocumentSplitView alloc] initWithFrame: contentFrame];
-        [documentSplitView setAutoresizingMask:
-                            NSViewWidthSizable | NSViewHeightSizable];
-        [[window contentView] addSubview: documentSplitView];
+        documentView
+            = [[WindowDocumentView alloc] initWithFrame: contentFrame];
         
-        [documentSplitView newContentSubviewAtIndex: 0
-                           alongAxis: UncommittedSplitAxis];
+        [window setContentView: documentView];
         
-        [documentSplitView adjustSubviews];
+        teDocumentWindowAdjustPanes(applicationState, windowID);
         
         [self setConstraints];
         
@@ -80,48 +80,15 @@
 }
 
 
-- (NSSize) defaultSize {
-    CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
-    CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
-    
-    CGFloat dividerHeight
-        = [DocumentSplitView minimumDividerThicknessForAxis:
-                              VerticalSplitAxis];
-    CGFloat dividerWidth
-        = [DocumentSplitView minimumDividerThicknessForAxis:
-                              HorizontalSplitAxis];
-    CGFloat width
-        = dividerWidth
-          + [DocumentContentView leftMarginWidth]
-          + [DocumentContentView leftPaddingWidth]
-          + emWidth * 81.0
-          + [DocumentContentView rightPaddingWidth]
-          + [DocumentContentView rightMarginWidth];
-    CGFloat height = 50.0 * lineHeight
-                     + dividerHeight
-                     + [DocumentContentView bottomMarginWidth];
-    
-    NSSize visibleSize = [[NSScreen mainScreen] visibleFrame].size;
-    
-    NSInteger linesToRemove = 0;
-    if(height > visibleSize.height)
-        linesToRemove = ceil((height - visibleSize.height) / lineHeight);
-    height -= linesToRemove * lineHeight;
-    height = ceil(height);
-    
-    NSInteger columnsToRemove = 0;
-    if(width > visibleSize.width)
-        columnsToRemove = ceil((width - visibleSize.width) / emWidth);
-    width -= columnsToRemove * emWidth;
-    width = ceil(width);
-    
-    return NSMakeSize(width, height);
-}
-
-
 - (void) setConstraints {
+    void *applicationState = getApplicationState();
+    if(!applicationState)
+        return;
+    
     NSWindow *window = [self window];
-    NSSize minimumSize = [documentSplitView minimumSize];
+    NSSize minimumSize;
+    teDocumentWindowMinimumSize
+        (applicationState, windowID, &minimumSize.width, &minimumSize.height);
     CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
     emWidth = ceil(emWidth);
     CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
@@ -129,7 +96,6 @@
     
     [window setContentMinSize: minimumSize];
     [window setContentMaxSize: NSMakeSize(INFINITY, INFINITY)];
-    [window setContentResizeIncrements: NSMakeSize(emWidth, lineHeight)];
 }
 
 
@@ -160,7 +126,14 @@
 
 - (void) adjustSizePerContentConstraints {
     if(!adjustingSize && !stillLoading) {
-        NSSize desiredSize = [documentSplitView desiredSize];
+        void *applicationState = getApplicationState();
+        if(!applicationState)
+            return;
+        
+        NSSize desiredSize;
+        teDocumentWindowDesiredSize
+            (applicationState, windowID,
+             &desiredSize.width, &desiredSize.height);
         
         CGFloat emWidth = [(AppDelegate *) [NSApp delegate] emWidth];
         CGFloat lineHeight = [(AppDelegate *) [NSApp delegate] lineHeight];
@@ -188,30 +161,9 @@
 }
 
 
-- (void) showResizingTips {
-    if(!stillLoading) {
-        [documentSplitView showResizingTips];
-    }
-}
-
-
-- (void) hideResizingTips {
-    if(!stillLoading) {
-        [documentSplitView hideResizingTips];
-    }
-}
-
-
-- (void) updateResizingTips {
-    if(!stillLoading) {
-        [documentSplitView updateResizingTips];
-    }
-}
-
-
 - (void) windowWillStartLiveResize: (NSNotification *) notification {
     if(!stillLoading) {
-        [self showResizingTips];
+        [documentView setNeedsDisplay: YES];
         adjustingSize = YES;
     }
 }
@@ -219,7 +171,7 @@
 
 - (void) windowDidEndLiveResize: (NSNotification *) notification {
     if(!stillLoading) {
-        [self hideResizingTips];
+        [documentView setNeedsDisplay: YES];
         [self adjustSizePerContentConstraints];
         manuallyAdjustedSize = [[self window] frame].size;
     }
@@ -229,14 +181,14 @@
 
 - (void) windowDidBecomeMain: (NSNotification *) notification {
     if(!stillLoading) {
-        [documentSplitView setNeedsDisplay: YES];
+        [documentView setNeedsDisplay: YES];
     }
 }
 
 
 - (void) windowDidResignMain: (NSNotification *) notification {
     if(!stillLoading) {
-        [documentSplitView setNeedsDisplay: YES];
+        [documentView setNeedsDisplay: YES];
     }
 }
 
@@ -257,6 +209,7 @@
 
 
 - (void) mouseDown: (NSEvent *) event {
+    /*
     NSPoint location = [self convertPoint: [event locationInWindow]
                              fromView: nil];
         
@@ -321,9 +274,7 @@
         else
             optionDown = NO;
         
-        DocumentWindow *documentWindow = [self documentWindow];
-        if(documentWindow)
-            [documentWindow showResizingTips];
+        [documentView setNeedsDisplay: YES];
         
         if(isTerminalDivider || optionDown) {
             creatingNewDivider = YES;
@@ -343,10 +294,12 @@
             creatingNewDivider = NO;
         }
     }
+    */
 }
 
 
 - (void) mouseDragged: (NSEvent *) event {
+    /*
     if(!trackingDividerDrag)
         return;
     
@@ -576,9 +529,7 @@
             [subviewAfter setFrame: frameAfter];
         [dividerSubview setFrame: dividerFrame];
         
-        DocumentWindow *documentWindow = [self documentWindow];
-        if(documentWindow)
-            [documentWindow updateResizingTips];
+        [documentView setNeedsDisplay: YES];
         
         if(dividerAxisBeingTracked == HorizontalSplitAxis) {
             previousDragPoint.y = location.y;
@@ -708,7 +659,7 @@
                 createdBefore = YES;
                 creatingNewDivider = NO;
                 
-                [self adjustSubviews];
+                teDocumentWindowAdjustPanes(applicationState, windowID);
             }
         }
         
@@ -809,20 +760,20 @@
                 createdAfter = YES;
                 creatingNewDivider = NO;
                 
-                [self adjustSubviews];
+                teDocumentWindowAdjustPanes(applicationState, windowID);
             }
         }
     }
+    */
 }
 
 
 - (void) mouseUp: (NSEvent *) event {
+    /*
     if(!trackingDividerDrag)
         return;
     
-    DocumentWindow *documentWindow = [self documentWindow];
-    if(documentWindow)
-        [documentWindow hideResizingTips];
+    [documentView setNeedsDisplay: YES];
     
     if(ghostWindow) {
         [self cleanupGhostWindow];
@@ -853,6 +804,7 @@
         }
     }
     trackingDividerDrag = NO;
+    */
 }
 
 @end

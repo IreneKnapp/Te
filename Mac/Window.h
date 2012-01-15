@@ -1,7 +1,6 @@
 #import <Cocoa/Cocoa.h>
 #import "Utilities.h"
 
-@class BrowserItem;
 @interface Window : NSWindowController <NSWindowDelegate>
 {
     BOOL alreadyClosing;

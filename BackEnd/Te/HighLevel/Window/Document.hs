@@ -2,15 +2,24 @@ module Te.HighLevel.Window.Document
   (DocumentWindow,
    DocumentWindowID,
    documentWindowID,
+   getDocumentWindowDefaultSize,
+   getDocumentWindowMinimumSize,
+   getDocumentWindowDesiredSize,
+   documentWindowAdjustPanes,
    getDocumentWindowTitle,
-   getDocumentWindowTitleIcon)
+   getDocumentWindowTitleIcon,
+   documentWindowAdjustPanes)
   where
 
+import Control.Concurrent.MVar
 import Data.Array.Unboxed
 
 import Te.HighLevel.Window
+import Te.HighLevel.Window.Document.Pane
+import Te.HighLevel.Window.DocumentPrivate
 import Te.LowLevel.Database
 import Te.LowLevel.Exceptions
+import Te.LowLevel.FrontEndCallbacks
 import Te.LowLevel.Identifiers
 import Te.Types
 
@@ -22,6 +31,52 @@ instance Window DocumentWindow where
   getWindowTitleIcon = getDocumentWindowTitleIcon
   browserWindowDo _ default' _ = return default'
   documentWindowDo window _ action = action window
+
+
+getDocumentWindowDefaultSize :: MVar ApplicationState -> IO (Int, Int)
+getDocumentWindowDefaultSize applicationStateMVar = do
+  emWidth <- getEmWidth applicationStateMVar
+  lineHeight <- getLineHeight applicationStateMVar
+  leftMarginWidth <- getDefaultLeftMarginWidth applicationStateMVar
+  leftPaddingWidth <- getDefaultLeftPaddingWidth applicationStateMVar
+  rightPaddingWidth <- getDefaultRightPaddingWidth applicationStateMVar
+  rightMarginWidth <- getDefaultRightMarginWidth applicationStateMVar
+  bottomMarginWidth <- getDefaultBottomMarginWidth applicationStateMVar
+  (visibleWidth, visibleHeight) <- getVisibleSize applicationStateMVar
+  let dividerHeight = dividerThicknessForOrientation HorizontalOrientation
+      dividerWidth = dividerThicknessForOrientation VerticalOrientation
+      width = dividerWidth
+              + leftMarginWidth
+              + leftPaddingWidth
+              + (ceiling $ emWidth * 81.0)
+              + rightPaddingWidth
+              + rightMarginWidth
+      height = (ceiling $ 50.0 * lineHeight)
+               + dividerHeight
+               + bottomMarginWidth
+      linesToRemove =
+        if realToFrac height > visibleHeight
+          then ceiling $ (realToFrac height - visibleHeight) / lineHeight
+          else 0
+      heightAfterRemoving =
+        height - (floor $ realToFrac linesToRemove * lineHeight)
+      columnsToRemove =
+        if realToFrac width > visibleWidth
+          then ceiling $ (realToFrac width - visibleWidth) / emWidth
+          else 0
+      widthAfterRemoving =
+        width - (floor $ realToFrac columnsToRemove * emWidth)
+  return (widthAfterRemoving, heightAfterRemoving)
+
+
+getDocumentWindowMinimumSize :: DocumentWindow -> IO (Int, Int)
+getDocumentWindowMinimumSize documentWindow = do
+  getWindowSizeFromPaneSizes documentWindow getDocumentPaneMinimumSize
+
+
+getDocumentWindowDesiredSize :: DocumentWindow -> IO (Int, Int)
+getDocumentWindowDesiredSize documentWindow = do
+  getWindowSizeFromPaneSizes documentWindow getDocumentPaneDesiredSize
 
 
 getDocumentWindowTitle :: DocumentWindow -> IO String
@@ -48,21 +103,6 @@ getDocumentWindowTitleIcon documentWindow = do
       HaskellInodeType -> return "File"
 
 
-+ (NSUInteger) minimumLines {
-    return 5;
-}
-
-
-+ (NSUInteger) minimumColumns {
-    return 35;
-}
-
-
-+ (CGFloat) collapseLines {
-    return 1.5;
-}
-
-
-+ (CGFloat) collapseColumns {
-    return 17.5;
-}
+documentWindowAdjustPanes :: DocumentWindow -> IO ()
+documentWindowAdjustPanes documentWindow = do
+  return ()
