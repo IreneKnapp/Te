@@ -2,6 +2,7 @@
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 #import "AppDelegate.h"
+#import "Window/Document.h"
 
 static WindowDocumentHorizontalDividerManager *sharedManager = nil;
 
@@ -126,6 +127,59 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
 }
 
 
+- (void) drawRect: (NSRect) dirtyRect
+         ofWindow: (NSWindow *) window
+{
+    void *applicationState
+        = [(AppDelegate *) [NSApp delegate] applicationState];
+    if(!applicationState) return;
+    
+    NSWindowController *controller = [window windowController];
+    if([controller isKindOfClass: [WindowDocument class]]) {
+        WindowDocument *windowDocument = (WindowDocument *) controller;
+        
+        uuid_t *documentWindowID = [windowDocument windowID];
+        
+        void *horizontalDividers
+            = teDocumentWindowHorizontalDividers
+                (applicationState, documentWindowID);
+        if(!horizontalDividers) return;
+        
+        uint64_t count = teDocumentHorizontalDividersCount(horizontalDividers);
+        for(uint64_t i = 0; i < count; i++) {
+            uuid_t horizontalDividerID;
+            teDocumentHorizontalDividersItem
+                (horizontalDividers, i, &horizontalDividerID);
+            if(uuidIsNull(&horizontalDividerID)) continue;
+            
+            int64_t left, top, width, height;
+            teDocumentHorizontalDividerFrame
+                (applicationState,
+                 &horizontalDividerID,
+                 &left, &top, &width, &height);
+            
+            NSRect dividerFrame;
+            dividerFrame.origin.x = left;
+            dividerFrame.origin.y = top + height;
+            dividerFrame.size.width = width;
+            dividerFrame.size.height = height;
+            
+            BOOL isBottom = NO;
+            BOOL activeState= YES;
+            NSString *caption = @"above";
+            NSString *documentTitle = @"Below";
+            
+            [self drawInFrame: dividerFrame
+                  isBottom: isBottom
+                  activeState: activeState
+                  caption: caption
+                  documentTitle: documentTitle];
+        }
+    }
+    
+}
+
+
 - (void) drawGhost: (NSRect) frame {
     [self drawInFrame: frame
           isBottom: NO
@@ -142,10 +196,11 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
        documentTitle: (NSString *) documentTitle
 {
     NSRect topBorderRect = dividerFrame;
-    topBorderRect.origin.y += topBorderRect.size.height - 1.0;
+    topBorderRect.origin.y -= topBorderRect.size.height;
     topBorderRect.size.height = 1.0;
     
     NSRect bottomBorderRect = dividerFrame;
+    bottomBorderRect.origin.y -= 1.0;
     bottomBorderRect.size.height = 1.0;
     
     CGFloat leftX = dividerFrame.origin.x;
@@ -160,7 +215,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
     CGFloat upperControlPointX
         = (curveRightX - curveLeftX) * 0.25 + curveLeftX;
     
-    CGFloat topY = dividerFrame.origin.y + dividerFrame.size.height;
+    CGFloat topY = dividerFrame.origin.y - dividerFrame.size.height;
     CGFloat bottomY = dividerFrame.origin.y;
     
     NSBezierPath *topRegion = [NSBezierPath bezierPath];
@@ -189,12 +244,12 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
     [curvyBorder lineToPoint: NSMakePoint(rightX, topY)];
     
     if(activeState) {
-        [titleGradient drawInBezierPath: bottomRegion angle: -90.0];
+        [titleGradient drawInBezierPath: bottomRegion angle: 90.0];
     } else {
-        [inactiveTitleGradient drawInBezierPath: bottomRegion angle: -90.0];
+        [inactiveTitleGradient drawInBezierPath: bottomRegion angle: 90.0];
     }
     
-    [captionGradient drawInBezierPath: topRegion angle: -90.0];
+    [captionGradient drawInBezierPath: topRegion angle: 90.0];
     
     if(activeState) {
         [topBorderColor set];
@@ -208,6 +263,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
     } else {
         [inactiveCurvyBorderColor set];
     }
+    [curvyBorder setLineWidth: 0.5];
     [curvyBorder stroke];
     
     if(!isBottom) {
@@ -221,7 +277,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
     
     if(caption) {
         NSRect captionRect = dividerFrame;
-        captionRect.origin.y += baselineOffset;
+        captionRect.origin.y -= captionRect.size.height - baselineOffset;
         captionRect.size.height = captionLineHeight;
         captionRect.size.width = curveLeftX;
         captionRect.origin.x += captionInset;
@@ -249,7 +305,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
     
     if(!isBottom && documentTitle) {
         NSRect titleRect = dividerFrame;
-        titleRect.origin.y += baselineOffset;
+        titleRect.origin.y -= titleRect.size.height - baselineOffset;
         titleRect.size.height = titleLineHeight;
         
         CGFloat newWidth
@@ -261,7 +317,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
             titleRect.origin.x = curveRightX;
         
         NSRect titleUnderprintRect = titleRect;
-        titleUnderprintRect.origin.y -= 1.0;
+        titleUnderprintRect.origin.y += 1.0;
         
         [NSGraphicsContext saveGraphicsState];
         
@@ -289,7 +345,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
         indicatorFrame.origin.x += indicatorFrame.size.width - 1.0;
         indicatorFrame.size.width = 30.0;
         indicatorFrame.origin.x -= indicatorFrame.size.width;
-        indicatorFrame.origin.y += 2.0;
+        indicatorFrame.origin.y -= indicatorFrame.size.height - 2.0;
         indicatorFrame.size.height -= 4.0;
         [self drawVerticalResizeIndicatorInFrame: indicatorFrame
               activeState: activeState];

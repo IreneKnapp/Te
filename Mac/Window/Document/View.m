@@ -2,6 +2,7 @@
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 #import "AppDelegate.h"
+#import "Window/Document/HorizontalDividerManager.h"
 #import "Window/Document/PaneManager.h"
 
 
@@ -22,6 +23,10 @@
     WindowDocumentPaneManager *paneManager
         = [WindowDocumentPaneManager sharedManager];
     [paneManager drawRect: dirtyRect ofWindow: window];
+    
+    WindowDocumentHorizontalDividerManager *horizontalDividerManager
+        = [WindowDocumentHorizontalDividerManager sharedManager];
+    [horizontalDividerManager drawRect: dirtyRect ofWindow: window];
 }
 
 

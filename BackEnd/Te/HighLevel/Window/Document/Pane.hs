@@ -171,37 +171,3 @@ getDocumentPaneSizeReport documentPane = do
                    else 0
       sizeReport = (show nColumns) ++ " x " ++ (show nLines)
   return sizeReport
-
-
-getDocumentPaneCurrentSize :: DocumentPane -> IO (Int64, Int64)
-getDocumentPaneCurrentSize documentPane = do
-  let documentWindow = documentPaneWindow documentPane
-  rowHeights <- readMVar $ documentWindowRowHeights documentWindow
-  columnWidths <- readMVar $ documentWindowColumnWidths documentWindow
-  let individualDividerHeight =
-        dividerThicknessForOrientation HorizontalOrientation
-      individualDividerWidth =
-        dividerThicknessForOrientation VerticalOrientation
-      rowTop = documentPaneRowTop documentPane
-      rowSpan = documentPaneRowSpan documentPane
-      columnLeft = documentPaneColumnLeft documentPane
-      columnSpan = documentPaneColumnSpan documentPane
-      contentHeight =
-        foldl (\soFar rowIndex -> do
-                 if inRange (bounds rowHeights) rowIndex
-                   then soFar + (rowHeights ! rowIndex)
-                   else soFar)
-              0
-              [rowTop .. rowTop + (rowSpan - 1)]
-      contentWidth =
-        foldl (\soFar columnIndex -> do
-                 if inRange (bounds columnWidths) columnIndex
-                   then soFar + (columnWidths ! columnIndex)
-                   else soFar)
-              0
-              [columnLeft .. columnLeft + (columnSpan - 1)]
-      totalHeight =
-        contentHeight + (fromIntegral rowSpan - 1) * individualDividerHeight
-      totalWidth =
-        contentWidth + (fromIntegral columnSpan - 1) * individualDividerWidth
-  return (totalWidth, totalHeight)

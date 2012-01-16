@@ -8,7 +8,8 @@ module Te
    module Te.HighLevel.Window.Browser,
    module Te.HighLevel.Window.Browser.Item,
    module Te.HighLevel.Window.Document,
-   module Te.HighLevel.Window.Document.Pane)
+   module Te.HighLevel.Window.Document.Pane,
+   module Te.HighLevel.Window.Document.HorizontalDivider)
   where
 
 import Te.HighLevel.Application
@@ -21,3 +22,4 @@ import Te.HighLevel.Window.Browser
 import Te.HighLevel.Window.Browser.Item
 import Te.HighLevel.Window.Document
 import Te.HighLevel.Window.Document.Pane
+import Te.HighLevel.Window.Document.HorizontalDivider

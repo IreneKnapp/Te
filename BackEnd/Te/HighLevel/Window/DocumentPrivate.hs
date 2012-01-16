@@ -9,7 +9,11 @@ module Te.HighLevel.Window.DocumentPrivate
    getDefaultRightPaddingWidth,
    getDefaultLineNumberPaddingWidth,
    getDefaultLineNumberAreaWidth,
-   dividerThicknessForOrientation)
+   dividerThicknessForOrientation,
+   getDocumentWindowWidthToLeft,
+   getDocumentWindowHeightAbove,
+   getDocumentWindowWidthInRange,
+   getDocumentWindowHeightInRange)
   where
 
 import Control.Concurrent.MVar
@@ -160,18 +164,21 @@ getWindowSizeFromPaneSizes documentWindow getDocumentPaneRelevantSize = do
                             (computeBoundsForAxis fst)
                             (\columnIndex -> getPane rowIndex columnIndex)
                             fst
+                            False
       getHeightForColumn columnIndex = do
         getDimensionForAxis HorizontalOrientation
                             (computeBoundsForAxis snd)
                             (\rowIndex -> getPane rowIndex columnIndex)
                             snd
+                            True
       computeBoundsForAxis computeBoundForAxis =
         let (start, end) = bounds grid
         in (computeBoundForAxis start, computeBoundForAxis end)
       getDimensionForAxis dividerOrientation
                           (startIndex, endIndex)
                           getPaneForIndex
-                          computeDimension = do
+                          computeDimension
+                          finalItemHasDivider = do
         (dimension, _) <-
           foldM (\(soFar, maybePreviousPaneID) index -> do
                     maybePane <- getPaneForIndex index
@@ -186,8 +193,11 @@ getWindowSizeFromPaneSizes documentWindow getDocumentPaneRelevantSize = do
                                    case maybePreviousPaneID of
                                      Nothing -> 0
                                      Just _ ->
-                                       dividerThicknessForOrientation
-                                        dividerOrientation
+                                       if (index /= endIndex)
+                                          || finalItemHasDivider
+                                         then dividerThicknessForOrientation
+                                               dividerOrientation
+                                         else 0
                               return $ computeDimension dimensions
                                        + dividerThickness
                             Nothing -> return 0
@@ -252,3 +262,81 @@ getDefaultLineNumberAreaWidth applicationStateMVar = do
 dividerThicknessForOrientation :: DividerOrientation -> Int64
 dividerThicknessForOrientation HorizontalOrientation = 22
 dividerThicknessForOrientation VerticalOrientation = 1
+
+
+getDocumentWindowWidthToLeft :: DocumentWindow -> Int -> IO Int64
+getDocumentWindowWidthToLeft window columnIndex = do
+  columnWidths <- readMVar $ documentWindowColumnWidths window
+  let contentWidth =
+        foldl (\soFar indexHere ->
+                 let widthHere = columnWidths ! indexHere
+                 in soFar + widthHere)
+              0
+              [0 .. columnIndex - 1]
+      individualDividerWidth =
+        dividerThicknessForOrientation VerticalOrientation
+      dividerWidth =
+        case columnIndex of
+          0 -> 0
+          _ -> individualDividerWidth * (fromIntegral $ columnIndex - 1)
+      totalWidth = contentWidth + dividerWidth
+  return totalWidth
+
+
+getDocumentWindowHeightAbove :: DocumentWindow -> Int -> IO Int64
+getDocumentWindowHeightAbove window rowIndex = do
+  rowHeights <- readMVar $ documentWindowRowHeights window
+  let contentHeight =
+        foldl (\soFar indexHere ->
+                 let heightHere = rowHeights ! indexHere
+                 in soFar + heightHere)
+              0
+              [0 .. rowIndex - 1]
+      individualDividerHeight =
+        dividerThicknessForOrientation HorizontalOrientation
+      dividerHeight =
+        case rowIndex of
+          0 -> 0
+          _ -> individualDividerHeight * (fromIntegral $ rowIndex - 1)
+      totalHeight = contentHeight + dividerHeight
+  return totalHeight
+
+
+getDocumentWindowWidthInRange :: DocumentWindow -> Int -> Int -> IO Int64
+getDocumentWindowWidthInRange window columnLeft columnSpan = do
+  columnWidths <- readMVar $ documentWindowColumnWidths window
+  let contentWidth =
+        foldl (\soFar columnIndex -> do
+                 if inRange (bounds columnWidths) columnIndex
+                   then soFar + (columnWidths ! columnIndex)
+                   else soFar)
+              0
+              [columnLeft .. columnLeft + (columnSpan - 1)]
+      individualDividerWidth =
+        dividerThicknessForOrientation VerticalOrientation
+      dividerWidth =
+        case columnSpan of
+          0 -> 0
+          _ -> individualDividerWidth * (fromIntegral $ columnSpan - 1)
+      totalWidth = contentWidth + dividerWidth
+  return totalWidth
+
+
+getDocumentWindowHeightInRange :: DocumentWindow -> Int -> Int -> IO Int64
+getDocumentWindowHeightInRange window rowTop rowSpan = do
+  rowHeights <- readMVar $ documentWindowRowHeights window
+  let contentHeight =
+        foldl (\soFar rowIndex -> do
+                 if inRange (bounds rowHeights) rowIndex
+                   then soFar + (rowHeights ! rowIndex)
+                   else soFar)
+              0
+              [rowTop .. rowTop + (rowSpan - 1)]
+      individualDividerHeight =
+        dividerThicknessForOrientation HorizontalOrientation
+      dividerHeight =
+        case rowSpan of
+          0 -> 0
+          _ -> individualDividerHeight * (fromIntegral $ rowSpan - 1)
+      totalHeight = contentHeight + dividerHeight
+  return totalHeight

@@ -86,6 +86,7 @@ App Te
                  Te.HighLevel.Window.Document,
                  Te.HighLevel.Window.Document.Pane,
                  Te.HighLevel.Window.Document.PanePrivate,
+                 Te.HighLevel.Window.Document.HorizontalDivider,
                  Te.Types
   build-depends: array >= 0.3.0.3 && < 1,
                  base >= 4.1 && < 5,

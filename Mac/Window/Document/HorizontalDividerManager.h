@@ -53,6 +53,8 @@
 + (id) sharedManager;
 + (id) allocWithZone: (NSZone *) zone;
 - (id) copyWithZone: (NSZone *) zone;
+- (void) drawRect: (NSRect) dirtyRect
+         ofWindow: (NSWindow *) window;
 - (void) drawGhost: (NSRect) frame;
 - (void) drawInFrame: (NSRect) dividerFrame
             isBottom: (BOOL) isBottom

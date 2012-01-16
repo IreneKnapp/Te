@@ -6,12 +6,17 @@ module Te.HighLevel.Window.Document
    getDocumentWindowDesiredSize,
    getDocumentWindowTitle,
    getDocumentWindowTitleIcon,
-   documentWindowAdjustPanes)
+   documentWindowAdjustPanes,
+   getDocumentWindowPanes,
+   getDocumentWindowHorizontalDividers,
+   getDocumentWindowVerticalDividers)
   where
 
 import Control.Concurrent.MVar
 import Data.Array.Unboxed
 import Data.Int
+import Data.Map (Map)
+import qualified Data.Map as Map
 
 import Te.HighLevel.Window
 import Te.HighLevel.Window.Document.Pane
@@ -69,3 +74,26 @@ getDocumentWindowTitleIcon documentWindow = do
 documentWindowAdjustPanes :: DocumentWindow -> IO ()
 documentWindowAdjustPanes documentWindow = do
   return ()
+
+
+getDocumentWindowPanes
+  :: DocumentWindow -> IO [DocumentPane]
+getDocumentWindowPanes documentWindow = do
+  paneMap <- readMVar $ documentWindowPanes documentWindow
+  return $ Map.elems paneMap
+
+
+getDocumentWindowVerticalDividers
+  :: DocumentWindow -> IO [DocumentVerticalDivider]
+getDocumentWindowVerticalDividers documentWindow = do
+  verticalDividerMap <-
+    readMVar $ documentWindowVerticalDividers documentWindow
+  return $ Map.elems verticalDividerMap
+
+
+getDocumentWindowHorizontalDividers
+  :: DocumentWindow -> IO [DocumentHorizontalDivider]
+getDocumentWindowHorizontalDividers documentWindow = do
+  horizontalDividerMap <-
+    readMVar $ documentWindowHorizontalDividers documentWindow
+  return $ Map.elems horizontalDividerMap
