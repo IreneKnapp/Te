@@ -277,7 +277,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
     
     if(caption) {
         NSRect captionRect = dividerFrame;
-        captionRect.origin.y -= captionRect.size.height - baselineOffset;
+        captionRect.origin.y -= baselineOffset + captionLineHeight;
         captionRect.size.height = captionLineHeight;
         captionRect.size.width = curveLeftX;
         captionRect.origin.x += captionInset;
@@ -305,7 +305,7 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
     
     if(!isBottom && documentTitle) {
         NSRect titleRect = dividerFrame;
-        titleRect.origin.y -= titleRect.size.height - baselineOffset;
+        titleRect.origin.y -= baselineOffset + titleLineHeight;
         titleRect.size.height = titleLineHeight;
         
         CGFloat newWidth
