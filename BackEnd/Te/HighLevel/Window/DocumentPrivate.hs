@@ -1,5 +1,6 @@
 module Te.HighLevel.Window.DocumentPrivate
   (newDocumentWindow,
+   getDocumentWindowDefaultFrame,
    getWindowSizeFromPaneSizes,
    getDefaultLeftMarginWidth,
    getDefaultRightMarginWidth,
@@ -15,6 +16,7 @@ import Control.Concurrent.MVar
 import Control.Monad
 import Data.Array.Unboxed
 import Data.Function
+import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -34,8 +36,8 @@ newDocumentWindow project documentInode = do
     newDocumentPaneID' <- newDocumentPaneID
     bottomDividerID <- newDocumentHorizontalDividerID
     leftDividerID <- newDocumentVerticalDividerID
-    (windowWidth, windowHeight) <-
-      getDocumentWindowDefaultSize applicationStateMVar
+    contentRectangle@(_, (windowWidth, windowHeight)) <-
+      getDocumentWindowDefaultFrame applicationStateMVar
     paneMapMVar <- newEmptyMVar
     verticalDividersMapMVar <- newEmptyMVar
     horizontalDividersMapMVar <- newEmptyMVar
@@ -63,16 +65,6 @@ newDocumentWindow project documentInode = do
               documentHorizontalDividerPanesUp = [newDocumentPane'],
               documentHorizontalDividerPanesDown = []
             }
-        leftDivider =
-          DocumentVerticalDivider {
-              documentVerticalDividerID = leftDividerID,
-              documentVerticalDividerWindow = newDocumentWindow',
-              documentVerticalDividerRowTop = 0,
-              documentVerticalDividerRowSpan = 1,
-              documentVerticalDividerColumnRight = 0,
-              documentVerticalDividerPanesLeft = [],
-              documentVerticalDividerPanesRight = [newDocumentPane']
-            }
         newDocumentPane' =
           DocumentPane {
               documentPaneID = newDocumentPaneID',
@@ -83,19 +75,15 @@ newDocumentWindow project documentInode = do
               documentPaneColumnSpan = 1,
               documentPaneDividerUp = Nothing,
               documentPaneDividerDown = Just bottomDivider,
-              documentPaneDividerLeft = Just leftDivider,
+              documentPaneDividerLeft = Nothing,
               documentPaneDividerRight = Nothing
             }
-        paneMap =
-          Map.singleton newDocumentPaneID' newDocumentPane'
-        horizontalDividersMap =
-          Map.singleton bottomDividerID bottomDivider
-        verticalDividersMap =
-          Map.singleton leftDividerID leftDivider
+        paneMap = Map.singleton newDocumentPaneID' newDocumentPane'
+        horizontalDividersMap = Map.singleton bottomDividerID bottomDivider
+        verticalDividersMap = Map.empty
         grid = array ((0, 0), (0, 0))
                      [((0, 0), newDocumentPane')]
         paneWidth = windowWidth
-                    - dividerThicknessForOrientation VerticalOrientation
         paneHeight = windowHeight
                      - dividerThicknessForOrientation HorizontalOrientation
         columnWidths = array (0, 0) [(0, paneWidth)]
@@ -113,13 +101,44 @@ newDocumentWindow project documentInode = do
     putMVar (projectWindows project) windows'
     recordNewDocumentWindow newDocumentWindow' documentInode
     noteNewDocumentWindow newDocumentWindow'
+                          contentRectangle
     noteNewDocumentPane newDocumentWindow'
                         newDocumentPane'
                         ((0, 0), (paneWidth, paneHeight))
 
 
+getDocumentWindowDefaultFrame
+  :: MVar ApplicationState -> IO ((Int64, Int64), (Int64, Int64))
+getDocumentWindowDefaultFrame applicationStateMVar = do
+  emWidth <- getEmWidth applicationStateMVar
+  lineHeight <- getLineHeight applicationStateMVar
+  leftMarginWidth <- getDefaultLeftMarginWidth applicationStateMVar
+  leftPaddingWidth <- getDefaultLeftPaddingWidth applicationStateMVar
+  rightPaddingWidth <- getDefaultRightPaddingWidth applicationStateMVar
+  rightMarginWidth <- getDefaultRightMarginWidth applicationStateMVar
+  bottomMarginWidth <- getDefaultBottomMarginWidth applicationStateMVar
+  ((visibleLeft, visibleTop), (visibleWidth, visibleHeight)) <-
+    getVisibleFrame applicationStateMVar
+  let dividerHeight = dividerThicknessForOrientation HorizontalOrientation
+      idealWidth = leftMarginWidth
+                   + leftPaddingWidth
+                   + (ceiling $ emWidth * 81.0)
+                   + rightPaddingWidth
+                   + rightMarginWidth
+      idealHeight = (ceiling $ 50.0 * lineHeight)
+                    + dividerHeight
+                    + bottomMarginWidth
+      provisionalWidth = min visibleWidth idealWidth
+      provisionalHeight = min visibleHeight idealHeight
+      provisionalLeft = visibleLeft + div (visibleWidth - provisionalWidth) 2
+      provisionalTop = visibleTop
+  getDocumentContentFromFrame
+   applicationStateMVar
+   ((provisionalLeft, provisionalTop), (provisionalWidth, provisionalHeight))
+
+
 getWindowSizeFromPaneSizes
-  :: DocumentWindow -> (DocumentPane -> IO (Int, Int)) -> IO (Int, Int)
+  :: DocumentWindow -> (DocumentPane -> IO (Int64, Int64)) -> IO (Int64, Int64)
 getWindowSizeFromPaneSizes documentWindow getDocumentPaneRelevantSize = do
   grid <- readMVar $ documentWindowGrid documentWindow
   let getWidth = do
@@ -187,41 +206,41 @@ getWindowSizeFromPaneSizes documentWindow getDocumentPaneRelevantSize = do
   return (width, height)
 
 
-getDefaultLeftMarginWidth :: MVar ApplicationState -> IO Int
+getDefaultLeftMarginWidth :: MVar ApplicationState -> IO Int64
 getDefaultLeftMarginWidth applicationStateMVar = do
   lineNumberAreaWidth <- getDefaultLineNumberAreaWidth applicationStateMVar
   return $ lineNumberAreaWidth + 16
 
 
-getDefaultRightMarginWidth :: MVar ApplicationState -> IO Int
+getDefaultRightMarginWidth :: MVar ApplicationState -> IO Int64
 getDefaultRightMarginWidth applicationStateMVar = do
   scrollerWidth <- getScrollerWidth applicationStateMVar
   return $ ceiling scrollerWidth
 
 
-getDefaultBottomMarginWidth :: MVar ApplicationState -> IO Int
+getDefaultBottomMarginWidth :: MVar ApplicationState -> IO Int64
 getDefaultBottomMarginWidth applicationStateMVar = do
   scrollerWidth <- getScrollerWidth applicationStateMVar
   return $ ceiling scrollerWidth
 
 
-getDefaultLeftPaddingWidth :: MVar ApplicationState -> IO Int
+getDefaultLeftPaddingWidth :: MVar ApplicationState -> IO Int64
 getDefaultLeftPaddingWidth applicationStateMVar = do
   return 1
 
 
-getDefaultRightPaddingWidth :: MVar ApplicationState -> IO Int
+getDefaultRightPaddingWidth :: MVar ApplicationState -> IO Int64
 getDefaultRightPaddingWidth applicationStateMVar = do
   emWidth <- getEmWidth applicationStateMVar
   return $ floor $ emWidth / 2.0
 
 
-getDefaultLineNumberPaddingWidth :: MVar ApplicationState -> IO Int
+getDefaultLineNumberPaddingWidth :: MVar ApplicationState -> IO Int64
 getDefaultLineNumberPaddingWidth applicationStateMVar = do
   return 2
 
 
-getDefaultLineNumberAreaWidth :: MVar ApplicationState -> IO Int
+getDefaultLineNumberAreaWidth :: MVar ApplicationState -> IO Int64
 getDefaultLineNumberAreaWidth applicationStateMVar = do
   lineNumberPaddingWidth <-
     getDefaultLineNumberPaddingWidth applicationStateMVar
@@ -230,6 +249,6 @@ getDefaultLineNumberAreaWidth applicationStateMVar = do
            + (ceiling $ 4.0 * lineNumberEmWidth)
 
 
-dividerThicknessForOrientation :: DividerOrientation -> Int
+dividerThicknessForOrientation :: DividerOrientation -> Int64
 dividerThicknessForOrientation HorizontalOrientation = 22
 dividerThicknessForOrientation VerticalOrientation = 1

@@ -12,35 +12,26 @@
 @implementation WindowDocument
 @synthesize adjustingSize;
 
-- (id) initWithWindowID: (uuid_t *) newWindowID {
++ (NSUInteger) windowStyleMask {
+    return NSTitledWindowMask
+           | NSClosableWindowMask
+           | NSMiniaturizableWindowMask
+           | NSResizableWindowMask;
+}
+
+
+- (id) initWithWindowID: (uuid_t *) newWindowID
+       contentRectangle: (NSRect) contentRectangle
+{
     void *applicationState = getApplicationState();
     if(!applicationState)
         return nil;
     
-    NSUInteger styleMask = NSTitledWindowMask
-                           | NSClosableWindowMask
-                           | NSMiniaturizableWindowMask
-                           | NSResizableWindowMask;
-    
-    NSSize initialSize;
-    teDocumentWindowDefaultSize
-        (applicationState, &initialSize.width, &initialSize.height);
-    
-    NSRect visibleFrame = [[NSScreen mainScreen] visibleFrame];
-    
-    NSRect contentRect;
-    contentRect.size = initialSize;
-    contentRect.origin.x
-        = (visibleFrame.size.width - contentRect.size.width) / 2.0
-          + visibleFrame.origin.x;
-    contentRect.origin.y
-        = visibleFrame.size.height - (contentRect.size.height + 22.0)
-          + visibleFrame.origin.y;
-    
-    NSWindow *window = [[NSWindow alloc] initWithContentRect: contentRect
-                                         styleMask: styleMask
-                                         backing: NSBackingStoreBuffered
-                                         defer: YES];
+    NSWindow *window
+        = [[NSWindow alloc] initWithContentRect: contentRectangle
+                            styleMask: [WindowDocument windowStyleMask]
+                            backing: NSBackingStoreBuffered
+                            defer: YES];
     
     self = [super initWithWindowID: newWindowID window: window];
     if(self) {
@@ -62,8 +53,8 @@
         
         stillLoading = NO;
         
-        manuallyAdjustedSize = initialSize;
-        [self adjustSize: initialSize withAnimation: NO];
+        manuallyAdjustedSize = contentRectangle.size;
+        [self adjustSize: manuallyAdjustedSize withAnimation: NO];
         
         NSNotificationCenter *notificationCenter
             = [NSNotificationCenter defaultCenter];

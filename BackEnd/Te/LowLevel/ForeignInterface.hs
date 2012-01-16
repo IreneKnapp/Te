@@ -27,9 +27,9 @@ foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
 foreign import ccall "dynamic" mkDoubleCallback
     :: FunPtr (IO Double) -> IO Double
-foreign import ccall "dynamic" mkDoublePairCallback
-    :: FunPtr (Ptr Double -> Ptr Double -> IO ())
-    -> (Ptr Double -> Ptr Double -> IO ())
+foreign import ccall "dynamic" mkIntPtrQuadCallback
+    :: FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
+    -> (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
 foreign import ccall "dynamic" mkVoidStringStringCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
 foreign import ccall "dynamic" mkVoidWindowIDPtrCallback
@@ -39,9 +39,13 @@ foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrCallback
 foreign import ccall "dynamic" mkVoidBrowserWindowIDPtrInodeIDPtrCallback
     :: FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
     -> (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
-foreign import ccall "dynamic" mkVoidDocumentWindowIDPtrCallback
-    :: FunPtr (Ptr DocumentWindowID -> IO ())
-    -> (Ptr DocumentWindowID -> IO ())
+foreign import ccall "dynamic" mkVoidDocumentWindowIDPtrRectangleCallback
+    :: FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> IO ())
+    -> (Ptr DocumentWindowID
+        -> Int64 -> Int64 -> Int64 -> Int64
+        -> IO ())
 foreign import ccall "dynamic" mkIntConfirmationDialogCompletionHandlerCallback
     :: FunPtr (StablePtr ConfirmationDialog
                -> (FunPtr (Word64 -> IO ()))
@@ -53,11 +57,11 @@ foreign import ccall "dynamic"
     mkVoidDocumentWindowIDPtrDocumentPaneIDPtrRectangleCallback
     :: FunPtr (Ptr DocumentWindowID
                -> Ptr DocumentPaneID
-               -> Double -> Double -> Double -> Double
+               -> Int64 -> Int64 -> Int64 -> Int64
                -> IO ())
     -> (Ptr DocumentWindowID
         -> Ptr DocumentPaneID
-        -> Double -> Double -> Double -> Double
+        -> Int64 -> Int64 -> Int64 -> Int64
         -> IO ())
 
 
@@ -107,15 +111,18 @@ foreign export ccall "teApplicationInit"
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
-    -> FunPtr (Ptr Double -> Ptr Double -> IO ())
+    -> FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
+    -> FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
-    -> FunPtr (Ptr DocumentWindowID -> IO ())
+    -> FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> IO ())
     -> FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
-               -> Double -> Double -> Double -> Double
+               -> Int64 -> Int64 -> Int64 -> Int64
                -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit"
@@ -179,25 +186,19 @@ foreign export ccall "teBrowserItemSetExpanded"
     -> Ptr InodeID
     -> Word64
     -> IO ()
-foreign export ccall "teDocumentWindowDefaultSize"
-                     foreignDocumentWindowDefaultSize
-    :: StablePtr (MVar ApplicationState)
-    -> Ptr Double
-    -> Ptr Double
-    -> IO ()
 foreign export ccall "teDocumentWindowMinimumSize"
                      foreignDocumentWindowMinimumSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
-    -> Ptr Double
-    -> Ptr Double
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreign export ccall "teDocumentWindowDesiredSize"
                      foreignDocumentWindowDesiredSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
-    -> Ptr Double
-    -> Ptr Double
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreign export ccall "teDocumentWindowAdjustPanes"
                      foreignDocumentWindowAdjustPanes
@@ -208,50 +209,50 @@ foreign export ccall "teDocumentPaneLeftMarginWidth"
                      foreignDocumentPaneLeftMarginWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreign export ccall "teDocumentPaneRightMarginWidth"
                      foreignDocumentPaneRightMarginWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreign export ccall "teDocumentPaneBottomMarginWidth"
                      foreignDocumentPaneBottomMarginWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreign export ccall "teDocumentPaneLeftPaddingWidth"
                      foreignDocumentPaneLeftPaddingWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreign export ccall "teDocumentPaneRightPaddingWidth"
                      foreignDocumentPaneRightPaddingWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreign export ccall "teDocumentPaneLineNumberPaddingWidth"
                      foreignDocumentPaneLineNumberPaddingWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreign export ccall "teDocumentPaneLineNumberAreaWidth"
                      foreignDocumentPaneLineNumberAreaWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreign export ccall "teDocumentPaneMinimumSize"
                      foreignDocumentPaneMinimumSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> Ptr Int
-    -> Ptr Int
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreign export ccall "teDocumentPaneDesiredSize"
                      foreignDocumentPaneDesiredSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> Ptr Int
-    -> Ptr Int
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreign export ccall "teDocumentPaneCaption"
                      foreignDocumentPaneCaption
@@ -597,18 +598,50 @@ wrapDoubleCallback foreignCallback =
   in highLevelCallback
 
 
-wrapDoublePairCallback
-    :: FunPtr (Ptr Double -> Ptr Double -> IO ())
-    -> (IO (Double, Double))
-wrapDoublePairCallback foreignCallback =
-  let lowLevelCallback = mkDoublePairCallback foreignCallback
+wrapRectangleCallback
+    :: FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
+    -> (IO ((Int64, Int64), (Int64, Int64)))
+wrapRectangleCallback foreignCallback =
+  let lowLevelCallback = mkIntPtrQuadCallback foreignCallback
       highLevelCallback = do
-        alloca $ \aPtr -> do
-          alloca $ \bPtr -> do
-            lowLevelCallback aPtr bPtr
-            a <- peek aPtr
-            b <- peek bPtr
-            return (a, b)
+        alloca $ \leftPtr -> do
+          alloca $ \topPtr -> do
+            alloca $ \widthPtr -> do
+              alloca $ \heightPtr -> do
+                poke leftPtr 0
+                poke topPtr 0
+                poke widthPtr 0
+                poke heightPtr 0
+                lowLevelCallback leftPtr topPtr widthPtr heightPtr
+                left <- peek leftPtr
+                top <- peek topPtr
+                width <- peek widthPtr
+                height <- peek heightPtr
+                return ((left, top), (width, height))
+  in highLevelCallback
+
+
+wrapRectangleRectangleCallback
+    :: FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
+    -> (((Int64, Int64), (Int64, Int64))
+        -> IO ((Int64, Int64), (Int64, Int64)))
+wrapRectangleRectangleCallback foreignCallback =
+  let lowLevelCallback = mkIntPtrQuadCallback foreignCallback
+      highLevelCallback ((left, top), (width, height)) = do
+        alloca $ \leftPtr -> do
+          alloca $ \topPtr -> do
+            alloca $ \widthPtr -> do
+              alloca $ \heightPtr -> do
+                poke leftPtr left
+                poke topPtr top
+                poke widthPtr width
+                poke heightPtr height
+                lowLevelCallback leftPtr topPtr widthPtr heightPtr
+                left' <- peek leftPtr
+                top' <- peek topPtr
+                width' <- peek widthPtr
+                height' <- peek heightPtr
+                return ((left', top'), (width', height'))
   in highLevelCallback
 
 
@@ -685,25 +718,30 @@ wrapVoidConfirmationDialogCompletionHandlerCallback foreignCallback =
   in highLevelCallback
 
 
-wrapVoidDocumentWindowCallback
-    :: FunPtr (Ptr DocumentWindowID -> IO ())
-    -> (DocumentWindow -> IO ())
-wrapVoidDocumentWindowCallback foreignCallback =
-  let lowLevelCallback = mkVoidDocumentWindowIDPtrCallback foreignCallback
-      highLevelCallback documentWindow = do
+wrapVoidDocumentWindowRectangleCallback
+    :: FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> IO ())
+    -> (DocumentWindow
+        -> ((Int64, Int64), (Int64, Int64))
+        -> IO ())
+wrapVoidDocumentWindowRectangleCallback foreignCallback =
+  let lowLevelCallback =
+        mkVoidDocumentWindowIDPtrRectangleCallback foreignCallback
+      highLevelCallback documentWindow ((left, top), (width, height)) = do
         alloca (\documentWindowIDPtr -> do
                   poke documentWindowIDPtr $ documentWindowID documentWindow
-                  lowLevelCallback documentWindowIDPtr)
+                  lowLevelCallback documentWindowIDPtr left top width height)
   in highLevelCallback
 
 
 wrapVoidDocumentWindowDocumentPaneRectangleCallback
     :: FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
-               -> Double -> Double -> Double -> Double
+               -> Int64 -> Int64 -> Int64 -> Int64
                -> IO ())
     -> (DocumentWindow
         -> DocumentPane
-        -> ((Double, Double), (Double, Double))
+        -> ((Int64, Int64), (Int64, Int64))
         -> IO ())
 wrapVoidDocumentWindowDocumentPaneRectangleCallback foreignCallback =
   let lowLevelCallback =
@@ -732,15 +770,18 @@ foreignApplicationInit
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
     -> FunPtr (IO Double)
-    -> FunPtr (Ptr Double -> Ptr Double -> IO ())
+    -> FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
+    -> FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr WindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> IO ())
     -> FunPtr (Ptr BrowserWindowID -> Ptr InodeID -> IO ())
-    -> FunPtr (Ptr DocumentWindowID -> IO ())
+    -> FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> IO ())
     -> FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
-               -> Double -> Double -> Double -> Double
+               -> Int64 -> Int64 -> Int64 -> Int64
                -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreignApplicationInit foreignException
@@ -750,7 +791,8 @@ foreignApplicationInit foreignException
                        foreignGetLineHeight
                        foreignGetLineNumberEmWidth
                        foreignGetScrollerWidth
-                       foreignGetVisibleSize
+                       foreignGetVisibleFrame
+                       foreignGetDocumentContentFromFrame
                        foreignNoteDeletedWindow
                        foreignActivateWindow
                        foreignNoteNewBrowserWindow
@@ -772,8 +814,10 @@ foreignApplicationInit foreignException
         wrapDoubleCallback foreignGetLineNumberEmWidth
       callbackGetScrollerWidth =
         wrapDoubleCallback foreignGetScrollerWidth
-      callbackGetVisibleSize =
-        wrapDoublePairCallback foreignGetVisibleSize
+      callbackGetVisibleFrame =
+        wrapRectangleCallback foreignGetVisibleFrame
+      callbackGetDocumentContentFromFrame =
+        wrapRectangleRectangleCallback foreignGetDocumentContentFromFrame
       callbackNoteDeletedWindow =
         wrapVoidWindowCallback foreignNoteDeletedWindow
       callbackActivateWindow =
@@ -785,7 +829,7 @@ foreignApplicationInit foreignException
       callbackEditBrowserItemName =
         wrapVoidBrowserItemCallback foreignEditBrowserItemName
       callbackNoteNewDocumentWindow =
-        wrapVoidDocumentWindowCallback foreignNoteNewDocumentWindow
+        wrapVoidDocumentWindowRectangleCallback foreignNoteNewDocumentWindow
       callbackNoteNewDocumentPane =
         wrapVoidDocumentWindowDocumentPaneRectangleCallback
          foreignNoteNewDocumentPane
@@ -804,8 +848,10 @@ foreignApplicationInit foreignException
                         callbackGetLineNumberEmWidth,
                       frontEndCallbacksGetScrollerWidth =
                         callbackGetScrollerWidth,
-                      frontEndCallbacksGetVisibleSize =
-                        callbackGetVisibleSize,
+                      frontEndCallbacksGetVisibleFrame =
+                        callbackGetVisibleFrame,
+                      frontEndCallbacksGetDocumentContentFromFrame =
+                        callbackGetDocumentContentFromFrame,
                       frontEndCallbacksNoteDeletedWindow =
                         callbackNoteDeletedWindow,
                       frontEndCallbacksActivateWindow =
@@ -1176,26 +1222,11 @@ foreignBrowserItemSetExpanded applicationStateMVarStablePtr
       return ()
 
 
-foreignDocumentWindowDefaultSize
-    :: StablePtr (MVar ApplicationState)
-    -> Ptr Double
-    -> Ptr Double
-    -> IO ()
-foreignDocumentWindowDefaultSize applicationStateMVarStablePtr
-                                 widthPtr
-                                 heightPtr = do
-  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  (width, height) <- getDocumentWindowDefaultSize applicationStateMVar
-  poke widthPtr (realToFrac width)
-  poke heightPtr (realToFrac height)
-  return ()
-
-
 foreignDocumentWindowMinimumSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
-    -> Ptr Double
-    -> Ptr Double
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreignDocumentWindowMinimumSize applicationStateMVarStablePtr
                                  documentWindowIDPtr
@@ -1208,19 +1239,19 @@ foreignDocumentWindowMinimumSize applicationStateMVarStablePtr
   case maybeDocumentWindow of
     Just documentWindow -> do
       (width, height) <- getDocumentWindowMinimumSize documentWindow
-      poke widthPtr (realToFrac width)
-      poke heightPtr (realToFrac height)
+      poke widthPtr width
+      poke heightPtr height
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
-      poke widthPtr 0.0
-      poke heightPtr 0.0
+      poke widthPtr 0
+      poke heightPtr 0
 
 
 foreignDocumentWindowDesiredSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
-    -> Ptr Double
-    -> Ptr Double
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreignDocumentWindowDesiredSize applicationStateMVarStablePtr
                                  documentWindowIDPtr
@@ -1233,12 +1264,12 @@ foreignDocumentWindowDesiredSize applicationStateMVarStablePtr
   case maybeDocumentWindow of
     Just documentWindow -> do
       (width, height) <- getDocumentWindowDesiredSize documentWindow
-      poke widthPtr (realToFrac width)
-      poke heightPtr (realToFrac height)
+      poke widthPtr width
+      poke heightPtr height
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
-      poke widthPtr 0.0
-      poke heightPtr 0.0
+      poke widthPtr 0
+      poke heightPtr 0
 
 
 foreignDocumentWindowAdjustPanes
@@ -1262,7 +1293,7 @@ foreignDocumentWindowAdjustPanes applicationStateMVarStablePtr
 foreignDocumentPaneLeftMarginWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreignDocumentPaneLeftMarginWidth applicationStateMVarStablePtr
                                    documentPaneIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
@@ -1280,7 +1311,7 @@ foreignDocumentPaneLeftMarginWidth applicationStateMVarStablePtr
 foreignDocumentPaneRightMarginWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreignDocumentPaneRightMarginWidth applicationStateMVarStablePtr
                                     documentPaneIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
@@ -1298,7 +1329,7 @@ foreignDocumentPaneRightMarginWidth applicationStateMVarStablePtr
 foreignDocumentPaneBottomMarginWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreignDocumentPaneBottomMarginWidth applicationStateMVarStablePtr
                                      documentPaneIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
@@ -1316,7 +1347,7 @@ foreignDocumentPaneBottomMarginWidth applicationStateMVarStablePtr
 foreignDocumentPaneLeftPaddingWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreignDocumentPaneLeftPaddingWidth applicationStateMVarStablePtr
                                     documentPaneIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
@@ -1334,7 +1365,7 @@ foreignDocumentPaneLeftPaddingWidth applicationStateMVarStablePtr
 foreignDocumentPaneRightPaddingWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreignDocumentPaneRightPaddingWidth applicationStateMVarStablePtr
                                      documentPaneIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
@@ -1352,7 +1383,7 @@ foreignDocumentPaneRightPaddingWidth applicationStateMVarStablePtr
 foreignDocumentPaneLineNumberPaddingWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreignDocumentPaneLineNumberPaddingWidth applicationStateMVarStablePtr
                                           documentPaneIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
@@ -1370,7 +1401,7 @@ foreignDocumentPaneLineNumberPaddingWidth applicationStateMVarStablePtr
 foreignDocumentPaneLineNumberAreaWidth
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> IO Int
+    -> IO Int64
 foreignDocumentPaneLineNumberAreaWidth applicationStateMVarStablePtr
                                        documentPaneIDPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
@@ -1388,8 +1419,8 @@ foreignDocumentPaneLineNumberAreaWidth applicationStateMVarStablePtr
 foreignDocumentPaneMinimumSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> Ptr Int
-    -> Ptr Int
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreignDocumentPaneMinimumSize applicationStateMVarStablePtr
                                documentPaneIDPtr
@@ -1413,8 +1444,8 @@ foreignDocumentPaneMinimumSize applicationStateMVarStablePtr
 foreignDocumentPaneDesiredSize
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
-    -> Ptr Int
-    -> Ptr Int
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreignDocumentPaneDesiredSize applicationStateMVarStablePtr
                                documentPaneIDPtr

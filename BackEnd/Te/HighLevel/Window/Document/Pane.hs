@@ -14,6 +14,7 @@ module Te.HighLevel.Window.Document.Pane
 
 import Control.Concurrent.MVar
 import Data.Array.Unboxed
+import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
 
@@ -23,7 +24,7 @@ import Te.LowLevel.FrontEndCallbacks
 import Te.Types
 
 
-getDocumentPaneLeftMarginWidth :: DocumentPane -> IO Int
+getDocumentPaneLeftMarginWidth :: DocumentPane -> IO Int64
 getDocumentPaneLeftMarginWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -31,7 +32,7 @@ getDocumentPaneLeftMarginWidth documentPane = do
   getDefaultLeftMarginWidth applicationState
 
 
-getDocumentPaneRightMarginWidth :: DocumentPane -> IO Int
+getDocumentPaneRightMarginWidth :: DocumentPane -> IO Int64
 getDocumentPaneRightMarginWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -39,7 +40,7 @@ getDocumentPaneRightMarginWidth documentPane = do
   getDefaultRightMarginWidth applicationState
 
 
-getDocumentPaneBottomMarginWidth :: DocumentPane -> IO Int
+getDocumentPaneBottomMarginWidth :: DocumentPane -> IO Int64
 getDocumentPaneBottomMarginWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -47,7 +48,7 @@ getDocumentPaneBottomMarginWidth documentPane = do
   getDefaultBottomMarginWidth applicationState
 
 
-getDocumentPaneLeftPaddingWidth :: DocumentPane -> IO Int
+getDocumentPaneLeftPaddingWidth :: DocumentPane -> IO Int64
 getDocumentPaneLeftPaddingWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -55,7 +56,7 @@ getDocumentPaneLeftPaddingWidth documentPane = do
   getDefaultLeftPaddingWidth applicationState
 
 
-getDocumentPaneRightPaddingWidth :: DocumentPane -> IO Int
+getDocumentPaneRightPaddingWidth :: DocumentPane -> IO Int64
 getDocumentPaneRightPaddingWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -63,7 +64,7 @@ getDocumentPaneRightPaddingWidth documentPane = do
   getDefaultRightPaddingWidth applicationState
 
 
-getDocumentPaneLineNumberPaddingWidth :: DocumentPane -> IO Int
+getDocumentPaneLineNumberPaddingWidth :: DocumentPane -> IO Int64
 getDocumentPaneLineNumberPaddingWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -71,7 +72,7 @@ getDocumentPaneLineNumberPaddingWidth documentPane = do
   getDefaultLineNumberPaddingWidth applicationState
 
 
-getDocumentPaneLineNumberAreaWidth :: DocumentPane -> IO Int
+getDocumentPaneLineNumberAreaWidth :: DocumentPane -> IO Int64
 getDocumentPaneLineNumberAreaWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -79,7 +80,7 @@ getDocumentPaneLineNumberAreaWidth documentPane = do
   getDefaultLineNumberAreaWidth applicationState
 
 
-getDocumentPaneMinimumSize :: DocumentPane -> IO (Int, Int)
+getDocumentPaneMinimumSize :: DocumentPane -> IO (Int64, Int64)
 getDocumentPaneMinimumSize documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -101,7 +102,7 @@ getDocumentPaneMinimumSize documentPane = do
   return (width, height)
 
 
-getDocumentPaneDesiredSize :: DocumentPane -> IO (Int, Int)
+getDocumentPaneDesiredSize :: DocumentPane -> IO (Int64, Int64)
 getDocumentPaneDesiredSize documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -172,7 +173,7 @@ getDocumentPaneSizeReport documentPane = do
   return sizeReport
 
 
-getDocumentPaneCurrentSize :: DocumentPane -> IO (Int, Int)
+getDocumentPaneCurrentSize :: DocumentPane -> IO (Int64, Int64)
 getDocumentPaneCurrentSize documentPane = do
   let documentWindow = documentPaneWindow documentPane
   rowHeights <- readMVar $ documentWindowRowHeights documentWindow
@@ -199,6 +200,8 @@ getDocumentPaneCurrentSize documentPane = do
                    else soFar)
               0
               [columnLeft .. columnLeft + (columnSpan - 1)]
-      totalHeight = contentHeight + (rowSpan - 1) * individualDividerHeight
-      totalWidth = contentWidth + (columnSpan - 1) * individualDividerWidth
+      totalHeight =
+        contentHeight + (fromIntegral rowSpan - 1) * individualDividerHeight
+      totalWidth =
+        contentWidth + (fromIntegral columnSpan - 1) * individualDividerWidth
   return (totalWidth, totalHeight)

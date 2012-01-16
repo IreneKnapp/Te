@@ -100,7 +100,8 @@
                                          (HsFunPtr) getLineHeight,
                                          (HsFunPtr) getLineNumberEmWidth,
                                          (HsFunPtr) getScrollerWidth,
-                                         (HsFunPtr) getVisibleSize,
+                                         (HsFunPtr) getVisibleFrame,
+                                         (HsFunPtr) getDocumentContentFromFrame,
                                          (HsFunPtr) noteDeletedWindow,
                                          (HsFunPtr) activateWindow,
                                          (HsFunPtr) noteNewBrowserWindow,
@@ -505,10 +506,40 @@ double getScrollerWidth() {
 }
 
 
-void getVisibleSize(double *width, double *height) {
-    NSSize size = [[NSScreen mainScreen] visibleFrame].size;
-    *width = (double) size.width;
-    *height = (double) size.height;
+void getVisibleFrame
+    (int64_t *left, int64_t *top, int64_t *width, int64_t *height)
+{
+    NSRect screenFrame = [[NSScreen mainScreen] frame];
+    NSRect visibleFrame = [[NSScreen mainScreen] visibleFrame];
+    
+    *left = visibleFrame.origin.x - screenFrame.origin.x;
+    *top = (screenFrame.size.height + screenFrame.origin.y)
+           - (visibleFrame.origin.y + visibleFrame.size.height);
+    *width = visibleFrame.size.width;
+    *height = visibleFrame.size.height;
+}
+
+
+void getDocumentContentFromFrame
+    (int64_t *left, int64_t *top, int64_t *width, int64_t *height)
+{
+    NSRect screenFrame = [[NSScreen mainScreen] frame];
+    
+    NSRect frame;
+    frame.origin.x = *left + screenFrame.origin.x;
+    frame.origin.y = (screenFrame.size.height + screenFrame.origin.y) - *top;
+    frame.size.width = *width;
+    frame.size.height = *height;
+    
+    NSRect content
+        = [NSWindow contentRectForFrameRect: frame
+                    styleMask: [WindowDocument windowStyleMask]];
+    
+    *left = content.origin.x - screenFrame.origin.x;
+    *top = (screenFrame.size.height + screenFrame.origin.y)
+           - (content.origin.y + content.size.height);
+    *width = content.size.width;
+    *height = content.size.height;
 }
 
 
@@ -587,17 +618,35 @@ void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID) {
 }
 
 
-- (void) noteNewDocumentWindow: (uuid_t *) documentWindowID {
+- (void) noteNewDocumentWindow: (uuid_t *) documentWindowID
+              contentRectangle: (NSRect) contentRectangle
+{
     WindowDocument *windowDocumentObject
-        = [[WindowDocument alloc] initWithWindowID: documentWindowID];
+        = [[WindowDocument alloc]
+             initWithWindowID: documentWindowID
+             contentRectangle: contentRectangle];
     if(windowDocumentObject)
         [windows setObject: windowDocumentObject
                  forKey: (void *) documentWindowID];
 }
 
 
-void noteNewDocumentWindow(uuid_t *documentWindowID) {
-    [(AppDelegate *) [NSApp delegate] noteNewDocumentWindow: documentWindowID];
+void noteNewDocumentWindow
+    (uuid_t *documentWindowID,
+     int64_t left, int64_t top, int64_t width, int64_t height)
+{
+    NSRect screenFrame = [[NSScreen mainScreen] frame];
+    
+    NSRect contentRectangle;
+    contentRectangle.origin.x = left + screenFrame.origin.x;
+    contentRectangle.origin.y
+        = (screenFrame.size.height + screenFrame.origin.y) - top;
+    contentRectangle.size.width = width;
+    contentRectangle.size.height = height;
+    
+    [(AppDelegate *) [NSApp delegate]
+        noteNewDocumentWindow: documentWindowID
+        contentRectangle: contentRectangle];
 }
 
 
@@ -619,10 +668,10 @@ void noteNewDocumentWindow(uuid_t *documentWindowID) {
 
 void noteNewDocumentPane(uuid_t *documentWindowID,
                          uuid_t *documentPaneID,
-                         double left,
-                         double top,
-                         double width,
-                         double height)
+                         int64_t left,
+                         int64_t top,
+                         int64_t width,
+                         int64_t height)
 {
     NSRect frame;
     frame.origin.x = left;

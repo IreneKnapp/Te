@@ -23,6 +23,7 @@ module Te.Types
 
 import Control.Concurrent.MVar
 import Data.Array.Unboxed
+import Data.Int
 import Data.Map (Map)
 import Data.Set (Set)
 import Data.Word
@@ -52,17 +53,24 @@ data FrontEndCallbacks =
       frontEndCallbacksGetLineHeight :: IO Double,
       frontEndCallbacksGetLineNumberEmWidth :: IO Double,
       frontEndCallbacksGetScrollerWidth :: IO Double,
-      frontEndCallbacksGetVisibleSize :: IO (Double, Double),
+      frontEndCallbacksGetVisibleFrame
+        :: IO ((Int64, Int64), (Int64, Int64)),
+      frontEndCallbacksGetDocumentContentFromFrame
+        :: ((Int64, Int64), (Int64, Int64))
+        -> IO ((Int64, Int64), (Int64, Int64)),
       frontEndCallbacksNoteDeletedWindow :: AnyWindow -> IO (),
       frontEndCallbacksActivateWindow :: AnyWindow -> IO (),
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
       frontEndCallbacksNoteBrowserItemsChanged :: BrowserWindow -> IO (),
       frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO (),
-      frontEndCallbacksNoteNewDocumentWindow :: DocumentWindow -> IO (),
+      frontEndCallbacksNoteNewDocumentWindow
+        :: DocumentWindow
+        -> ((Int64, Int64), (Int64, Int64))
+        -> IO (),
       frontEndCallbacksNoteNewDocumentPane
         :: DocumentWindow
         -> DocumentPane
-        -> ((Double, Double), (Double, Double))
+        -> ((Int64, Int64), (Int64, Int64))
         -> IO ()
     }
 
@@ -161,8 +169,8 @@ data DocumentWindow =
       documentWindowHorizontalDividers
         :: MVar (Map DocumentHorizontalDividerID DocumentHorizontalDivider),
       documentWindowGrid :: MVar (Array (Int, Int) DocumentPane),
-      documentWindowColumnWidths :: MVar (UArray Int Int),
-      documentWindowRowHeights :: MVar (UArray Int Int)
+      documentWindowColumnWidths :: MVar (UArray Int Int64),
+      documentWindowRowHeights :: MVar (UArray Int Int64)
     }
 
 

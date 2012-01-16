@@ -75,7 +75,10 @@ double getEmWidth();
 double getLineHeight();
 double getLineNumberEmWidth();
 double getScrollerWidth();
-void getVisibleSize(double *width, double *height);
+void getVisibleFrame
+    (int64_t *left, int64_t *top, int64_t *width, int64_t *height);
+void getDocumentContentFromFrame
+    (int64_t *left, int64_t *top, int64_t *width, int64_t *height);
 - (void) noteDeletedWindow: (uuid_t *) windowID;
 void noteDeletedWindow(uuid_t *windowID);
 - (void) activateWindow: (uuid_t *) windowID;
@@ -87,16 +90,18 @@ void noteBrowserItemsChanged(uuid_t *browserWindowID);
 - (void) editBrowserItemNameInBrowserWindow: (uuid_t *) browserWindowID
                                       inode: (uuid_t *) inodeID;
 void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID);
-- (void) noteNewDocumentWindow: (uuid_t *) documentWindowID;
-void noteNewDocumentWindow(uuid_t *documentWindowID);
+- (void) noteNewDocumentWindow: (uuid_t *) documentWindowID
+              contentRectangle: (NSRect) contentRectangle;
+void noteNewDocumentWindow
+    (uuid_t *documentWindowID,
+     int64_t left, int64_t top, int64_t width, int64_t height);
 - (void) noteNewDocumentPane: (uuid_t *) documentPaneID
                     inWindow: (uuid_t *) documentWindowID
                    withFrame: (NSRect) frame;
 void noteNewDocumentPane(uuid_t *documentWindowID,
                          uuid_t *documentPaneID,
-                         double left,
-                         double top,
-                         double width,
-                         double height);
-
+                         int64_t left,
+                         int64_t top,
+                         int64_t width,
+                         int64_t height);
 @end

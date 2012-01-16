@@ -6,7 +6,8 @@ module Te.LowLevel.FrontEndCallbacks
    getLineHeight,
    getLineNumberEmWidth,
    getScrollerWidth,
-   getVisibleSize,
+   getVisibleFrame,
+   getDocumentContentFromFrame,
    noteNewBrowserWindow,
    noteDeletedWindow,
    activateWindow,
@@ -17,6 +18,7 @@ module Te.LowLevel.FrontEndCallbacks
   where
 
 import Control.Concurrent.MVar
+import Data.Int
 import Data.Word
 
 import {-# SOURCE #-} Te.LowLevel.Exceptions
@@ -85,12 +87,24 @@ getScrollerWidth applicationStateMVar = do
   callback
 
 
-getVisibleSize :: MVar ApplicationState -> IO (Double, Double)
-getVisibleSize applicationStateMVar = do
+getVisibleFrame
+  :: MVar ApplicationState -> IO ((Int64, Int64), (Int64, Int64))
+getVisibleFrame applicationStateMVar = do
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksGetVisibleSize callbacks
+      callback = frontEndCallbacksGetVisibleFrame callbacks
   callback
+
+
+getDocumentContentFromFrame
+  :: MVar ApplicationState
+  -> ((Int64, Int64), (Int64, Int64))
+  -> IO ((Int64, Int64), (Int64, Int64))
+getDocumentContentFromFrame applicationStateMVar frame = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGetDocumentContentFromFrame callbacks
+  callback frame
 
 
 noteNewBrowserWindow :: BrowserWindow -> IO ()
@@ -144,24 +158,28 @@ editBrowserItemName browserItem = do
   callback browserItem
 
 
-noteNewDocumentWindow :: DocumentWindow -> IO ()
-noteNewDocumentWindow documentWindow = do
+noteNewDocumentWindow
+  :: DocumentWindow
+  -> ((Int64, Int64), (Int64, Int64))
+  -> IO ()
+noteNewDocumentWindow documentWindow frame = do
   let project = documentWindowProject documentWindow
       applicationStateMVar = projectApplicationState project
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteNewDocumentWindow callbacks
-  callback documentWindow
+  callback documentWindow frame
 
 
 noteNewDocumentPane
-  :: DocumentWindow -> DocumentPane -> ((Int, Int), (Int, Int)) -> IO ()
-noteNewDocumentPane documentWindow documentPane ((x, y), (width, height)) = do
+  :: DocumentWindow
+  -> DocumentPane
+  -> ((Int64, Int64), (Int64, Int64))
+  -> IO ()
+noteNewDocumentPane documentWindow documentPane frame = do
   let project = documentWindowProject documentWindow
       applicationStateMVar = projectApplicationState project
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteNewDocumentPane callbacks
-  callback documentWindow
-           documentPane
-           ((realToFrac x, realToFrac y), (realToFrac width, realToFrac height))
+  callback documentWindow documentPane frame

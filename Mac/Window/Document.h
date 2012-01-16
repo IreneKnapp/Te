@@ -16,7 +16,9 @@
 }
 @property (assign) BOOL adjustingSize;
 
-- (id) initWithWindowID: (uuid_t *) newWindowID;
++ (NSUInteger) windowStyleMask;
+- (id) initWithWindowID: (uuid_t *) newWindowID
+       contentRectangle: (NSRect) contentRectangle;
 - (void) setConstraints;
 - (void) adjustSize: (NSSize) newSize withAnimation: (BOOL) withAnimation;
 - (void) adjustSizePerContentConstraints;
