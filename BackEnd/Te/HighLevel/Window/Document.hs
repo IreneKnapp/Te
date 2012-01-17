@@ -9,15 +9,19 @@ module Te.HighLevel.Window.Document
    documentWindowAdjustPanes,
    getDocumentWindowPanes,
    getDocumentWindowHorizontalDividers,
-   getDocumentWindowVerticalDividers)
+   getDocumentWindowVerticalDividers,
+   documentWindowMouseDown)
   where
 
 import Control.Concurrent.MVar
+import Control.Monad
 import Data.Array.Unboxed
 import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Data.Geometry
+import Te.HighLevel.ApplicationPrivate
 import Te.HighLevel.Window
 import Te.HighLevel.Window.Document.Pane
 import Te.HighLevel.Window.DocumentPrivate
@@ -37,12 +41,12 @@ instance Window DocumentWindow where
   documentWindowDo window _ action = action window
 
 
-getDocumentWindowMinimumSize :: DocumentWindow -> IO (Int64, Int64)
+getDocumentWindowMinimumSize :: DocumentWindow -> IO Size
 getDocumentWindowMinimumSize documentWindow = do
   getWindowSizeFromPaneSizes documentWindow getDocumentPaneMinimumSize
 
 
-getDocumentWindowDesiredSize :: DocumentWindow -> IO (Int64, Int64)
+getDocumentWindowDesiredSize :: DocumentWindow -> IO Size
 getDocumentWindowDesiredSize documentWindow = do
   getWindowSizeFromPaneSizes documentWindow getDocumentPaneDesiredSize
 
@@ -97,3 +101,50 @@ getDocumentWindowHorizontalDividers documentWindow = do
   horizontalDividerMap <-
     readMVar $ documentWindowHorizontalDividers documentWindow
   return $ Map.elems horizontalDividerMap
+
+
+documentWindowMouseDown
+  :: DocumentWindow -> Point -> Bool -> IO ()
+documentWindowMouseDown window location optionDown = do
+  horizontalDividerMap <- readMVar $ documentWindowHorizontalDividers window
+  verticalDividerMap <- readMVar $ documentWindowVerticalDividers window
+  maybeFoundDivider <-
+    foldM (\maybeResult found ->
+             case maybeResult of
+               Just _ -> return maybeResult
+               Nothing -> do
+                 frame <- getAnyDocumentDividerClickFrame window found
+                 if pointInRectangle location frame
+                   then return $ Just found
+                   else return Nothing)
+          Nothing
+          $ (map AnyDocumentHorizontalDivider $ Map.elems horizontalDividerMap)
+            ++ (map AnyDocumentVerticalDivider $ Map.elems verticalDividerMap)
+            ++ [FarTopVirtualDocumentHorizontalDivider,
+                FarLeftVirtualDocumentVerticalDivider,
+                FarRightVirtualDocumentVerticalDivider]
+  case maybeFoundDivider of
+    Nothing -> return ()
+    Just foundDivider -> do
+      isTerminalDivider <- getIsTerminalDivider window foundDivider
+      let creatingNewDivider = isTerminalDivider || optionDown
+      maybeGhostWindow <- if creatingNewDivider
+        then do
+          ghostFrame <- getGhostStartingFrame window foundDivider
+          case dividerOrientation foundDivider of
+            VerticalOrientation ->
+              noteNewVerticalGhostDivider window ghostFrame location
+            HorizontalOrientation ->
+              noteNewHorizontalGhostDivider window ghostFrame location
+        else return Nothing
+      let project = documentWindowProject window
+          applicationState = projectApplicationState project
+      putDragState applicationState
+                   DividerDragState {
+                       dragStatePreviousDragPoint = location,
+                       dragStateGhostWindow = maybeGhostWindow,
+                       dividerDragStateDivider = foundDivider,
+                       dividerDragStateCreatedBefore = False,
+                       dividerDragStateCreatedAfter = False,
+                       dividerDragStateCreatingNewDivider = creatingNewDivider
+                     }

@@ -2,6 +2,7 @@
 module Te.Types
   (ApplicationState(..),
    FrontEndCallbacks(..),
+   DragState(..),
    ConfirmationDialog(..),
    RecentProject(..),
    Project(..),
@@ -14,6 +15,7 @@ module Te.Types
    BrowserItem(..),
    DocumentWindow(..),
    DocumentPane(..),
+   AnyDocumentDivider(..),
    DocumentVerticalDivider(..),
    DocumentHorizontalDivider(..),
    DividerOrientation(..),
@@ -31,6 +33,7 @@ import Database.SQLite3 (Database)
 
 import Data.Bitfield
 import Data.ByteSize
+import Data.Geometry
 import Data.Timestamp
 import Te.LowLevel.Identifiers
 
@@ -39,7 +42,8 @@ data ApplicationState =
   ApplicationState {
       applicationStateRecentProjects :: [RecentProject],
       applicationStateProjects :: Map ProjectID Project,
-      applicationStateFrontEndCallbacks :: FrontEndCallbacks
+      applicationStateFrontEndCallbacks :: FrontEndCallbacks,
+      applicationStateDragState :: Maybe DragState
     }
 
 
@@ -53,11 +57,8 @@ data FrontEndCallbacks =
       frontEndCallbacksGetLineHeight :: IO Double,
       frontEndCallbacksGetLineNumberEmWidth :: IO Double,
       frontEndCallbacksGetScrollerWidth :: IO Double,
-      frontEndCallbacksGetVisibleFrame
-        :: IO ((Int64, Int64), (Int64, Int64)),
-      frontEndCallbacksGetDocumentContentFromFrame
-        :: ((Int64, Int64), (Int64, Int64))
-        -> IO ((Int64, Int64), (Int64, Int64)),
+      frontEndCallbacksGetVisibleFrame :: IO Rectangle,
+      frontEndCallbacksGetDocumentContentFromFrame :: Rectangle -> IO Rectangle,
       frontEndCallbacksNoteDeletedWindow :: AnyWindow -> IO (),
       frontEndCallbacksActivateWindow :: AnyWindow -> IO (),
       frontEndCallbacksNoteNewBrowserWindow :: BrowserWindow -> IO (),
@@ -65,13 +66,33 @@ data FrontEndCallbacks =
       frontEndCallbacksEditBrowserItemName :: BrowserItem -> IO (),
       frontEndCallbacksNoteNewDocumentWindow
         :: DocumentWindow
-        -> ((Int64, Int64), (Int64, Int64))
+        -> Rectangle
         -> IO (),
       frontEndCallbacksNoteNewDocumentPane
         :: DocumentWindow
         -> DocumentPane
-        -> ((Int64, Int64), (Int64, Int64))
+        -> Rectangle
         -> IO ()
+      frontEndCallbacksNoteNewHorizontalGhostDivider
+        :: DocumentWindow
+        -> Rectangle
+        -> Point
+        -> IO ()
+      frontEndCallbacksNoteNewVerticalGhostDivider
+        :: DocumentWindow
+        -> Rectangle
+        -> Point
+        -> IO ()
+    }
+
+
+data DragState =
+  DividerDragState {
+      dragStatePreviousDragPoint :: Point,
+      dividerDragStateDivider :: AnyDocumentDivider,
+      dividerDragStateCreatedBefore :: Bool,
+      dividerDragStateCreatedAfter :: Bool,
+      dividerDragStateCreatingNewDivider :: Bool
     }
 
 
@@ -163,14 +184,15 @@ data DocumentWindow =
   DocumentWindow {
       documentWindowID :: DocumentWindowID,
       documentWindowProject :: Project,
+      documentWindowContentSize :: MVar Size,
       documentWindowPanes :: MVar (Map DocumentPaneID DocumentPane),
       documentWindowVerticalDividers
         :: MVar (Map DocumentVerticalDividerID DocumentVerticalDivider),
       documentWindowHorizontalDividers
         :: MVar (Map DocumentHorizontalDividerID DocumentHorizontalDivider),
       documentWindowGrid :: MVar (Array (Int, Int) DocumentPane),
-      documentWindowColumnWidths :: MVar (UArray Int Int64),
-      documentWindowRowHeights :: MVar (UArray Int Int64)
+      documentWindowColumnWidths :: MVar (UArray Int Coordinate),
+      documentWindowRowHeights :: MVar (UArray Int Coordinate)
     }
 
 
@@ -178,26 +200,34 @@ data DocumentPane =
   DocumentPane {
       documentPaneID :: DocumentPaneID,
       documentPaneWindow :: DocumentWindow,
-      documentPaneRowTop :: Int,
-      documentPaneColumnLeft :: Int,
-      documentPaneRowSpan :: Int,
-      documentPaneColumnSpan :: Int,
-      documentPaneDividerUp :: Maybe DocumentHorizontalDivider,
-      documentPaneDividerDown :: Maybe DocumentHorizontalDivider,
-      documentPaneDividerLeft :: Maybe DocumentVerticalDivider,
-      documentPaneDividerRight :: Maybe DocumentVerticalDivider
+      documentPaneRowTop :: MVar Int,
+      documentPaneColumnLeft :: MVar Int,
+      documentPaneRowSpan :: MVar Int,
+      documentPaneColumnSpan :: MVar Int,
+      documentPaneDividerUp :: MVar (Maybe DocumentHorizontalDivider),
+      documentPaneDividerDown :: MVar (Maybe DocumentHorizontalDivider),
+      documentPaneDividerLeft :: MVar (Maybe DocumentVerticalDivider),
+      documentPaneDividerRight :: MVar (Maybe DocumentVerticalDivider)
     }
+
+
+data AnyDocumentDivider
+  = AnyDocumentVerticalDivider DocumentVerticalDivider
+  | AnyDocumentHorizontalDivider DocumentHorizontalDivider
+  | FarTopVirtualDocumentHorizontalDivider
+  | FarLeftVirtualDocumentVerticalDivider
+  | FarRightVirtualDocumentVerticalDivider
 
 
 data DocumentVerticalDivider =
   DocumentVerticalDivider {
       documentVerticalDividerID :: DocumentVerticalDividerID,
       documentVerticalDividerWindow :: DocumentWindow,
-      documentVerticalDividerRowTop :: Int,
-      documentVerticalDividerRowSpan :: Int,
-      documentVerticalDividerColumnRight :: Int,
-      documentVerticalDividerPanesLeft :: [DocumentPane],
-      documentVerticalDividerPanesRight :: [DocumentPane]
+      documentVerticalDividerRowTop :: MVar Int,
+      documentVerticalDividerRowSpan :: MVar Int,
+      documentVerticalDividerColumnRight :: MVar Int,
+      documentVerticalDividerPanesLeft :: MVar [DocumentPane],
+      documentVerticalDividerPanesRight :: MVar [DocumentPane]
     }
 
 
@@ -205,11 +235,11 @@ data DocumentHorizontalDivider =
   DocumentHorizontalDivider {
       documentHorizontalDividerID :: DocumentHorizontalDividerID,
       documentHorizontalDividerWindow :: DocumentWindow,
-      documentHorizontalDividerColumnLeft :: Int,
-      documentHorizontalDividerColumnSpan :: Int,
-      documentHorizontalDividerRowDown :: Int,
-      documentHorizontalDividerPanesUp :: [DocumentPane],
-      documentHorizontalDividerPanesDown :: [DocumentPane]
+      documentHorizontalDividerColumnLeft :: MVar Int,
+      documentHorizontalDividerColumnSpan :: MVar Int,
+      documentHorizontalDividerRowDown :: MVar Int,
+      documentHorizontalDividerPanesUp :: MVar [DocumentPane],
+      documentHorizontalDividerPanesDown :: MVar [DocumentPane]
     }
 
 

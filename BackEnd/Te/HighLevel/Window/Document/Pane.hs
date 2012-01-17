@@ -18,13 +18,14 @@ import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Data.Geometry
 import Te.HighLevel.Window.DocumentPrivate
 import Te.HighLevel.Window.Document.PanePrivate
 import Te.LowLevel.FrontEndCallbacks
 import Te.Types
 
 
-getDocumentPaneLeftMarginWidth :: DocumentPane -> IO Int64
+getDocumentPaneLeftMarginWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneLeftMarginWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -32,7 +33,7 @@ getDocumentPaneLeftMarginWidth documentPane = do
   getDefaultLeftMarginWidth applicationState
 
 
-getDocumentPaneRightMarginWidth :: DocumentPane -> IO Int64
+getDocumentPaneRightMarginWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneRightMarginWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -40,7 +41,7 @@ getDocumentPaneRightMarginWidth documentPane = do
   getDefaultRightMarginWidth applicationState
 
 
-getDocumentPaneBottomMarginWidth :: DocumentPane -> IO Int64
+getDocumentPaneBottomMarginWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneBottomMarginWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -48,7 +49,7 @@ getDocumentPaneBottomMarginWidth documentPane = do
   getDefaultBottomMarginWidth applicationState
 
 
-getDocumentPaneLeftPaddingWidth :: DocumentPane -> IO Int64
+getDocumentPaneLeftPaddingWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneLeftPaddingWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -56,7 +57,7 @@ getDocumentPaneLeftPaddingWidth documentPane = do
   getDefaultLeftPaddingWidth applicationState
 
 
-getDocumentPaneRightPaddingWidth :: DocumentPane -> IO Int64
+getDocumentPaneRightPaddingWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneRightPaddingWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -64,7 +65,7 @@ getDocumentPaneRightPaddingWidth documentPane = do
   getDefaultRightPaddingWidth applicationState
 
 
-getDocumentPaneLineNumberPaddingWidth :: DocumentPane -> IO Int64
+getDocumentPaneLineNumberPaddingWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneLineNumberPaddingWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -72,7 +73,7 @@ getDocumentPaneLineNumberPaddingWidth documentPane = do
   getDefaultLineNumberPaddingWidth applicationState
 
 
-getDocumentPaneLineNumberAreaWidth :: DocumentPane -> IO Int64
+getDocumentPaneLineNumberAreaWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneLineNumberAreaWidth documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -80,7 +81,7 @@ getDocumentPaneLineNumberAreaWidth documentPane = do
   getDefaultLineNumberAreaWidth applicationState
 
 
-getDocumentPaneMinimumSize :: DocumentPane -> IO (Int64, Int64)
+getDocumentPaneMinimumSize :: DocumentPane -> IO Size
 getDocumentPaneMinimumSize documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -102,7 +103,7 @@ getDocumentPaneMinimumSize documentPane = do
   return (width, height)
 
 
-getDocumentPaneDesiredSize :: DocumentPane -> IO (Int64, Int64)
+getDocumentPaneDesiredSize :: DocumentPane -> IO Size
 getDocumentPaneDesiredSize documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow

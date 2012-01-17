@@ -93,22 +93,25 @@
     hsArgv[0] = "Te";
     hs_init(&hsArgc, &hsArgv);
     
-    applicationState = teApplicationInit((HsFunPtr) exception,
-                                         (HsFunPtr) confirm,
-                                         (HsFunPtr) noteRecentProjectsChanged,
-                                         (HsFunPtr) getEmWidth,
-                                         (HsFunPtr) getLineHeight,
-                                         (HsFunPtr) getLineNumberEmWidth,
-                                         (HsFunPtr) getScrollerWidth,
-                                         (HsFunPtr) getVisibleFrame,
-                                         (HsFunPtr) getDocumentContentFromFrame,
-                                         (HsFunPtr) noteDeletedWindow,
-                                         (HsFunPtr) activateWindow,
-                                         (HsFunPtr) noteNewBrowserWindow,
-                                         (HsFunPtr) noteBrowserItemsChanged,
-                                         (HsFunPtr) editBrowserItemName,
-                                         (HsFunPtr) noteNewDocumentWindow,
-                                         (HsFunPtr) noteNewDocumentPane);
+    applicationState
+        = teApplicationInit((HsFunPtr) exception,
+                            (HsFunPtr) confirm,
+                            (HsFunPtr) noteRecentProjectsChanged,
+                            (HsFunPtr) getEmWidth,
+                            (HsFunPtr) getLineHeight,
+                            (HsFunPtr) getLineNumberEmWidth,
+                            (HsFunPtr) getScrollerWidth,
+                            (HsFunPtr) getVisibleFrame,
+                            (HsFunPtr) getDocumentContentFromFrame,
+                            (HsFunPtr) noteDeletedWindow,
+                            (HsFunPtr) activateWindow,
+                            (HsFunPtr) noteNewBrowserWindow,
+                            (HsFunPtr) noteBrowserItemsChanged,
+                            (HsFunPtr) editBrowserItemName,
+                            (HsFunPtr) noteNewDocumentWindow,
+                            (HsFunPtr) noteNewDocumentPane,
+                            (HsFunPtr) noteNewHorizontalGhostDivider,
+                            (HsFunPtr) noteNewVerticalGhostDivider);
     
     keyFunctions = nil;
     valueFunctions = nil;
@@ -682,6 +685,90 @@ void noteNewDocumentPane(uuid_t *documentWindowID,
     [(AppDelegate *) [NSApp delegate] noteNewDocumentPane: documentPaneID
                                       inWindow: documentWindowID
                                       withFrame: frame];
+}
+
+
+- (void) noteNewHorizontalGhostDividerInWindow: (uuid_t *) documentWindowID
+                                     withFrame: (NSRect) frame
+                                      location: (NSPoint) location
+{
+    // IAK
+    [self cleanupGhostWindow];
+    
+    NSView *dividerSubview;
+    if(dividerAxis == HorizontalSplitAxis)
+        dividerSubview
+            = [dividerSubviewsForHorizontalContent objectAtIndex: dividerIndex];
+    else if(dividerAxis == VerticalSplitAxis)
+        dividerSubview
+            = [dividerSubviewsForVerticalContent objectAtIndex: dividerIndex];
+    
+    NSRect dividerFrame
+        = [self convertRectToBase: [dividerSubview frame]];
+    
+    void (^drawHelper)(NSRect drawFrame) = nil;
+    if(dividerAxis == HorizontalSplitAxis) {
+        dividerFrame.size.width += [DocumentContentView leftMarginWidth];
+        drawHelper = ^(NSRect drawFrame)
+                     {
+                         [self drawGhostForHorizontalContent: drawFrame];
+                     };
+    } else if(dividerAxis == VerticalSplitAxis) {
+        drawHelper = ^(NSRect drawFrame)
+                     {
+                         [self drawGhostForVerticalContent: drawFrame];
+                     };
+    }
+    
+    ghostWindow
+        = [[TransparentHelperWindow alloc]
+            initWithContentRect: dividerFrame
+            drawHelper: drawHelper
+            aboveWindow: [self window]];
+    
+    [ghostWindow startTrackingMouse: [event locationInWindow]
+                 onAxes: trackingAxis];
+}
+
+
+void noteNewHorizontalGhostDivider(uuid_t *documentWindowID,
+                                   int64_t left,
+                                   int64_t top,
+                                   int64_t width,
+                                   int64_t height,
+                                   int64_t x,
+                                   int64_t y)
+{
+    // IAK
+}
+
+
+- (void) noteNewVerticalGhostDividerInWindow: (uuid_t *) documentWindowID
+                                   withFrame: (NSRect) frame
+                                    location: (NSPoint) location
+{
+    // IAK
+}
+
+
+void noteNewVerticalGhostDivider(uuid_t *documentWindowID,
+                                 int64_t left,
+                                 int64_t top,
+                                 int64_t width,
+                                 int64_t height,
+                                 int64_t x,
+                                 int64_t y)
+{
+    // IAK
+}
+
+
+- (void) cleanupGhostWindow {
+    // IAK
+    if(ghostWindow) {
+        [ghostWindow remove];
+        ghostWindow = nil;
+    }
 }
 
 @end

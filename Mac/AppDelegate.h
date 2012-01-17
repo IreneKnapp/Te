@@ -104,4 +104,25 @@ void noteNewDocumentPane(uuid_t *documentWindowID,
                          int64_t top,
                          int64_t width,
                          int64_t height);
+- (void) noteNewHorizontalGhostDividerInWindow: (uuid_t *) documentWindowID
+                                     withFrame: (NSRect) frame
+                                      location: (NSPoint) location;
+void noteNewHorizontalGhostDivider(uuid_t *documentWindowID,
+                                   int64_t left,
+                                   int64_t top,
+                                   int64_t width,
+                                   int64_t height,
+                                   int64_t x,
+                                   int64_t y);
+- (void) noteNewVerticalGhostDividerInWindow: (uuid_t *) documentWindowID
+                                   withFrame: (NSRect) frame
+                                    location: (NSPoint) location;
+void noteNewVerticalGhostDivider(uuid_t *documentWindowID,
+                                 int64_t left,
+                                 int64_t top,
+                                 int64_t width,
+                                 int64_t height,
+                                 int64_t x,
+                                 int64_t y);
+- (void) cleanupGhostWindow;
 @end

@@ -69,7 +69,8 @@ applicationInit callbacks = do
   let applicationState = ApplicationState {
                              applicationStateRecentProjects = [],
                              applicationStateProjects = Map.empty,
-                             applicationStateFrontEndCallbacks = callbacks
+                             applicationStateFrontEndCallbacks = callbacks,
+                             applicationStateDragState = Nothing
                            }
   newMVar applicationState
 

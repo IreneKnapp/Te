@@ -13,7 +13,10 @@ module Te.HighLevel.Window.DocumentPrivate
    getDocumentWindowWidthToLeft,
    getDocumentWindowHeightAbove,
    getDocumentWindowWidthInRange,
-   getDocumentWindowHeightInRange)
+   getDocumentWindowHeightInRange,
+   getAnyDocumentDividerClickFrame,
+   getIsTerminalDivider,
+   dividerOrientation)
   where
 
 import Control.Concurrent.MVar
@@ -24,7 +27,10 @@ import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
 
+import Data.Geometry
 import {-# SOURCE #-} Te.HighLevel.Window.Document
+import {-# SOURCE #-} Te.HighLevel.Window.Document.HorizontalDivider
+import {-# SOURCE #-} Te.HighLevel.Window.Document.VerticalDivider
 import Te.LowLevel.Database
 import Te.LowLevel.Exceptions
 import Te.LowLevel.FrontEndCallbacks
@@ -42,6 +48,20 @@ newDocumentWindow project documentInode = do
     leftDividerID <- newDocumentVerticalDividerID
     contentRectangle@(_, (windowWidth, windowHeight)) <-
       getDocumentWindowDefaultFrame applicationStateMVar
+    dividerColumnLeftMVar <- newEmptyMVar
+    dividerColumnSpanMVar <- newEmptyMVar
+    dividerRowDownMVar <- newEmptyMVar
+    dividerPanesUpMVar <- newEmptyMVar
+    dividerPanesDownMVar <- newEmptyMVar
+    rowTopMVar <- newEmptyMVar
+    columnLeftMVar <- newEmptyMVar
+    rowSpanMVar <- newEmptyMVar
+    columnSpanMVar <- newEmptyMVar
+    dividerUpMVar <- newEmptyMVar
+    dividerDownMVar <- newEmptyMVar
+    dividerLeftMVar <- newEmptyMVar
+    dividerRightMVar <- newEmptyMVar
+    contentSizeMVar <- newEmptyMVar
     paneMapMVar <- newEmptyMVar
     verticalDividersMapMVar <- newEmptyMVar
     horizontalDividersMapMVar <- newEmptyMVar
@@ -52,6 +72,7 @@ newDocumentWindow project documentInode = do
           DocumentWindow {
               documentWindowID = newDocumentWindowID',
               documentWindowProject = project,
+              documentWindowContentSize = contentSizeMVar,
               documentWindowPanes = paneMapMVar,
               documentWindowVerticalDividers = verticalDividersMapMVar,
               documentWindowHorizontalDividers = horizontalDividersMapMVar,
@@ -63,25 +84,26 @@ newDocumentWindow project documentInode = do
           DocumentHorizontalDivider {
               documentHorizontalDividerID = bottomDividerID,
               documentHorizontalDividerWindow = newDocumentWindow',
-              documentHorizontalDividerColumnLeft = 0,
-              documentHorizontalDividerColumnSpan = 1,
-              documentHorizontalDividerRowDown = 1,
-              documentHorizontalDividerPanesUp = [newDocumentPane'],
-              documentHorizontalDividerPanesDown = []
+              documentHorizontalDividerColumnLeft = dividerColumnLeftMVar,
+              documentHorizontalDividerColumnSpan = dividerColumnSpanMVar,
+              documentHorizontalDividerRowDown = dividerRowDownMVar,
+              documentHorizontalDividerPanesUp = dividerPanesUpMVar,
+              documentHorizontalDividerPanesDown = dividerPanesDownMVar
             }
         newDocumentPane' =
           DocumentPane {
               documentPaneID = newDocumentPaneID',
               documentPaneWindow = newDocumentWindow',
-              documentPaneRowTop = 0,
-              documentPaneColumnLeft = 0,
-              documentPaneRowSpan = 1,
-              documentPaneColumnSpan = 1,
-              documentPaneDividerUp = Nothing,
-              documentPaneDividerDown = Just bottomDivider,
-              documentPaneDividerLeft = Nothing,
-              documentPaneDividerRight = Nothing
+              documentPaneRowTop = rowTopMVar,
+              documentPaneColumnLeft = columnLeftMVar,
+              documentPaneRowSpan = rowSpanMVar,
+              documentPaneColumnSpan = columnSpanMVar,
+              documentPaneDividerUp = dividerUpMVar,
+              documentPaneDividerDown = dividerDownMVar,
+              documentPaneDividerLeft = dividerLeftMVar,
+              documentPaneDividerRight = dividerRightMVar
             }
+        contentSize = (windowWidth, windowHeight)
         paneMap = Map.singleton newDocumentPaneID' newDocumentPane'
         horizontalDividersMap = Map.singleton bottomDividerID bottomDivider
         verticalDividersMap = Map.empty
@@ -94,6 +116,20 @@ newDocumentWindow project documentInode = do
         rowHeights = array (0, 0) [(0, paneHeight)]
         newWindow = AnyWindow newDocumentWindow'
         newWindowID = windowID newWindow
+    putMVar dividerColumnLeftMVar 0
+    putMVar dividerColumnSpanMVar 1
+    putMVar dividerRowDownMVar 1
+    putMVar dividerPanesUpMVar [newDocumentPane']
+    putMVar dividerPanesDownMVar []
+    putMVar rowTopMVar 0
+    putMVar columnLeftMVar 0
+    putMVar rowSpanMVar 1
+    putMVar columnSpanMVar 1
+    putMVar dividerUpMVar Nothing
+    putMVar dividerDownMVar $ Just bottomDivider
+    putMVar dividerLeftMVar Nothing
+    putMVar dividerRightMVar Nothing
+    putMVar contentSizeMVar contentSize
     putMVar paneMapMVar paneMap
     putMVar horizontalDividersMapMVar horizontalDividersMap
     putMVar verticalDividersMapMVar verticalDividersMap
@@ -112,7 +148,7 @@ newDocumentWindow project documentInode = do
 
 
 getDocumentWindowDefaultFrame
-  :: MVar ApplicationState -> IO ((Int64, Int64), (Int64, Int64))
+  :: MVar ApplicationState -> IO Rectangle
 getDocumentWindowDefaultFrame applicationStateMVar = do
   emWidth <- getEmWidth applicationStateMVar
   lineHeight <- getLineHeight applicationStateMVar
@@ -142,7 +178,7 @@ getDocumentWindowDefaultFrame applicationStateMVar = do
 
 
 getWindowSizeFromPaneSizes
-  :: DocumentWindow -> (DocumentPane -> IO (Int64, Int64)) -> IO (Int64, Int64)
+  :: DocumentWindow -> (DocumentPane -> IO Size) -> IO Size
 getWindowSizeFromPaneSizes documentWindow getDocumentPaneRelevantSize = do
   grid <- readMVar $ documentWindowGrid documentWindow
   let getWidth = do
@@ -216,41 +252,41 @@ getWindowSizeFromPaneSizes documentWindow getDocumentPaneRelevantSize = do
   return (width, height)
 
 
-getDefaultLeftMarginWidth :: MVar ApplicationState -> IO Int64
+getDefaultLeftMarginWidth :: MVar ApplicationState -> IO Coordinate
 getDefaultLeftMarginWidth applicationStateMVar = do
   lineNumberAreaWidth <- getDefaultLineNumberAreaWidth applicationStateMVar
   return $ lineNumberAreaWidth + 16
 
 
-getDefaultRightMarginWidth :: MVar ApplicationState -> IO Int64
+getDefaultRightMarginWidth :: MVar ApplicationState -> IO Coordinate
 getDefaultRightMarginWidth applicationStateMVar = do
   scrollerWidth <- getScrollerWidth applicationStateMVar
   return $ ceiling scrollerWidth
 
 
-getDefaultBottomMarginWidth :: MVar ApplicationState -> IO Int64
+getDefaultBottomMarginWidth :: MVar ApplicationState -> IO Coordinate
 getDefaultBottomMarginWidth applicationStateMVar = do
   scrollerWidth <- getScrollerWidth applicationStateMVar
   return $ ceiling scrollerWidth
 
 
-getDefaultLeftPaddingWidth :: MVar ApplicationState -> IO Int64
+getDefaultLeftPaddingWidth :: MVar ApplicationState -> IO Coordinate
 getDefaultLeftPaddingWidth applicationStateMVar = do
   return 1
 
 
-getDefaultRightPaddingWidth :: MVar ApplicationState -> IO Int64
+getDefaultRightPaddingWidth :: MVar ApplicationState -> IO Coordinate
 getDefaultRightPaddingWidth applicationStateMVar = do
   emWidth <- getEmWidth applicationStateMVar
   return $ floor $ emWidth / 2.0
 
 
-getDefaultLineNumberPaddingWidth :: MVar ApplicationState -> IO Int64
+getDefaultLineNumberPaddingWidth :: MVar ApplicationState -> IO Coordinate
 getDefaultLineNumberPaddingWidth applicationStateMVar = do
   return 2
 
 
-getDefaultLineNumberAreaWidth :: MVar ApplicationState -> IO Int64
+getDefaultLineNumberAreaWidth :: MVar ApplicationState -> IO Coordinate
 getDefaultLineNumberAreaWidth applicationStateMVar = do
   lineNumberPaddingWidth <-
     getDefaultLineNumberPaddingWidth applicationStateMVar
@@ -259,12 +295,12 @@ getDefaultLineNumberAreaWidth applicationStateMVar = do
            + (ceiling $ 4.0 * lineNumberEmWidth)
 
 
-dividerThicknessForOrientation :: DividerOrientation -> Int64
+dividerThicknessForOrientation :: DividerOrientation -> Coordinate
 dividerThicknessForOrientation HorizontalOrientation = 22
 dividerThicknessForOrientation VerticalOrientation = 1
 
 
-getDocumentWindowWidthToLeft :: DocumentWindow -> Int -> IO Int64
+getDocumentWindowWidthToLeft :: DocumentWindow -> Int -> IO Coordinate
 getDocumentWindowWidthToLeft window columnIndex = do
   columnWidths <- readMVar $ documentWindowColumnWidths window
   let contentWidth =
@@ -283,7 +319,7 @@ getDocumentWindowWidthToLeft window columnIndex = do
   return totalWidth
 
 
-getDocumentWindowHeightAbove :: DocumentWindow -> Int -> IO Int64
+getDocumentWindowHeightAbove :: DocumentWindow -> Int -> IO Coordinate
 getDocumentWindowHeightAbove window rowIndex = do
   rowHeights <- readMVar $ documentWindowRowHeights window
   let contentHeight =
@@ -302,7 +338,7 @@ getDocumentWindowHeightAbove window rowIndex = do
   return totalHeight
 
 
-getDocumentWindowWidthInRange :: DocumentWindow -> Int -> Int -> IO Int64
+getDocumentWindowWidthInRange :: DocumentWindow -> Int -> Int -> IO Coordinate
 getDocumentWindowWidthInRange window columnLeft columnSpan = do
   columnWidths <- readMVar $ documentWindowColumnWidths window
   let contentWidth =
@@ -322,7 +358,7 @@ getDocumentWindowWidthInRange window columnLeft columnSpan = do
   return totalWidth
 
 
-getDocumentWindowHeightInRange :: DocumentWindow -> Int -> Int -> IO Int64
+getDocumentWindowHeightInRange :: DocumentWindow -> Int -> Int -> IO Coordinate
 getDocumentWindowHeightInRange window rowTop rowSpan = do
   rowHeights <- readMVar $ documentWindowRowHeights window
   let contentHeight =
@@ -340,3 +376,75 @@ getDocumentWindowHeightInRange window rowTop rowSpan = do
           _ -> individualDividerHeight * (fromIntegral $ rowSpan - 1)
       totalHeight = contentHeight + dividerHeight
   return totalHeight
+
+
+getAnyDocumentDividerClickFrame
+  :: DocumentWindow
+  -> AnyDocumentDivider
+  -> IO Rectangle
+getAnyDocumentDividerClickFrame window anyDivider = do
+  let project = documentWindowProject window
+      applicationState = projectApplicationState project
+  case anyDivider of
+    AnyDocumentVerticalDivider divider -> do
+      getDocumentVerticalDividerFrame divider
+    AnyDocumentHorizontalDivider divider -> do
+      getDocumentHorizontalDividerFrame divider
+    FarTopVirtualDocumentHorizontalDivider -> do
+      (contentWidth, _) <-
+        readMVar $ documentWindowContentSize window
+      lineHeight <- getLineHeight applicationState
+      let virtualHeight = floor lineHeight
+      return ((0, 0),
+              (contentWidth, virtualHeight))
+    FarLeftVirtualDocumentVerticalDivider -> do
+      (_, contentHeight) <-
+        readMVar $ documentWindowContentSize window
+      lineNumberAreaWidth <- getDefaultLineNumberAreaWidth applicationState
+      return ((0, 0),
+              (lineNumberAreaWidth, contentHeight))
+    FarRightVirtualDocumentVerticalDivider -> do
+      (contentWidth, contentHeight) <-
+        readMVar $ documentWindowContentSize window
+      emWidth <- getEmWidth applicationState
+      let virtualWidth = floor $ emWidth * 2.0
+      return ((contentWidth - virtualWidth, 0),
+              (virtualWidth, contentHeight))
+
+
+getIsTerminalDivider
+  :: DocumentWindow
+  -> AnyDocumentDivider
+  -> IO Bool
+getIsTerminalDivider window anyDivider = do
+  case anyDivider of
+    AnyDocumentVerticalDivider divider -> do
+      panesLeft <- readMVar $ documentVerticalDividerPanesLeft divider
+      panesRight <- readMVar $ documentVerticalDividerPanesRight divider
+      case (panesLeft, panesRight) of
+        ([], _) -> return True
+        (_, []) -> return True
+        _ -> return False
+    AnyDocumentHorizontalDivider divider -> do
+      panesUp <- readMVar $ documentHorizontalDividerPanesUp divider
+      panesDown <- readMVar $ documentHorizontalDividerPanesDown divider
+      case (panesUp, panesDown) of
+        ([], _) -> return True
+        (_, []) -> return True
+        _ -> return False
+    FarTopVirtualDocumentHorizontalDivider -> return True
+    FarLeftVirtualDocumentVerticalDivider -> return True
+    FarRightVirtualDocumentVerticalDivider -> return True
+
+
+dividerOrientation
+  :: AnyDocumenDivider
+  -> DividerOrientation
+dividerOrientation (AnyDocumentVerticalDivider _) = VerticalOrientation
+dividerOrientation (AnyDocumentHorizontalDivider _) = HorizontalOrientation
+dividerOrientation FarTopVirtualDocumentHorizontalDivider =
+  HorizontalOrientation
+dividerOrientation FarLeftVirtualDocumentVerticalDivider =
+  VerticalOrientation
+dividerOrientation FarRightVirtualDocumentVerticalDivider =
+  VerticalOrientation

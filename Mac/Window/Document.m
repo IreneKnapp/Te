@@ -200,91 +200,35 @@
 
 
 - (void) mouseDown: (NSEvent *) event {
+    void *applicationState = getApplicationState();
+    if(!applicationState) return;
+    
+    NSPoint location = [documentView convertPoint: [event locationInWindow]
+                                     fromView: nil];
+    
+    int64_t x = location.x;
+    int64_t y = location.y;
+    
+    BOOL optionDown;
+    if([event modifierFlags] & NSAlternateKeyMask)
+        optionDown = YES;
+    else
+        optionDown = NO;
+    
+    teDocumentWindowMouseDown(applicationState, &windowID, x, y, optionDown);
+    
     /*
-    NSPoint location = [self convertPoint: [event locationInWindow]
-                             fromView: nil];
-        
-    CGFloat lineNumberAreaWidth = [DocumentContentView lineNumberAreaWidth];
-    
-    BOOL found = NO;
-    NSUInteger foundIndex;
-    enum SplitAxis foundAxis;
-    
-    {
-        NSUInteger nDividersForHorizontalContent
-            = [dividerSubviewsForHorizontalContent count];
-        for(NSUInteger i = 0; i < nDividersForHorizontalContent; i++) {
-            NSView *dividerSubview 
-                = [dividerSubviewsForHorizontalContent objectAtIndex: i];
-            NSRect dividerFrame = [dividerSubview frame];
-            dividerFrame.size.width += lineNumberAreaWidth;
-            if(NSPointInRect(location, dividerFrame)) {
-                found = YES;
-                foundIndex = i;
-                foundAxis = HorizontalSplitAxis;
-                break;
-            }
-        }
+    enum MouseTrackingAxes trackingAxis;
+    if(foundAxis == HorizontalSplitAxis) {
+        trackingAxis = TrackMouseHorizontalAxis;
+    } else if(foundAxis == VerticalSplitAxis) {
+        trackingAxis = TrackMouseVerticalAxis;
     }
     
-    if(!found) {
-        NSUInteger nDividersForVerticalContent
-            = [dividerSubviewsForVerticalContent count];
-        for(NSUInteger i = 0; i < nDividersForVerticalContent; i++) {
-            NSView *dividerSubview
-                = [dividerSubviewsForVerticalContent objectAtIndex: i];
-            NSRect dividerFrame = [dividerSubview frame];
-            if(NSPointInRect(location, dividerFrame)) {
-                found = YES;
-                foundIndex = i;
-                foundAxis = VerticalSplitAxis;
-                break;
-            }
-        }
-    }
-    
-    if(found) {
-        trackingDividerDrag = YES;
-        dividerIndexBeingTracked = foundIndex;
-        dividerAxisBeingTracked = foundAxis;
-        previousDragPoint = location;
-        createdBefore = NO;
-        createdAfter = NO;
-        
-        BOOL isTerminalDivider;
-        if(foundAxis == HorizontalSplitAxis) {
-            isTerminalDivider = foundIndex == 0;
-        } else if(foundAxis == VerticalSplitAxis) {
-            NSUInteger nDividers = [dividerSubviewsForVerticalContent count];
-            isTerminalDivider = foundIndex + 1 == nDividers;
-        }
-        
-        BOOL optionDown;
-        if([event modifierFlags] & NSAlternateKeyMask)
-            optionDown = YES;
-        else
-            optionDown = NO;
-        
-        [documentView setNeedsDisplay: YES];
-        
-        if(isTerminalDivider || optionDown) {
-            creatingNewDivider = YES;
-            
-            enum MouseTrackingAxes trackingAxis;
-            if(foundAxis == HorizontalSplitAxis) {
-                trackingAxis = TrackMouseHorizontalAxis;
-            } else if(foundAxis == VerticalSplitAxis) {
-                trackingAxis = TrackMouseVerticalAxis;
-            }
-            
-            [self createGhostWindowWithDividerAt: foundIndex
-                                            axis: foundAxis];
-            [ghostWindow startTrackingMouse: [event locationInWindow]
-                         onAxes: trackingAxis];
-        } else {
-            creatingNewDivider = NO;
-        }
-    }
+    [self createGhostWindowWithDividerAt: foundIndex
+                                    axis: foundAxis];
+    [ghostWindow startTrackingMouse: [event locationInWindow]
+                 onAxes: trackingAxis];
     */
 }
 

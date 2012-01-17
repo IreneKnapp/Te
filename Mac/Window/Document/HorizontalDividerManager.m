@@ -145,10 +145,11 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
                 (applicationState, documentWindowID);
         if(!horizontalDividers) return;
         
-        uint64_t count = teDocumentHorizontalDividersCount(horizontalDividers);
+        uint64_t count
+            = teDocumentHorizontalDividerListCount(horizontalDividers);
         for(uint64_t i = 0; i < count; i++) {
             uuid_t horizontalDividerID;
-            teDocumentHorizontalDividersItem
+            teDocumentHorizontalDividerListItem
                 (horizontalDividers, i, &horizontalDividerID);
             if(uuidIsNull(&horizontalDividerID)) continue;
             
@@ -175,6 +176,8 @@ static WindowDocumentHorizontalDividerManager *sharedManager = nil;
                   caption: caption
                   documentTitle: documentTitle];
         }
+        
+        teDocumentHorizontalDividerListFree(horizontalDividers);
     }
     
 }

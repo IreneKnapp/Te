@@ -3,6 +3,10 @@
 #import "HasCurrentFolder.h"
 #import "Utilities.h"
 
+enum DividerOrientation {
+    HorizontalOrientation,
+    VerticalOrientation,
+};
 
 @class WindowDocumentView;
 @interface WindowDocument : Window

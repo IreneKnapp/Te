@@ -7,7 +7,8 @@ module Te.HighLevel.ApplicationPrivate
    computeNextNumberedName,
    getNextUntitledProjectName,
    computeNameForFilePath,
-   newBrowserWindow)
+   newBrowserWindow,
+   putDragState)
   where
 
 import Control.Concurrent.MVar
@@ -182,3 +183,13 @@ newBrowserWindow project maybeRootInode = do
                    Nothing -> lookupProjectRoot project
     recordNewBrowserWindow newBrowserWindow' rootInode
     noteNewBrowserWindow newBrowserWindow'
+
+
+putDragState :: MVar ApplicationState -> DragState -> IO ()
+putDragState applicationStateMVar dragState = do
+  applicationState <- takeMVar applicationStateMVar
+  let applicationState' =
+        applicationState {
+            applicationStateDragState = Just dragState
+          }
+  putMVar applicationStateMVar applicationState'

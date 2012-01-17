@@ -14,13 +14,16 @@ module Te.LowLevel.FrontEndCallbacks
    noteBrowserItemsChanged,
    editBrowserItemName,
    noteNewDocumentWindow,
-   noteNewDocumentPane)
+   noteNewDocumentPane,
+   noteNewHorizontalGhostDivider,
+   noteNewVerticalGhostDivider)
   where
 
 import Control.Concurrent.MVar
 import Data.Int
 import Data.Word
 
+import Data.Geometry
 import {-# SOURCE #-} Te.LowLevel.Exceptions
 import Te.Types
 
@@ -88,7 +91,7 @@ getScrollerWidth applicationStateMVar = do
 
 
 getVisibleFrame
-  :: MVar ApplicationState -> IO ((Int64, Int64), (Int64, Int64))
+  :: MVar ApplicationState -> IO Rectangle
 getVisibleFrame applicationStateMVar = do
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
@@ -98,8 +101,8 @@ getVisibleFrame applicationStateMVar = do
 
 getDocumentContentFromFrame
   :: MVar ApplicationState
-  -> ((Int64, Int64), (Int64, Int64))
-  -> IO ((Int64, Int64), (Int64, Int64))
+  -> Rectangle
+  -> IO Rectangle
 getDocumentContentFromFrame applicationStateMVar frame = do
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
@@ -160,7 +163,7 @@ editBrowserItemName browserItem = do
 
 noteNewDocumentWindow
   :: DocumentWindow
-  -> ((Int64, Int64), (Int64, Int64))
+  -> Rectangle
   -> IO ()
 noteNewDocumentWindow documentWindow frame = do
   let project = documentWindowProject documentWindow
@@ -174,7 +177,7 @@ noteNewDocumentWindow documentWindow frame = do
 noteNewDocumentPane
   :: DocumentWindow
   -> DocumentPane
-  -> ((Int64, Int64), (Int64, Int64))
+  -> Rectangle
   -> IO ()
 noteNewDocumentPane documentWindow documentPane frame = do
   let project = documentWindowProject documentWindow
@@ -183,3 +186,31 @@ noteNewDocumentPane documentWindow documentPane frame = do
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksNoteNewDocumentPane callbacks
   callback documentWindow documentPane frame
+
+
+noteNewHorizontalGhostDivider
+  :: DocumentWindow
+  -> Rectangle
+  -> Point
+  -> IO ()
+noteNewHorizontalGhostDivider documentWindow frame location = do
+  let project = documentWindowProject documentWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksNoteNewHorizontalGhostDivider callbacks
+  callback documentWindow frame location
+
+
+noteNewVerticalGhostDivider
+  :: DocumentWindow
+  -> Rectangle
+  -> Point
+  -> IO ()
+noteNewVerticalGhostDivider documentWindow frame location = do
+  let project = documentWindowProject documentWindow
+      applicationStateMVar = projectApplicationState project
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksNoteNewVerticalGhostDivider callbacks
+  callback documentWindow frame location

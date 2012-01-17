@@ -16,6 +16,7 @@ import Control.Concurrent.MVar
 import Data.Array.Unboxed
 import Data.Int
 
+import Data.Geometry
 import Te.HighLevel.Window.DocumentPrivate
 import Te.Types
 
@@ -37,7 +38,7 @@ collapseColumns = 17.5
 
 
 getDocumentPaneCurrentFrame
-  :: DocumentPane -> IO ((Int64, Int64), (Int64, Int64))
+  :: DocumentPane -> IO Rectangle
 getDocumentPaneCurrentFrame documentPane = do
   origin <- getDocumentPaneCurrentOrigin documentPane
   size <- getDocumentPaneCurrentSize documentPane
@@ -45,7 +46,7 @@ getDocumentPaneCurrentFrame documentPane = do
 
 
 getDocumentPaneCurrentOrigin
-  :: DocumentPane -> IO (Int64, Int64)
+  :: DocumentPane -> IO Point
 getDocumentPaneCurrentOrigin documentPane = do
   left <- getDocumentPaneCurrentLeft documentPane
   top <- getDocumentPaneCurrentTop documentPane
@@ -53,39 +54,39 @@ getDocumentPaneCurrentOrigin documentPane = do
 
 
 getDocumentPaneCurrentLeft
-  :: DocumentPane -> IO Int64
+  :: DocumentPane -> IO Coordinate
 getDocumentPaneCurrentLeft documentPane = do
   let window = documentPaneWindow documentPane
-      columnLeft = documentPaneColumnLeft documentPane
+  columnLeft <- readMVar $ documentPaneColumnLeft documentPane
   getDocumentWindowWidthToLeft window columnLeft
 
 
 getDocumentPaneCurrentTop
-  :: DocumentPane -> IO Int64
+  :: DocumentPane -> IO Coordinate
 getDocumentPaneCurrentTop documentPane = do
   let window = documentPaneWindow documentPane
-      rowTop = documentPaneRowTop documentPane
+  rowTop <- readMVar $ documentPaneRowTop documentPane
   getDocumentWindowHeightAbove window rowTop
 
 
-getDocumentPaneCurrentSize :: DocumentPane -> IO (Int64, Int64)
+getDocumentPaneCurrentSize :: DocumentPane -> IO Size
 getDocumentPaneCurrentSize documentPane = do
   width <- getDocumentPaneCurrentWidth documentPane
   height <- getDocumentPaneCurrentHeight documentPane
   return (width, height)
 
 
-getDocumentPaneCurrentWidth :: DocumentPane -> IO Int64
+getDocumentPaneCurrentWidth :: DocumentPane -> IO Coordinate
 getDocumentPaneCurrentWidth documentPane = do
   let window = documentPaneWindow documentPane
-      columnLeft = documentPaneColumnLeft documentPane
-      columnSpan = documentPaneColumnSpan documentPane
+  columnLeft <- readMVar $ documentPaneColumnLeft documentPane
+  columnSpan <- readMVar $ documentPaneColumnSpan documentPane
   getDocumentWindowWidthInRange window columnLeft columnSpan
 
 
-getDocumentPaneCurrentHeight :: DocumentPane -> IO Int64
+getDocumentPaneCurrentHeight :: DocumentPane -> IO Coordinate
 getDocumentPaneCurrentHeight documentPane = do
   let window = documentPaneWindow documentPane
-      rowTop = documentPaneRowTop documentPane
-      rowSpan = documentPaneRowSpan documentPane
+  rowTop <- readMVar $ documentPaneRowTop documentPane
+  rowSpan <- readMVar $ documentPaneRowSpan documentPane
   getDocumentWindowHeightInRange window rowTop rowSpan

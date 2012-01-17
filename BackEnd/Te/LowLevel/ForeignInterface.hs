@@ -63,6 +63,16 @@ foreign import ccall "dynamic"
         -> Ptr DocumentPaneID
         -> Int64 -> Int64 -> Int64 -> Int64
         -> IO ())
+foreign import ccall "dynamic"
+    mkVoidDocumentWindowIDPtrRectanglePointCallback
+    :: FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> Int64 -> Int64
+               -> IO ())
+    -> (Ptr DocumentWindowID
+        -> Int64 -> Int64 -> Int64 -> Int64
+        -> Int64 -> Int64
+        -> IO ())
 
 
 foreign import ccall "wrapper" wrapCompletionHandler
@@ -123,6 +133,14 @@ foreign export ccall "teApplicationInit"
                -> IO ())
     -> FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
                -> Int64 -> Int64 -> Int64 -> Int64
+               -> IO ())
+    -> FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> Int64 -> Int64
+               -> IO ())
+    -> FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> Int64 -> Int64
                -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit"
@@ -210,46 +228,24 @@ foreign export ccall "teDocumentWindowPanes"
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
     -> IO (StablePtr [DocumentPane])
-foreign export ccall "teDocumentPanesCount"
-                     foreignDocumentPanesCount
-    :: StablePtr [DocumentPane]
-    -> IO Word64
-foreign export ccall "teDocumentPanesItem"
-                     foreignDocumentPanesItem
-    :: StablePtr [DocumentPane]
-    -> Word64
-    -> Ptr DocumentPaneID
-    -> IO ()
 foreign export ccall "teDocumentWindowHorizontalDividers"
                      foreignDocumentWindowHorizontalDividers
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
     -> IO (StablePtr [DocumentHorizontalDivider])
-foreign export ccall "teDocumentHorizontalDividersCount"
-                     foreignDocumentHorizontalDividersCount
-    :: StablePtr [DocumentHorizontalDivider]
-    -> IO Word64
-foreign export ccall "teDocumentHorizontalDividersItem"
-                     foreignDocumentHorizontalDividersItem
-    :: StablePtr [DocumentHorizontalDivider]
-    -> Word64
-    -> Ptr DocumentHorizontalDividerID
-    -> IO ()
 foreign export ccall "teDocumentWindowVerticalDividers"
                      foreignDocumentWindowVerticalDividers
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
     -> IO (StablePtr [DocumentVerticalDivider])
-foreign export ccall "teDocumentVerticalDividersCount"
-                     foreignDocumentVerticalDividersCount
-    :: StablePtr [DocumentVerticalDivider]
-    -> IO Word64
-foreign export ccall "teDocumentVerticalDividersItem"
-                     foreignDocumentVerticalDividersItem
-    :: StablePtr [DocumentVerticalDivider]
-    -> Word64
-    -> Ptr DocumentVerticalDividerID
-    -> IO ()
+foreign export ccall "teDocumentWindowMouseDown"
+                     foreignDocumentWindowMouseDown
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> Int64
+  -> Int64
+  -> Word64
+  -> IO ()
 foreign export ccall "teDocumentPaneLeftMarginWidth"
                      foreignDocumentPaneLeftMarginWidth
     :: StablePtr (MVar ApplicationState)
@@ -309,6 +305,20 @@ foreign export ccall "teDocumentPaneSizeReport"
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentPaneID
     -> IO CString
+foreign export ccall "teDocumentPaneListFree"
+                     foreignDocumentPaneListFree
+    :: StablePtr [DocumentPane]
+    -> IO ()
+foreign export ccall "teDocumentPaneListCount"
+                     foreignDocumentPaneListCount
+    :: StablePtr [DocumentPane]
+    -> IO Word64
+foreign export ccall "teDocumentPaneListItem"
+                     foreignDocumentPaneListItem
+    :: StablePtr [DocumentPane]
+    -> Word64
+    -> Ptr DocumentPaneID
+    -> IO ()
 foreign export ccall "teDocumentHorizontalDividerFrame"
                      foreignDocumentHorizontalDividerFrame
     :: StablePtr (MVar ApplicationState)
@@ -317,6 +327,34 @@ foreign export ccall "teDocumentHorizontalDividerFrame"
     -> Ptr Int64
     -> Ptr Int64
     -> Ptr Int64
+    -> IO ()
+foreign export ccall "teDocumentHorizontalDividerListFree"
+                     foreignDocumentHorizontalDividerListFree
+    :: StablePtr [DocumentHorizontalDivider]
+    -> IO ()
+foreign export ccall "teDocumentHorizontalDividerListCount"
+                     foreignDocumentHorizontalDividerListCount
+    :: StablePtr [DocumentHorizontalDivider]
+    -> IO Word64
+foreign export ccall "teDocumentHorizontalDividerListItem"
+                     foreignDocumentHorizontalDividerListItem
+    :: StablePtr [DocumentHorizontalDivider]
+    -> Word64
+    -> Ptr DocumentHorizontalDividerID
+    -> IO ()
+foreign export ccall "teDocumentVerticalDividerListFree"
+                     foreignDocumentVerticalDividerListFree
+    :: StablePtr [DocumentVerticalDivider]
+    -> IO ()
+foreign export ccall "teDocumentVerticalDividerListCount"
+                     foreignDocumentVerticalDividerListCount
+    :: StablePtr [DocumentVerticalDivider]
+    -> IO Word64
+foreign export ccall "teDocumentVerticalDividerListItem"
+                     foreignDocumentVerticalDividerListItem
+    :: StablePtr [DocumentVerticalDivider]
+    -> Word64
+    -> Ptr DocumentVerticalDividerID
     -> IO ()
 foreign export ccall "teInodeParent"
                      foreignInodeParent
@@ -814,6 +852,29 @@ wrapVoidDocumentWindowDocumentPaneRectangleCallback foreignCallback =
   in highLevelCallback
 
 
+wrapVoidDocumentWindowRectanglePointCallback
+    :: FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> Int64 -> Int64
+               -> IO ())
+    -> (DocumentWindow
+        -> ((Int64, Int64), (Int64, Int64)),
+        -> (Int64, Int64)
+        -> IO ())
+wrapVoidDocumentWindowRectanglePointCallback foreignCallback =
+  let lowLevelCallback =
+        mkVoidDocumentWindowIDPtrRectanglePointCallback
+         foreignCallback
+      highLevelCallback
+          documentWindow ((left, top), (width, height)) (x, y) = do
+        alloca $ \documentWindowIDPtr -> do
+          poke documentWindowIDPtr $ documentWindowID documentWindow
+          lowLevelCallback documentWindowIDPtr
+                           left top width height
+                           x y
+  in highLevelCallback
+
+
 foreignApplicationInit
     :: FunPtr (CString -> CString -> IO ())
     -> FunPtr (StablePtr ConfirmationDialog
@@ -837,6 +898,14 @@ foreignApplicationInit
     -> FunPtr (Ptr DocumentWindowID -> Ptr DocumentPaneID
                -> Int64 -> Int64 -> Int64 -> Int64
                -> IO ())
+    -> FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> Int64 -> Int64
+               -> IO ())
+    -> FunPtr (Ptr DocumentWindowID
+               -> Int64 -> Int64 -> Int64 -> Int64
+               -> Int64 -> Int64
+               -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreignApplicationInit foreignException
                        foreignConfirm
@@ -853,7 +922,9 @@ foreignApplicationInit foreignException
                        foreignNoteBrowserItemsChanged
                        foreignEditBrowserItemName
                        foreignNoteNewDocumentWindow
-                       foreignNoteNewDocumentPane = do
+                       foreignNoteNewDocumentPane
+                       foreignNoteNewHorizontalGhostDivider
+                       foreignNoteNewVerticalGhostDivider = do
   let callbackException =
         wrapVoidStringStringCallback foreignException
       callbackConfirm =
@@ -887,6 +958,12 @@ foreignApplicationInit foreignException
       callbackNoteNewDocumentPane =
         wrapVoidDocumentWindowDocumentPaneRectangleCallback
          foreignNoteNewDocumentPane
+      callbackNoteNewHorizontalGhostDivider =
+        wrapVoidDocumentWindowRectanglePointCallback
+         foreignNoteNewHorizontalGhostDivider
+      callbackNoteNewVerticalGhostDivider =
+        wrapVoidDocumentWindowRectanglePointCallback
+         foreignNoteNewVerticalGhostDivider
       callbacks = FrontEndCallbacks {
                       frontEndCallbacksException =
                         callbackException,
@@ -919,7 +996,11 @@ foreignApplicationInit foreignException
                       frontEndCallbacksNoteNewDocumentWindow =
                         callbackNoteNewDocumentWindow,
                       frontEndCallbacksNoteNewDocumentPane =
-                        callbackNoteNewDocumentPane
+                        callbackNoteNewDocumentPane,
+                      frontEndCallbacksNoteNewHorizontalGhostDivider =
+                        callbackNoteNewHorizontalGhostDivider,
+                      frontEndCallbacksNoteNewVerticalGhostDivider =
+                        callbackNoteNewVerticalGhostDivider
                     }
   applicationStateMVar <- applicationInit callbacks
   newStablePtr applicationStateMVar
@@ -1440,77 +1521,30 @@ foreignDocumentWindowVerticalDividers applicationStateMVarStablePtr
       return $ castPtrToStablePtr nullPtr
 
 
-foreignDocumentPanesCount
-    :: StablePtr [DocumentPane]
-    -> IO Word64
-foreignDocumentPanesCount documentPanesStablePtr = do
-  documentPanes <- deRefStablePtr documentPanesStablePtr
-  return $ fromIntegral $ length documentPanes
-
-
-foreignDocumentPanesItem
-    :: StablePtr [DocumentPane]
-    -> Word64
-    -> Ptr DocumentPaneID
-    -> IO ()
-foreignDocumentPanesItem itemsStablePtr index identifierPtr = do
-  items <- deRefStablePtr itemsStablePtr
-  let identifier =
-        if fromIntegral index < length items
-          then let item = items !! fromIntegral index
-               in documentPaneID item
-          else nullDocumentPaneID
-  poke identifierPtr identifier
-
-
-foreignDocumentHorizontalDividersCount
-    :: StablePtr [DocumentHorizontalDivider]
-    -> IO Word64
-foreignDocumentHorizontalDividersCount
-    documentHorizontalDividersStablePtr = do
-  documentHorizontalDividers <-
-    deRefStablePtr documentHorizontalDividersStablePtr
-  return $ fromIntegral $ length documentHorizontalDividers
-
-
-foreignDocumentHorizontalDividersItem
-    :: StablePtr [DocumentHorizontalDivider]
-    -> Word64
-    -> Ptr DocumentHorizontalDividerID
-    -> IO ()
-foreignDocumentHorizontalDividersItem itemsStablePtr index identifierPtr = do
-  items <- deRefStablePtr itemsStablePtr
-  let identifier =
-        if fromIntegral index < length items
-          then let item = items !! fromIntegral index
-               in documentHorizontalDividerID item
-          else nullDocumentHorizontalDividerID
-  poke identifierPtr identifier
-
-
-foreignDocumentVerticalDividersCount
-    :: StablePtr [DocumentVerticalDivider]
-    -> IO Word64
-foreignDocumentVerticalDividersCount
-    documentVerticalDividersStablePtr = do
-  documentVerticalDividers <-
-    deRefStablePtr documentVerticalDividersStablePtr
-  return $ fromIntegral $ length documentVerticalDividers
-
-
-foreignDocumentVerticalDividersItem
-    :: StablePtr [DocumentVerticalDivider]
-    -> Word64
-    -> Ptr DocumentVerticalDividerID
-    -> IO ()
-foreignDocumentVerticalDividersItem itemsStablePtr index identifierPtr = do
-  items <- deRefStablePtr itemsStablePtr
-  let identifier =
-        if fromIntegral index < length items
-          then let item = items !! fromIntegral index
-               in documentVerticalDividerID item
-          else nullDocumentVerticalDividerID
-  poke identifierPtr identifier
+foreignDocumentWindowMouseDown
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> Int64
+  -> Int64
+  -> Word64
+  -> IO ()
+foreignDocumentWindowMouseDown
+    applicationStateMVarStablePtr
+    documentWindowIDPtr
+    x
+    y
+    optionDownWord = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentWindowID <- peek documentWindowIDPtr
+  maybeDocumentWindow <- findDocumentWindowByID applicationStateMVar
+                                                documentWindowID
+  case maybeDocumentWindow of
+    Just documentWindow -> do
+      let optionDown = optionDownWord /= 0
+      documentWindowMouseDown documentWindow (x, y) optionDown
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
 
 
 foreignDocumentPaneLeftMarginWidth
@@ -1727,6 +1761,36 @@ foreignDocumentPaneSizeReport applicationStateMVarStablePtr
       return nullPtr
 
 
+foreignDocumentPaneListFree
+    :: StablePtr [DocumentPane]
+    -> IO ()
+foreignDocumentPaneListFree documentPanesStablePtr = do
+  freeStablePtr documentPanesStablePtr
+
+
+foreignDocumentPaneListCount
+    :: StablePtr [DocumentPane]
+    -> IO Word64
+foreignDocumentPaneListCount documentPanesStablePtr = do
+  documentPanes <- deRefStablePtr documentPanesStablePtr
+  return $ fromIntegral $ length documentPanes
+
+
+foreignDocumentPaneListItem
+    :: StablePtr [DocumentPane]
+    -> Word64
+    -> Ptr DocumentPaneID
+    -> IO ()
+foreignDocumentPaneListItem itemsStablePtr index identifierPtr = do
+  items <- deRefStablePtr itemsStablePtr
+  let identifier =
+        if fromIntegral index < length items
+          then let item = items !! fromIntegral index
+               in documentPaneID item
+          else nullDocumentPaneID
+  poke identifierPtr identifier
+
+
 foreignDocumentHorizontalDividerFrame
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentHorizontalDividerID
@@ -1757,6 +1821,73 @@ foreignDocumentHorizontalDividerFrame applicationStateMVarStablePtr
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return ()
+
+
+foreignDocumentHorizontalDividerListFree
+    :: StablePtr [DocumentHorizontalDivider]
+    -> IO ()
+foreignDocumentHorizontalDividerListFree
+    documentHorizontalDividersStablePtr = do
+  freeStablePtr documentHorizontalDividersStablePtr
+
+
+foreignDocumentHorizontalDividerListCount
+    :: StablePtr [DocumentHorizontalDivider]
+    -> IO Word64
+foreignDocumentHorizontalDividerListCount
+    documentHorizontalDividersStablePtr = do
+  documentHorizontalDividers <-
+    deRefStablePtr documentHorizontalDividersStablePtr
+  return $ fromIntegral $ length documentHorizontalDividers
+
+
+foreignDocumentHorizontalDividerListItem
+    :: StablePtr [DocumentHorizontalDivider]
+    -> Word64
+    -> Ptr DocumentHorizontalDividerID
+    -> IO ()
+foreignDocumentHorizontalDividerListItem
+    itemsStablePtr index identifierPtr = do
+  items <- deRefStablePtr itemsStablePtr
+  let identifier =
+        if fromIntegral index < length items
+          then let item = items !! fromIntegral index
+               in documentHorizontalDividerID item
+          else nullDocumentHorizontalDividerID
+  poke identifierPtr identifier
+
+
+foreignDocumentVerticalDividerListFree
+    :: StablePtr [DocumentVerticalDivider]
+    -> IO ()
+foreignDocumentVerticalDividerListFree
+    documentVerticalDividersStablePtr = do
+  freeStablePtr documentVerticalDividersStablePtr
+
+
+foreignDocumentVerticalDividerListCount
+    :: StablePtr [DocumentVerticalDivider]
+    -> IO Word64
+foreignDocumentVerticalDividerListCount
+    documentVerticalDividersStablePtr = do
+  documentVerticalDividers <-
+    deRefStablePtr documentVerticalDividersStablePtr
+  return $ fromIntegral $ length documentVerticalDividers
+
+
+foreignDocumentVerticalDividerListItem
+    :: StablePtr [DocumentVerticalDivider]
+    -> Word64
+    -> Ptr DocumentVerticalDividerID
+    -> IO ()
+foreignDocumentVerticalDividerListItem itemsStablePtr index identifierPtr = do
+  items <- deRefStablePtr itemsStablePtr
+  let identifier =
+        if fromIntegral index < length items
+          then let item = items !! fromIntegral index
+               in documentVerticalDividerID item
+          else nullDocumentVerticalDividerID
+  poke identifierPtr identifier
 
 
 foreignInodeParent

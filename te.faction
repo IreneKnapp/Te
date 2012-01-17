@@ -33,7 +33,6 @@ App Te
             FileNameCellFieldEditor.h,
             HasCurrentFolder.h,
             HasSelectedInodes.h,
-            SizeConstraintParticipant.h,
             TransparentHelperWindow.h,
             TransparentHelperWindowView.h,
             Utilities.h,
@@ -64,6 +63,7 @@ App Te
   hs-source-dirs: BackEnd
   other-modules: Data.Bitfield,
                  Data.ByteSize,
+                 Data.Geometry,
                  Data.SQLable,
                  Data.Timestamp,
                  Te,
@@ -87,6 +87,9 @@ App Te
                  Te.HighLevel.Window.Document.Pane,
                  Te.HighLevel.Window.Document.PanePrivate,
                  Te.HighLevel.Window.Document.HorizontalDivider,
+                 Te.HighLevel.Window.Document.HorizontalDividerPrivate,
+                 Te.HighLevel.Window.Document.VerticalDivider,
+                 Te.HighLevel.Window.Document.VerticalDividerPrivate,
                  Te.Types
   build-depends: array >= 0.3.0.3 && < 1,
                  base >= 4.1 && < 5,
