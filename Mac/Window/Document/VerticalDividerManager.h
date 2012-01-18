@@ -1,7 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import "Utilities.h"
 
-@interface VerticalDividerManager : NSObject
+@interface WindowDocumentVerticalDividerManager : NSObject
 {
 }
 

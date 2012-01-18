@@ -5,6 +5,9 @@
 #import "Window/Browser.h"
 #import "Window/Document.h"
 #import "Window/Document/PaneManager.h"
+#import "Window/Document/HorizontalDividerManager.h"
+#import "Window/Document/VerticalDividerManager.h"
+#import "TransparentHelperWindow.h"
 
 @implementation AppDelegate
 @synthesize applicationState;
@@ -110,8 +113,9 @@
                             (HsFunPtr) editBrowserItemName,
                             (HsFunPtr) noteNewDocumentWindow,
                             (HsFunPtr) noteNewDocumentPane,
-                            (HsFunPtr) noteNewHorizontalGhostDivider,
-                            (HsFunPtr) noteNewVerticalGhostDivider);
+                            (HsFunPtr) newGhostWindowWithHorizontalDivider,
+                            (HsFunPtr) newGhostWindowWithVerticalDivider,
+                            (HsFunPtr) cleanupGhostWindow);
     
     keyFunctions = nil;
     valueFunctions = nil;
@@ -150,6 +154,8 @@
     captionFont = lineNumberFont;
     captionEmWidth = lineNumberEmWidth;
     captionLineHeight = lineNumberLineHeight;
+    
+    ghostWindow = nil;
 }
 
 
@@ -622,21 +628,10 @@ void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID) {
 
 
 - (void) noteNewDocumentWindow: (uuid_t *) documentWindowID
-              contentRectangle: (NSRect) contentRectangle
-{
-    WindowDocument *windowDocumentObject
-        = [[WindowDocument alloc]
-             initWithWindowID: documentWindowID
-             contentRectangle: contentRectangle];
-    if(windowDocumentObject)
-        [windows setObject: windowDocumentObject
-                 forKey: (void *) documentWindowID];
-}
-
-
-void noteNewDocumentWindow
-    (uuid_t *documentWindowID,
-     int64_t left, int64_t top, int64_t width, int64_t height)
+                          left: (int64_t) left
+                           top: (int64_t) top
+                         width: (int64_t) width
+                        height: (int64_t) height
 {
     NSRect screenFrame = [[NSScreen mainScreen] frame];
     
@@ -647,19 +642,49 @@ void noteNewDocumentWindow
     contentRectangle.size.width = width;
     contentRectangle.size.height = height;
     
+    WindowDocument *windowDocumentObject
+        = [[WindowDocument alloc]
+             initWithWindowID: documentWindowID
+             contentRectangle: contentRectangle];
+    if(windowDocumentObject) {
+        [windows setObject: windowDocumentObject
+                 forKey: (void *) documentWindowID];
+    }
+}
+
+
+void noteNewDocumentWindow
+    (uuid_t *documentWindowID,
+     int64_t left,
+     int64_t top,
+     int64_t width,
+     int64_t height)
+{
     [(AppDelegate *) [NSApp delegate]
         noteNewDocumentWindow: documentWindowID
-        contentRectangle: contentRectangle];
+        left: left
+        top: top
+        width: width
+        height: height];
 }
 
 
 - (void) noteNewDocumentPane: (uuid_t *) documentPaneID
                     inWindow: (uuid_t *) documentWindowID
-                   withFrame: (NSRect) frame
+                        left: (int64_t) left
+                         top: (int64_t) top
+                       width: (int64_t) width
+                      height: (int64_t) height
 {
     WindowDocument *windowDocumentObject
         = [windows objectForKey: (void *) documentWindowID];
     if(windowDocumentObject) {
+        NSRect frame;
+        frame.origin.x = left;
+        frame.origin.y = top;
+        frame.size.width = width;
+        frame.size.height = height;
+        
         WindowDocumentPaneManager *paneManager
             = [WindowDocumentPaneManager sharedManager];
         [paneManager addPane: documentPaneID
@@ -675,100 +700,175 @@ void noteNewDocumentPane(uuid_t *documentWindowID,
                          int64_t top,
                          int64_t width,
                          int64_t height)
-{
-    NSRect frame;
-    frame.origin.x = left;
-    frame.origin.y = top;
-    frame.size.width = width;
-    frame.size.height = height;
-    
+{    
     [(AppDelegate *) [NSApp delegate] noteNewDocumentPane: documentPaneID
                                       inWindow: documentWindowID
-                                      withFrame: frame];
+                                      left: left
+                                      top: top
+                                      width: width
+                                      height: height];
 }
 
 
-- (void) noteNewHorizontalGhostDividerInWindow: (uuid_t *) documentWindowID
-                                     withFrame: (NSRect) frame
-                                      location: (NSPoint) location
+- (void) newGhostWindowWithHorizontalDivider: (uuid_t *) documentWindowID
+                                        left: (int64_t) left
+                                         top: (int64_t) top
+                                       width: (int64_t) width
+                                      height: (int64_t) height
+                                           x: (int64_t) x
+                                           y: (int64_t) y
 {
-    // IAK
     [self cleanupGhostWindow];
     
-    NSView *dividerSubview;
-    if(dividerAxis == HorizontalSplitAxis)
-        dividerSubview
-            = [dividerSubviewsForHorizontalContent objectAtIndex: dividerIndex];
-    else if(dividerAxis == VerticalSplitAxis)
-        dividerSubview
-            = [dividerSubviewsForVerticalContent objectAtIndex: dividerIndex];
-    
-    NSRect dividerFrame
-        = [self convertRectToBase: [dividerSubview frame]];
-    
-    void (^drawHelper)(NSRect drawFrame) = nil;
-    if(dividerAxis == HorizontalSplitAxis) {
-        dividerFrame.size.width += [DocumentContentView leftMarginWidth];
-        drawHelper = ^(NSRect drawFrame)
-                     {
-                         [self drawGhostForHorizontalContent: drawFrame];
-                     };
-    } else if(dividerAxis == VerticalSplitAxis) {
-        drawHelper = ^(NSRect drawFrame)
-                     {
-                         [self drawGhostForVerticalContent: drawFrame];
-                     };
+    WindowDocument *windowDocumentObject
+        = [windows objectForKey: (void *) documentWindowID];
+    if(windowDocumentObject) {
+        NSWindow *window = [windowDocumentObject window];
+        NSView *contentView = [window contentView];
+        
+        NSRect frame;
+        frame.origin.x = left;
+        frame.origin.y = top;
+        frame.size.width = width;
+        frame.size.height = height;
+        frame = [contentView convertRectToBacking: frame];
+        frame = [window convertRectFromBacking: frame];
+        frame = [window convertRectToScreen: frame];
+        
+        NSPoint location;
+        location.x = x;
+        location.y = y;
+        NSRect dummyRectangle;
+        dummyRectangle.origin = location;
+        dummyRectangle.size = NSMakeSize(0.0, 0.0);
+        dummyRectangle = [contentView convertRectToBacking: dummyRectangle];
+        dummyRectangle = [window convertRectFromBacking: dummyRectangle];
+        dummyRectangle = [window convertRectToScreen: dummyRectangle];
+        location = dummyRectangle.origin;
+        
+        void (^drawHelper)(NSRect drawFrame) = ^(NSRect drawFrame)
+        {
+            WindowDocumentHorizontalDividerManager *manager
+                = [WindowDocumentHorizontalDividerManager sharedManager];
+            [manager drawGhost: drawFrame];
+        };
+        
+        ghostWindow
+            = [[TransparentHelperWindow alloc]
+                initWithContentRect: frame
+                drawHelper: drawHelper
+                aboveWindow: window];
+        
+        [ghostWindow startTrackingMouse: location
+                     onAxes: TrackMouseVerticalAxis];
     }
+}
+
+
+void newGhostWindowWithHorizontalDivider(uuid_t *documentWindowID,
+                                         int64_t left,
+                                         int64_t top,
+                                         int64_t width,
+                                         int64_t height,
+                                         int64_t x,
+                                         int64_t y)
+{
+    [(AppDelegate *) [NSApp delegate]
+        newGhostWindowWithHorizontalDivider: documentWindowID
+        left: left
+        top: top
+        width: width
+        height: height
+        x: x
+        y: y];
+}
+
+
+- (void) newGhostWindowWithVerticalDivider: (uuid_t *) documentWindowID
+                                      left: (int64_t) left
+                                       top: (int64_t) top
+                                     width: (int64_t) width
+                                    height: (int64_t) height
+                                         x: (int64_t) x
+                                         y: (int64_t) y
+{
+   [self cleanupGhostWindow];
     
-    ghostWindow
-        = [[TransparentHelperWindow alloc]
-            initWithContentRect: dividerFrame
-            drawHelper: drawHelper
-            aboveWindow: [self window]];
-    
-    [ghostWindow startTrackingMouse: [event locationInWindow]
-                 onAxes: trackingAxis];
+    WindowDocument *windowDocumentObject
+        = [windows objectForKey: (void *) documentWindowID];
+    if(windowDocumentObject) {
+        NSWindow *window = [windowDocumentObject window];
+        NSView *contentView = [window contentView];
+        
+        NSRect frame;
+        frame.origin.x = left;
+        frame.origin.y = top;
+        frame.size.width = width;
+        frame.size.height = height;
+        frame = [contentView convertRectToBacking: frame];
+        frame = [window convertRectFromBacking: frame];
+        frame = [window convertRectToScreen: frame];
+        
+        NSPoint location;
+        location.x = x;
+        location.y = y;
+        NSRect dummyRectangle;
+        dummyRectangle.origin = location;
+        dummyRectangle.size = NSMakeSize(0.0, 0.0);
+        dummyRectangle = [contentView convertRectToBacking: dummyRectangle];
+        dummyRectangle = [window convertRectFromBacking: dummyRectangle];
+        dummyRectangle = [window convertRectToScreen: dummyRectangle];
+        location = dummyRectangle.origin;
+        
+        void (^drawHelper)(NSRect drawFrame) = ^(NSRect drawFrame)
+        {
+            WindowDocumentVerticalDividerManager *manager
+                = [WindowDocumentVerticalDividerManager sharedManager];
+            [manager drawGhost: drawFrame];
+        };
+        
+        ghostWindow
+            = [[TransparentHelperWindow alloc]
+                initWithContentRect: frame
+                drawHelper: drawHelper
+                aboveWindow: window];
+        
+        [ghostWindow startTrackingMouse: location
+                     onAxes: TrackMouseHorizontalAxis];
+    }
 }
 
 
-void noteNewHorizontalGhostDivider(uuid_t *documentWindowID,
-                                   int64_t left,
-                                   int64_t top,
-                                   int64_t width,
-                                   int64_t height,
-                                   int64_t x,
-                                   int64_t y)
+void newGhostWindowWithVerticalDivider(uuid_t *documentWindowID,
+                                       int64_t left,
+                                       int64_t top,
+                                       int64_t width,
+                                       int64_t height,
+                                       int64_t x,
+                                       int64_t y)
 {
-    // IAK
-}
-
-
-- (void) noteNewVerticalGhostDividerInWindow: (uuid_t *) documentWindowID
-                                   withFrame: (NSRect) frame
-                                    location: (NSPoint) location
-{
-    // IAK
-}
-
-
-void noteNewVerticalGhostDivider(uuid_t *documentWindowID,
-                                 int64_t left,
-                                 int64_t top,
-                                 int64_t width,
-                                 int64_t height,
-                                 int64_t x,
-                                 int64_t y)
-{
-    // IAK
+    [(AppDelegate *) [NSApp delegate]
+        newGhostWindowWithVerticalDivider: documentWindowID
+        left: left
+        top: top
+        width: width
+        height: height
+        x: x
+        y: y];
 }
 
 
 - (void) cleanupGhostWindow {
-    // IAK
     if(ghostWindow) {
         [ghostWindow remove];
         ghostWindow = nil;
     }
+}
+
+
+
+void cleanupGhostWindow() {
+    [(AppDelegate *) [NSApp delegate] cleanupGhostWindow];
 }
 
 @end

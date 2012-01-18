@@ -142,6 +142,7 @@ foreign export ccall "teApplicationInit"
                -> Int64 -> Int64 -> Int64 -> Int64
                -> Int64 -> Int64
                -> IO ())
+    -> FunPtr (IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit"
                      foreignApplicationExit
@@ -858,7 +859,7 @@ wrapVoidDocumentWindowRectanglePointCallback
                -> Int64 -> Int64
                -> IO ())
     -> (DocumentWindow
-        -> ((Int64, Int64), (Int64, Int64)),
+        -> ((Int64, Int64), (Int64, Int64))
         -> (Int64, Int64)
         -> IO ())
 wrapVoidDocumentWindowRectanglePointCallback foreignCallback =
@@ -906,6 +907,7 @@ foreignApplicationInit
                -> Int64 -> Int64 -> Int64 -> Int64
                -> Int64 -> Int64
                -> IO ())
+    -> FunPtr (IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreignApplicationInit foreignException
                        foreignConfirm
@@ -923,8 +925,9 @@ foreignApplicationInit foreignException
                        foreignEditBrowserItemName
                        foreignNoteNewDocumentWindow
                        foreignNoteNewDocumentPane
-                       foreignNoteNewHorizontalGhostDivider
-                       foreignNoteNewVerticalGhostDivider = do
+                       foreignNewGhostWindowWithHorizontalDivider
+                       foreignNewGhostWindowWithVerticalDivider
+                       foreignCleanupGhostWindow = do
   let callbackException =
         wrapVoidStringStringCallback foreignException
       callbackConfirm =
@@ -958,12 +961,14 @@ foreignApplicationInit foreignException
       callbackNoteNewDocumentPane =
         wrapVoidDocumentWindowDocumentPaneRectangleCallback
          foreignNoteNewDocumentPane
-      callbackNoteNewHorizontalGhostDivider =
+      callbackNewGhostWindowWithHorizontalDivider =
         wrapVoidDocumentWindowRectanglePointCallback
-         foreignNoteNewHorizontalGhostDivider
-      callbackNoteNewVerticalGhostDivider =
+         foreignNewGhostWindowWithHorizontalDivider
+      callbackNewGhostWindowWithVerticalDivider =
         wrapVoidDocumentWindowRectanglePointCallback
-         foreignNoteNewVerticalGhostDivider
+         foreignNewGhostWindowWithVerticalDivider
+      callbackCleanupGhostWindow =
+        wrapVoidCallback foreignCleanupGhostWindow
       callbacks = FrontEndCallbacks {
                       frontEndCallbacksException =
                         callbackException,
@@ -997,10 +1002,12 @@ foreignApplicationInit foreignException
                         callbackNoteNewDocumentWindow,
                       frontEndCallbacksNoteNewDocumentPane =
                         callbackNoteNewDocumentPane,
-                      frontEndCallbacksNoteNewHorizontalGhostDivider =
-                        callbackNoteNewHorizontalGhostDivider,
-                      frontEndCallbacksNoteNewVerticalGhostDivider =
-                        callbackNoteNewVerticalGhostDivider
+                      frontEndCallbacksNewGhostWindowWithHorizontalDivider =
+                        callbackNewGhostWindowWithHorizontalDivider,
+                      frontEndCallbacksNewGhostWindowWithVerticalDivider =
+                        callbackNewGhostWindowWithVerticalDivider,
+                      frontEndCallbacksCleanupGhostWindow =
+                        callbackCleanupGhostWindow
                     }
   applicationStateMVar <- applicationInit callbacks
   newStablePtr applicationStateMVar

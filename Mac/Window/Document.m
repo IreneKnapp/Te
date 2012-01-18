@@ -216,20 +216,6 @@
         optionDown = NO;
     
     teDocumentWindowMouseDown(applicationState, &windowID, x, y, optionDown);
-    
-    /*
-    enum MouseTrackingAxes trackingAxis;
-    if(foundAxis == HorizontalSplitAxis) {
-        trackingAxis = TrackMouseHorizontalAxis;
-    } else if(foundAxis == VerticalSplitAxis) {
-        trackingAxis = TrackMouseVerticalAxis;
-    }
-    
-    [self createGhostWindowWithDividerAt: foundIndex
-                                    axis: foundAxis];
-    [ghostWindow startTrackingMouse: [event locationInWindow]
-                 onAxes: trackingAxis];
-    */
 }
 
 

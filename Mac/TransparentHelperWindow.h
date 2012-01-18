@@ -25,7 +25,4 @@ enum MouseTrackingAxes {
                      onAxes: (enum MouseTrackingAxes) newAxes;
 - (void) updateMouse: (NSPoint) newLocation;
 - (void) offsetBy: (NSSize) offsetAmount;
-- (void) startTrackingView: (NSView *) newTrackedView
-              resizingMask: (NSUInteger) newTrackedViewResizingMask;
-- (void) updateTrackedView: (NSNotification *) notification;
 @end

@@ -2,9 +2,9 @@
 #import <HsFFI.h>
 #import "Te/LowLevel/ForeignInterface_stub.h"
 
-static VerticalDividerManager *sharedManager = nil;
+static WindowDocumentVerticalDividerManager *sharedManager = nil;
 
-@implementation VerticalDividerManager
+@implementation WindowDocumentVerticalDividerManager
 
 + (id) sharedManager {
     if(sharedManager == nil) {

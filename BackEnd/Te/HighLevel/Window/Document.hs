@@ -128,21 +128,22 @@ documentWindowMouseDown window location optionDown = do
     Just foundDivider -> do
       isTerminalDivider <- getIsTerminalDivider window foundDivider
       let creatingNewDivider = isTerminalDivider || optionDown
-      maybeGhostWindow <- if creatingNewDivider
+      hasGhostWindow <- if creatingNewDivider
         then do
           ghostFrame <- getGhostStartingFrame window foundDivider
           case dividerOrientation foundDivider of
-            VerticalOrientation ->
-              noteNewVerticalGhostDivider window ghostFrame location
-            HorizontalOrientation ->
-              noteNewHorizontalGhostDivider window ghostFrame location
-        else return Nothing
+            VerticalOrientation -> do
+              newGhostWindowWithVerticalDivider window ghostFrame location
+            HorizontalOrientation -> do
+              newGhostWindowWithHorizontalDivider window ghostFrame location
+          return True
+        else return False
       let project = documentWindowProject window
           applicationState = projectApplicationState project
       putDragState applicationState
                    DividerDragState {
                        dragStatePreviousDragPoint = location,
-                       dragStateGhostWindow = maybeGhostWindow,
+                       dragStateHasGhostWindow = hasGhostWindow,
                        dividerDragStateDivider = foundDivider,
                        dividerDragStateCreatedBefore = False,
                        dividerDragStateCreatedAfter = False,

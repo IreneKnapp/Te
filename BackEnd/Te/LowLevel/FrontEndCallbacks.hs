@@ -15,8 +15,8 @@ module Te.LowLevel.FrontEndCallbacks
    editBrowserItemName,
    noteNewDocumentWindow,
    noteNewDocumentPane,
-   noteNewHorizontalGhostDivider,
-   noteNewVerticalGhostDivider)
+   newGhostWindowWithHorizontalDivider,
+   newGhostWindowWithVerticalDivider)
   where
 
 import Control.Concurrent.MVar
@@ -188,29 +188,37 @@ noteNewDocumentPane documentWindow documentPane frame = do
   callback documentWindow documentPane frame
 
 
-noteNewHorizontalGhostDivider
+newGhostWindowWithHorizontalDivider
   :: DocumentWindow
   -> Rectangle
   -> Point
   -> IO ()
-noteNewHorizontalGhostDivider documentWindow frame location = do
+newGhostWindowWithHorizontalDivider documentWindow frame location = do
   let project = documentWindowProject documentWindow
       applicationStateMVar = projectApplicationState project
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksNoteNewHorizontalGhostDivider callbacks
+      callback = frontEndCallbacksNewGhostWindowWithHorizontalDivider callbacks
   callback documentWindow frame location
 
 
-noteNewVerticalGhostDivider
+newGhostWindowWithVerticalDivider
   :: DocumentWindow
   -> Rectangle
   -> Point
   -> IO ()
-noteNewVerticalGhostDivider documentWindow frame location = do
+newGhostWindowWithVerticalDivider documentWindow frame location = do
   let project = documentWindowProject documentWindow
       applicationStateMVar = projectApplicationState project
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
-      callback = frontEndCallbacksNoteNewVerticalGhostDivider callbacks
+      callback = frontEndCallbacksNewGhostWindowWithVerticalDivider callbacks
   callback documentWindow frame location
+
+
+cleanupGhostWindow :: MVar ApplicationState -> IO ()
+cleanupGhostWindow applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksCleanupGhostWindow callbacks
+  callback

@@ -72,23 +72,25 @@ data FrontEndCallbacks =
         :: DocumentWindow
         -> DocumentPane
         -> Rectangle
-        -> IO ()
-      frontEndCallbacksNoteNewHorizontalGhostDivider
+        -> IO (),
+      frontEndCallbacksNewGhostWindowWithHorizontalDivider
         :: DocumentWindow
         -> Rectangle
         -> Point
-        -> IO ()
-      frontEndCallbacksNoteNewVerticalGhostDivider
+        -> IO (),
+      frontEndCallbacksNewGhostWindowWithVerticalDivider
         :: DocumentWindow
         -> Rectangle
         -> Point
-        -> IO ()
+        -> IO (),
+      frontEndCallbacksCleanupGhostWindow :: IO ()
     }
 
 
 data DragState =
   DividerDragState {
       dragStatePreviousDragPoint :: Point,
+      dragStateHasGhostWindow :: Bool,
       dividerDragStateDivider :: AnyDocumentDivider,
       dividerDragStateCreatedBefore :: Bool,
       dividerDragStateCreatedAfter :: Bool,

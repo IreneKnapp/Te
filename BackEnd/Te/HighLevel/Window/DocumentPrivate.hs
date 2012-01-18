@@ -16,7 +16,8 @@ module Te.HighLevel.Window.DocumentPrivate
    getDocumentWindowHeightInRange,
    getAnyDocumentDividerClickFrame,
    getIsTerminalDivider,
-   dividerOrientation)
+   dividerOrientation,
+   getGhostStartingFrame)
   where
 
 import Control.Concurrent.MVar
@@ -438,7 +439,7 @@ getIsTerminalDivider window anyDivider = do
 
 
 dividerOrientation
-  :: AnyDocumenDivider
+  :: AnyDocumentDivider
   -> DividerOrientation
 dividerOrientation (AnyDocumentVerticalDivider _) = VerticalOrientation
 dividerOrientation (AnyDocumentHorizontalDivider _) = HorizontalOrientation
@@ -448,3 +449,16 @@ dividerOrientation FarLeftVirtualDocumentVerticalDivider =
   VerticalOrientation
 dividerOrientation FarRightVirtualDocumentVerticalDivider =
   VerticalOrientation
+
+
+getGhostStartingFrame
+  :: DocumentWindow
+  -> AnyDocumentDivider
+  -> IO Rectangle
+getGhostStartingFrame window anyDivider = do
+  case anyDivider of
+    AnyDocumentVerticalDivider divider -> return ((0, 0), (50, 50))
+    AnyDocumentHorizontalDivider divider -> return ((0, 0), (50, 50))
+    FarTopVirtualDocumentHorizontalDivider -> return ((0, 0), (50, 50))
+    FarLeftVirtualDocumentVerticalDivider -> return ((0, 0), (50, 50))
+    FarRightVirtualDocumentVerticalDivider -> return ((0, 0), (50, 50))

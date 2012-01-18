@@ -1,6 +1,7 @@
 #import <Cocoa/Cocoa.h>
 #import "Utilities.h"
 
+@class TransparentHelperWindow;
 @interface AppDelegate : NSDocumentController
 <NSApplicationDelegate, NSTableViewDataSource, NSTableViewDelegate>
 {
@@ -28,7 +29,9 @@
     NSFont *captionFont;
     CGFloat captionEmWidth;
     CGFloat captionLineHeight;
-        
+    
+    TransparentHelperWindow *ghostWindow;
+    
     int hsArgc;
     char **hsArgv;
 }
@@ -91,38 +94,56 @@ void noteBrowserItemsChanged(uuid_t *browserWindowID);
                                       inode: (uuid_t *) inodeID;
 void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID);
 - (void) noteNewDocumentWindow: (uuid_t *) documentWindowID
-              contentRectangle: (NSRect) contentRectangle;
+                          left: (int64_t) left
+                           top: (int64_t) top
+                         width: (int64_t) width
+                        height: (int64_t) height;
 void noteNewDocumentWindow
     (uuid_t *documentWindowID,
-     int64_t left, int64_t top, int64_t width, int64_t height);
+     int64_t left,
+     int64_t top,
+     int64_t width,
+     int64_t height);
 - (void) noteNewDocumentPane: (uuid_t *) documentPaneID
                     inWindow: (uuid_t *) documentWindowID
-                   withFrame: (NSRect) frame;
+                        left: (int64_t) left
+                         top: (int64_t) top
+                       width: (int64_t) width
+                      height: (int64_t) height;
 void noteNewDocumentPane(uuid_t *documentWindowID,
                          uuid_t *documentPaneID,
                          int64_t left,
                          int64_t top,
                          int64_t width,
                          int64_t height);
-- (void) noteNewHorizontalGhostDividerInWindow: (uuid_t *) documentWindowID
-                                     withFrame: (NSRect) frame
-                                      location: (NSPoint) location;
-void noteNewHorizontalGhostDivider(uuid_t *documentWindowID,
-                                   int64_t left,
-                                   int64_t top,
-                                   int64_t width,
-                                   int64_t height,
-                                   int64_t x,
-                                   int64_t y);
-- (void) noteNewVerticalGhostDividerInWindow: (uuid_t *) documentWindowID
-                                   withFrame: (NSRect) frame
-                                    location: (NSPoint) location;
-void noteNewVerticalGhostDivider(uuid_t *documentWindowID,
-                                 int64_t left,
-                                 int64_t top,
-                                 int64_t width,
-                                 int64_t height,
-                                 int64_t x,
-                                 int64_t y);
+- (void) newGhostWindowWithHorizontalDivider: (uuid_t *) documentWindowID
+                                        left: (int64_t) left
+                                         top: (int64_t) top
+                                       width: (int64_t) width
+                                      height: (int64_t) height
+                                           x: (int64_t) x
+                                           y: (int64_t) y;
+void newGhostWindowWithHorizontalDivider(uuid_t *documentWindowID,
+                                         int64_t left,
+                                         int64_t top,
+                                         int64_t width,
+                                         int64_t height,
+                                         int64_t x,
+                                         int64_t y);
+- (void) newGhostWindowWithVerticalDivider: (uuid_t *) documentWindowID
+                                      left: (int64_t) left
+                                       top: (int64_t) top
+                                     width: (int64_t) width
+                                    height: (int64_t) height
+                                         x: (int64_t) x
+                                         y: (int64_t) y;
+void newGhostWindowWithVerticalDivider(uuid_t *documentWindowID,
+                                       int64_t left,
+                                       int64_t top,
+                                       int64_t width,
+                                       int64_t height,
+                                       int64_t x,
+                                       int64_t y);
 - (void) cleanupGhostWindow;
+void cleanupGhostWindow();
 @end
