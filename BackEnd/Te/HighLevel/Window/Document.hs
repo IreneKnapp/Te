@@ -11,7 +11,9 @@ module Te.HighLevel.Window.Document
    getDocumentWindowHorizontalDividers,
    getDocumentWindowVerticalDividers,
    getDocumentWindowCursorRectangles,
-   documentWindowMouseDown)
+   documentWindowMouseDown,
+   documentWindowMouseDragged,
+   documentWindowMouseUp)
   where
 
 import Control.Concurrent.MVar
@@ -175,11 +177,41 @@ documentWindowMouseDown window location optionDown = do
       let project = documentWindowProject window
           applicationState = projectApplicationState project
       putDragState applicationState
-                   DividerDragState {
-                       dragStatePreviousDragPoint = location,
-                       dragStateHasGhostWindow = hasGhostWindow,
-                       dividerDragStateDivider = foundDivider,
-                       dividerDragStateCreatedBefore = False,
-                       dividerDragStateCreatedAfter = False,
-                       dividerDragStateCreatingNewDivider = creatingNewDivider
-                     }
+                   $ Just $ DividerDragState {
+                                dragStatePreviousDragPoint = location,
+                                dragStateHasGhostWindow = hasGhostWindow,
+                                dividerDragStateDivider = foundDivider,
+                                dividerDragStateCreatedBefore = False,
+                                dividerDragStateCreatedAfter = False,
+                                dividerDragStateCreatingNewDivider =
+                                  creatingNewDivider
+                              }
+
+
+documentWindowMouseDragged
+  :: DocumentWindow -> Point -> IO ()
+documentWindowMouseDragged window location = do
+  let project = documentWindowProject window
+      applicationState = projectApplicationState project
+  maybeDragState <- getDragState applicationState
+  case maybeDragState of
+    Nothing -> return ()
+    Just dragState@(DividerDragState { }) -> do
+      let dragState' = dragState {
+                           dragStatePreviousDragPoint = location
+                         }
+      putDragState applicationState $ Just dragState'
+      ghostWindowUpdateMouse applicationState location
+
+
+documentWindowMouseUp
+  :: DocumentWindow -> Point -> IO ()
+documentWindowMouseUp window location = do
+  let project = documentWindowProject window
+      applicationState = projectApplicationState project
+  maybeDragState <- getDragState applicationState
+  case maybeDragState of
+    Nothing -> return ()
+    Just dragState@(DividerDragState { }) -> do
+      putDragState applicationState Nothing
+      cleanupGhostWindow applicationState

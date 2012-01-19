@@ -16,7 +16,9 @@ module Te.LowLevel.FrontEndCallbacks
    noteNewDocumentWindow,
    noteNewDocumentPane,
    newGhostWindowWithHorizontalDivider,
-   newGhostWindowWithVerticalDivider)
+   newGhostWindowWithVerticalDivider,
+   cleanupGhostWindow,
+   ghostWindowUpdateMouse)
   where
 
 import Control.Concurrent.MVar
@@ -222,3 +224,11 @@ cleanupGhostWindow applicationStateMVar = do
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksCleanupGhostWindow callbacks
   callback
+
+
+ghostWindowUpdateMouse :: MVar ApplicationState -> Point -> IO ()
+ghostWindowUpdateMouse applicationStateMVar point = do
+  applicationState <- readMVar applicationStateMVar
+  let callbacks = applicationStateFrontEndCallbacks applicationState
+      callback = frontEndCallbacksGhostWindowUpdateMouse callbacks
+  callback point

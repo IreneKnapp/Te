@@ -148,4 +148,6 @@ void newGhostWindowWithVerticalDivider(uuid_t *documentWindowID,
                                        int64_t y);
 - (void) cleanupGhostWindow;
 void cleanupGhostWindow();
+- (void) ghostWindowUpdateMouseX: (int64_t) x y: (int64_t) y;
+void ghostWindowUpdateMouse(int64_t x, int64_t y);
 @end

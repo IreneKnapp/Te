@@ -115,7 +115,8 @@
                             (HsFunPtr) noteNewDocumentPane,
                             (HsFunPtr) newGhostWindowWithHorizontalDivider,
                             (HsFunPtr) newGhostWindowWithVerticalDivider,
-                            (HsFunPtr) cleanupGhostWindow);
+                            (HsFunPtr) cleanupGhostWindow,
+                            (HsFunPtr) ghostWindowUpdateMouse);
     
     keyFunctions = nil;
     valueFunctions = nil;
@@ -884,6 +885,22 @@ void newGhostWindowWithVerticalDivider(uuid_t *documentWindowID,
 
 void cleanupGhostWindow() {
     [(AppDelegate *) [NSApp delegate] cleanupGhostWindow];
+}
+
+
+- (void) ghostWindowUpdateMouseX: (int64_t) x y: (int64_t) y {
+    if(!ghostWindow) return;
+    
+    NSPoint location;
+    location.x = x;
+    location.y = y;
+    
+    [ghostWindow updateMouse: location];
+}
+
+
+void ghostWindowUpdateMouse(int64_t x, int64_t y) {
+    [(AppDelegate *) [NSApp delegate] ghostWindowUpdateMouseX: x y: y];
 }
 
 @end

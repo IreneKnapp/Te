@@ -8,6 +8,7 @@ module Te.HighLevel.ApplicationPrivate
    getNextUntitledProjectName,
    computeNameForFilePath,
    newBrowserWindow,
+   getDragState,
    putDragState)
   where
 
@@ -185,11 +186,17 @@ newBrowserWindow project maybeRootInode = do
     noteNewBrowserWindow newBrowserWindow'
 
 
-putDragState :: MVar ApplicationState -> DragState -> IO ()
-putDragState applicationStateMVar dragState = do
+getDragState :: MVar ApplicationState -> IO (Maybe DragState)
+getDragState applicationStateMVar = do
+  applicationState <- readMVar applicationStateMVar
+  return $ applicationStateDragState applicationState
+
+
+putDragState :: MVar ApplicationState -> Maybe DragState -> IO ()
+putDragState applicationStateMVar maybeDragState = do
   applicationState <- takeMVar applicationStateMVar
   let applicationState' =
         applicationState {
-            applicationStateDragState = Just dragState
+            applicationStateDragState = maybeDragState
           }
   putMVar applicationStateMVar applicationState'

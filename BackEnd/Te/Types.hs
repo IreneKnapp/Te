@@ -84,7 +84,8 @@ data FrontEndCallbacks =
         -> Rectangle
         -> Point
         -> IO (),
-      frontEndCallbacksCleanupGhostWindow :: IO ()
+      frontEndCallbacksCleanupGhostWindow :: IO (),
+      frontEndCallbacksGhostWindowUpdateMouse :: Point -> IO ()
     }
 
 

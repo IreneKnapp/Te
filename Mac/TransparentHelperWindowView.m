@@ -23,4 +23,9 @@
     return nil;
 }
 
+
+- (BOOL) isFlipped {
+    return YES;
+}
+
 @end

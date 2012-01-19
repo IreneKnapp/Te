@@ -27,6 +27,9 @@ foreign import ccall "dynamic" mkVoidCallback
     :: FunPtr (IO ()) -> IO ()
 foreign import ccall "dynamic" mkDoubleCallback
     :: FunPtr (IO Double) -> IO Double
+foreign import ccall "dynamic" mkIntPairCallback
+    :: FunPtr (Int64 -> Int64 -> IO ())
+    -> (Int64 -> Int64 -> IO ())
 foreign import ccall "dynamic" mkIntPtrQuadCallback
     :: FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
     -> (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
@@ -143,6 +146,7 @@ foreign export ccall "teApplicationInit"
                -> Int64 -> Int64
                -> IO ())
     -> FunPtr (IO ())
+    -> FunPtr (Int64 -> Int64 -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreign export ccall "teApplicationExit"
                      foreignApplicationExit
@@ -251,6 +255,20 @@ foreign export ccall "teDocumentWindowMouseDown"
   -> Int64
   -> Int64
   -> Word64
+  -> IO ()
+foreign export ccall "teDocumentWindowMouseDragged"
+                     foreignDocumentWindowMouseDragged
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> Int64
+  -> Int64
+  -> IO ()
+foreign export ccall "teDocumentWindowMouseUp"
+                     foreignDocumentWindowMouseUp
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> Int64
+  -> Int64
   -> IO ()
 foreign export ccall "teDocumentPaneLeftMarginWidth"
                      foreignDocumentPaneLeftMarginWidth
@@ -714,6 +732,16 @@ wrapDoubleCallback foreignCallback =
   in highLevelCallback
 
 
+wrapVoidPointCallback
+    :: FunPtr (Int64 -> Int64 -> IO ())
+    -> ((Int64, Int64) -> IO ())
+wrapVoidPointCallback foreignCallback =
+  let lowLevelCallback = mkIntPairCallback foreignCallback
+      highLevelCallback (x, y) = do
+        lowLevelCallback x y
+  in highLevelCallback
+
+
 wrapRectangleCallback
     :: FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
     -> (IO ((Int64, Int64), (Int64, Int64)))
@@ -931,6 +959,7 @@ foreignApplicationInit
                -> Int64 -> Int64
                -> IO ())
     -> FunPtr (IO ())
+    -> FunPtr (Int64 -> Int64 -> IO ())
     -> IO (StablePtr (MVar ApplicationState))
 foreignApplicationInit foreignException
                        foreignConfirm
@@ -950,7 +979,8 @@ foreignApplicationInit foreignException
                        foreignNoteNewDocumentPane
                        foreignNewGhostWindowWithHorizontalDivider
                        foreignNewGhostWindowWithVerticalDivider
-                       foreignCleanupGhostWindow = do
+                       foreignCleanupGhostWindow
+                       foreignGhostWindowUpdateMouse = do
   let callbackException =
         wrapVoidStringStringCallback foreignException
       callbackConfirm =
@@ -992,6 +1022,8 @@ foreignApplicationInit foreignException
          foreignNewGhostWindowWithVerticalDivider
       callbackCleanupGhostWindow =
         wrapVoidCallback foreignCleanupGhostWindow
+      callbackGhostWindowUpdateMouse =
+        wrapVoidPointCallback foreignGhostWindowUpdateMouse
       callbacks = FrontEndCallbacks {
                       frontEndCallbacksException =
                         callbackException,
@@ -1030,7 +1062,9 @@ foreignApplicationInit foreignException
                       frontEndCallbacksNewGhostWindowWithVerticalDivider =
                         callbackNewGhostWindowWithVerticalDivider,
                       frontEndCallbacksCleanupGhostWindow =
-                        callbackCleanupGhostWindow
+                        callbackCleanupGhostWindow,
+                      frontEndCallbacksGhostWindowUpdateMouse =
+                        callbackGhostWindowUpdateMouse
                     }
   applicationStateMVar <- applicationInit callbacks
   newStablePtr applicationStateMVar
@@ -1592,6 +1626,52 @@ foreignDocumentWindowMouseDown
     Just documentWindow -> do
       let optionDown = optionDownWord /= 0
       documentWindowMouseDown documentWindow (x, y) optionDown
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
+
+
+foreignDocumentWindowMouseDragged
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> Int64
+  -> Int64
+  -> IO ()
+foreignDocumentWindowMouseDragged
+    applicationStateMVarStablePtr
+    documentWindowIDPtr
+    x
+    y = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentWindowID <- peek documentWindowIDPtr
+  maybeDocumentWindow <- findDocumentWindowByID applicationStateMVar
+                                                documentWindowID
+  case maybeDocumentWindow of
+    Just documentWindow -> do
+      documentWindowMouseDragged documentWindow (x, y)
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return ()
+
+
+foreignDocumentWindowMouseUp
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> Int64
+  -> Int64
+  -> IO ()
+foreignDocumentWindowMouseUp
+    applicationStateMVarStablePtr
+    documentWindowIDPtr
+    x
+    y = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentWindowID <- peek documentWindowIDPtr
+  maybeDocumentWindow <- findDocumentWindowByID applicationStateMVar
+                                                documentWindowID
+  case maybeDocumentWindow of
+    Just documentWindow -> do
+      documentWindowMouseUp documentWindow (x, y)
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return ()

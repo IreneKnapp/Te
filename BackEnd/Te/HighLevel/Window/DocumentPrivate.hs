@@ -16,9 +16,9 @@ module Te.HighLevel.Window.DocumentPrivate
    getDocumentWindowHeightInRange,
    getAllDividers,
    getAnyDocumentDividerClickFrame,
+   getGhostStartingFrame,
    getIsTerminalDivider,
-   dividerOrientation,
-   getGhostStartingFrame)
+   dividerOrientation)
   where
 
 import Control.Concurrent.MVar
@@ -419,10 +419,37 @@ getAnyDocumentDividerClickFrame window anyDivider = do
     FarRightVirtualDocumentVerticalDivider -> do
       (contentWidth, contentHeight) <-
         readMVar $ documentWindowContentSize window
-      emWidth <- getEmWidth applicationState
-      let virtualWidth = floor $ emWidth * 4.0
-      return ((contentWidth - virtualWidth, 0),
-              (virtualWidth, contentHeight))
+      lineNumberAreaWidth <- getDefaultLineNumberAreaWidth applicationState
+      return ((contentWidth - lineNumberAreaWidth, 0),
+              (lineNumberAreaWidth, contentHeight))
+
+
+getGhostStartingFrame
+  :: DocumentWindow
+  -> AnyDocumentDivider
+  -> IO Rectangle
+getGhostStartingFrame window anyDivider = do
+  let project = documentWindowProject window
+      applicationState = projectApplicationState project
+  case anyDivider of
+    FarTopVirtualDocumentHorizontalDivider -> do
+      (contentWidth, _) <-
+        readMVar $ documentWindowContentSize window
+      lineHeight <- getLineHeight applicationState
+      let thickness = dividerThicknessForOrientation HorizontalOrientation
+      return ((0, 0), (contentWidth, thickness))
+    FarLeftVirtualDocumentVerticalDivider -> do
+      (_, contentHeight) <-
+        readMVar $ documentWindowContentSize window
+      lineNumberAreaWidth <- getDefaultLineNumberAreaWidth applicationState
+      return ((0, 0), (lineNumberAreaWidth, contentHeight))
+    FarRightVirtualDocumentVerticalDivider -> do
+      (contentWidth, contentHeight) <-
+        readMVar $ documentWindowContentSize window
+      lineNumberAreaWidth <- getDefaultLineNumberAreaWidth applicationState
+      return ((contentWidth - lineNumberAreaWidth, 0),
+              (lineNumberAreaWidth, contentHeight))
+    _ -> getAnyDocumentDividerClickFrame window anyDivider
 
 
 getIsTerminalDivider
@@ -461,16 +488,3 @@ dividerOrientation FarLeftVirtualDocumentVerticalDivider =
   VerticalOrientation
 dividerOrientation FarRightVirtualDocumentVerticalDivider =
   VerticalOrientation
-
-
-getGhostStartingFrame
-  :: DocumentWindow
-  -> AnyDocumentDivider
-  -> IO Rectangle
-getGhostStartingFrame window anyDivider = do
-  case anyDivider of
-    AnyDocumentVerticalDivider divider -> return ((0, 0), (50, 50))
-    AnyDocumentHorizontalDivider divider -> return ((0, 0), (50, 50))
-    FarTopVirtualDocumentHorizontalDivider -> return ((0, 0), (50, 50))
-    FarLeftVirtualDocumentVerticalDivider -> return ((0, 0), (50, 50))
-    FarRightVirtualDocumentVerticalDivider -> return ((0, 0), (50, 50))

@@ -225,6 +225,17 @@
 
 
 - (void) mouseDragged: (NSEvent *) event {
+    void *applicationState = getApplicationState();
+    if(!applicationState) return;
+    
+    NSPoint location = [documentView convertPoint: [event locationInWindow]
+                                     fromView: nil];
+    
+    int64_t x = location.x;
+    int64_t y = location.y;
+    
+    teDocumentWindowMouseDragged(applicationState, &windowID, x, y);
+
     /*
     if(!trackingDividerDrag)
         return;
@@ -695,6 +706,17 @@
 
 
 - (void) mouseUp: (NSEvent *) event {
+    void *applicationState = getApplicationState();
+    if(!applicationState) return;
+    
+    NSPoint location = [documentView convertPoint: [event locationInWindow]
+                                     fromView: nil];
+    
+    int64_t x = location.x;
+    int64_t y = location.y;
+    
+    teDocumentWindowMouseUp(applicationState, &windowID, x, y);
+    
     /*
     if(!trackingDividerDrag)
         return;

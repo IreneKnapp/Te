@@ -10,4 +10,5 @@
           drawHelper: (void (^)(NSRect drawFrame)) newDrawHelper;
 - (void) drawRect: (NSRect) dirtyRect;
 - (NSView *) hitTest: (NSPoint) point;
+- (BOOL) isFlipped;
 @end
