@@ -8,4 +8,5 @@
 - (id) initWithFrame: (NSRect) frame;
 - (void) drawRect: (NSRect) dirtyRect;
 - (BOOL) isFlipped;
+- (void) resetCursorRects;
 @end

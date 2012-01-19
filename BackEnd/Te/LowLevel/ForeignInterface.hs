@@ -239,6 +239,11 @@ foreign export ccall "teDocumentWindowVerticalDividers"
     :: StablePtr (MVar ApplicationState)
     -> Ptr DocumentWindowID
     -> IO (StablePtr [DocumentVerticalDivider])
+foreign export ccall "teDocumentWindowCursorRectangles"
+                     foreignDocumentWindowCursorRectangles
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> IO (StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))])
 foreign export ccall "teDocumentWindowMouseDown"
                      foreignDocumentWindowMouseDown
   :: StablePtr (MVar ApplicationState)
@@ -356,6 +361,24 @@ foreign export ccall "teDocumentVerticalDividerListItem"
     :: StablePtr [DocumentVerticalDivider]
     -> Word64
     -> Ptr DocumentVerticalDividerID
+    -> IO ()
+foreign export ccall "teCursorRectangleListFree"
+                     foreignCursorRectangleListFree
+    :: StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))]
+    -> IO ()
+foreign export ccall "teCursorRectangleListCount"
+                     foreignCursorRectangleListCount
+    :: StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))]
+    -> IO Word64
+foreign export ccall "teCursorRectangleListItem"
+                     foreignCursorRectangleListItem
+    :: StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))]
+    -> Word64
+    -> Ptr Word64
+    -> Ptr Int64
+    -> Ptr Int64
+    -> Ptr Int64
+    -> Ptr Int64
     -> IO ()
 foreign export ccall "teInodeParent"
                      foreignInodeParent
@@ -1528,6 +1551,26 @@ foreignDocumentWindowVerticalDividers applicationStateMVarStablePtr
       return $ castPtrToStablePtr nullPtr
 
 
+foreignDocumentWindowCursorRectangles
+  :: StablePtr (MVar ApplicationState)
+  -> Ptr DocumentWindowID
+  -> IO (StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))])
+foreignDocumentWindowCursorRectangles
+    applicationStateMVarStablePtr
+    documentWindowIDPtr = do
+  applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
+  documentWindowID <- peek documentWindowIDPtr
+  maybeDocumentWindow <- findDocumentWindowByID applicationStateMVar
+                                                documentWindowID
+  case maybeDocumentWindow of
+    Just documentWindow -> do
+      cursorRectangles <- getDocumentWindowCursorRectangles documentWindow
+      newStablePtr cursorRectangles
+    Nothing -> do
+      exception applicationStateMVar $(internalFailure)
+      return $ castPtrToStablePtr nullPtr
+
+
 foreignDocumentWindowMouseDown
   :: StablePtr (MVar ApplicationState)
   -> Ptr DocumentWindowID
@@ -1895,6 +1938,66 @@ foreignDocumentVerticalDividerListItem itemsStablePtr index identifierPtr = do
                in documentVerticalDividerID item
           else nullDocumentVerticalDividerID
   poke identifierPtr identifier
+
+
+foreignCursorRectangleListFree
+    :: StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))]
+    -> IO ()
+foreignCursorRectangleListFree
+    cursorRectangleListStablePtr = do
+  freeStablePtr cursorRectangleListStablePtr
+
+
+foreignCursorRectangleListCount
+    :: StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))]
+    -> IO Word64
+foreignCursorRectangleListCount
+    cursorRectangleListStablePtr = do
+  cursorRectangleList <- deRefStablePtr cursorRectangleListStablePtr
+  return $ fromIntegral $ length cursorRectangleList
+
+
+foreignCursorRectangleListItem
+    :: StablePtr [(CursorType, ((Int64, Int64), (Int64, Int64)))]
+    -> Word64
+    -> Ptr Word64
+    -> Ptr Int64
+    -> Ptr Int64
+    -> Ptr Int64
+    -> Ptr Int64
+    -> IO ()
+foreignCursorRectangleListItem
+    cursorRectangleListStablePtr
+    index
+    cursorTypePtr
+    leftPtr
+    topPtr
+    widthPtr
+    heightPtr = do
+  cursorRectangleList <- deRefStablePtr cursorRectangleListStablePtr
+  if fromIntegral index < length cursorRectangleList
+    then do
+      let (cursorType, ((left, top), (width, height))) =
+            cursorRectangleList !! fromIntegral index
+      poke cursorTypePtr
+           $ case cursorType of
+               ArrowCursorType -> 0
+               ResizeUpCursorType -> 1
+               ResizeDownCursorType -> 2
+               ResizeLeftCursorType -> 3
+               ResizeRightCursorType -> 4
+               ResizeUpDownCursorType -> 5
+               ResizeLeftRightCursorType -> 6
+      poke leftPtr left
+      poke topPtr top
+      poke widthPtr width
+      poke heightPtr height
+    else do
+      poke cursorTypePtr 0
+      poke leftPtr 0
+      poke topPtr 0
+      poke widthPtr 0
+      poke heightPtr 0
 
 
 foreignInodeParent

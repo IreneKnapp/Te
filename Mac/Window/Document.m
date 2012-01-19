@@ -199,6 +199,11 @@
 }
 
 
+- (void) recomputeCursorRectangles {
+    [[self window] invalidateCursorRectsForView: documentView];
+}
+
+
 - (void) mouseDown: (NSEvent *) event {
     void *applicationState = getApplicationState();
     if(!applicationState) return;

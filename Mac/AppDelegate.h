@@ -116,6 +116,8 @@ void noteNewDocumentPane(uuid_t *documentWindowID,
                          int64_t top,
                          int64_t width,
                          int64_t height);
+- (void) recomputeCursorRectangles: (uuid_t *) documentWindowID;
+void recomputeCursorRectangles(uuid_t *documentWindowID);
 - (void) newGhostWindowWithHorizontalDivider: (uuid_t *) documentWindowID
                                         left: (int64_t) left
                                          top: (int64_t) top

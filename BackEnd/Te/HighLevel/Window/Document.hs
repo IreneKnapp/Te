@@ -10,6 +10,7 @@ module Te.HighLevel.Window.Document
    getDocumentWindowPanes,
    getDocumentWindowHorizontalDividers,
    getDocumentWindowVerticalDividers,
+   getDocumentWindowCursorRectangles,
    documentWindowMouseDown)
   where
 
@@ -19,6 +20,7 @@ import Data.Array.Unboxed
 import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Maybe
 
 import Data.Geometry
 import Te.HighLevel.ApplicationPrivate
@@ -103,11 +105,47 @@ getDocumentWindowHorizontalDividers documentWindow = do
   return $ Map.elems horizontalDividerMap
 
 
+getDocumentWindowCursorRectangles
+  :: DocumentWindow -> IO [(CursorType, Rectangle)]
+getDocumentWindowCursorRectangles window = do
+  allDividers <- getAllDividers window
+  mapM (\anyDivider -> do
+          frame <- getAnyDocumentDividerClickFrame window anyDivider
+          case anyDivider of
+            AnyDocumentVerticalDivider divider -> do
+              panesLeft <-
+                readMVar $ documentVerticalDividerPanesLeft divider
+              panesRight <-
+                readMVar $ documentVerticalDividerPanesRight divider
+              case (panesLeft, panesRight) of
+                ([], []) -> return Nothing
+                ([], _) -> return $ Just (ResizeRightCursorType, frame)
+                (_, []) -> return $ Just (ResizeLeftCursorType, frame)
+                _ -> return $ Just (ResizeLeftRightCursorType, frame)
+            AnyDocumentHorizontalDivider divider -> do
+              panesUp <-
+                readMVar $ documentHorizontalDividerPanesUp divider
+              panesDown <-
+                readMVar $ documentHorizontalDividerPanesDown divider
+              case (panesUp, panesDown) of
+                ([], []) -> return Nothing
+                ([], _) -> return $ Just (ResizeDownCursorType, frame)
+                (_, []) -> return $ Just (ResizeUpCursorType, frame)
+                _ -> return $ Just (ResizeUpDownCursorType, frame)
+            FarTopVirtualDocumentHorizontalDivider -> do
+              return $ Just (ResizeDownCursorType, frame)
+            FarLeftVirtualDocumentVerticalDivider -> do
+              return $ Just (ResizeRightCursorType, frame)
+            FarRightVirtualDocumentVerticalDivider -> do
+              return $ Just (ResizeLeftCursorType, frame))
+       allDividers
+  >>= return . catMaybes
+
+
 documentWindowMouseDown
   :: DocumentWindow -> Point -> Bool -> IO ()
 documentWindowMouseDown window location optionDown = do
-  horizontalDividerMap <- readMVar $ documentWindowHorizontalDividers window
-  verticalDividerMap <- readMVar $ documentWindowVerticalDividers window
+  allDividers <- getAllDividers window
   maybeFoundDivider <-
     foldM (\maybeResult found ->
              case maybeResult of
@@ -118,11 +156,7 @@ documentWindowMouseDown window location optionDown = do
                    then return $ Just found
                    else return Nothing)
           Nothing
-          $ (map AnyDocumentHorizontalDivider $ Map.elems horizontalDividerMap)
-            ++ (map AnyDocumentVerticalDivider $ Map.elems verticalDividerMap)
-            ++ [FarTopVirtualDocumentHorizontalDivider,
-                FarLeftVirtualDocumentVerticalDivider,
-                FarRightVirtualDocumentVerticalDivider]
+          allDividers
   case maybeFoundDivider of
     Nothing -> return ()
     Just foundDivider -> do

@@ -14,6 +14,7 @@ module Te.HighLevel.Window.DocumentPrivate
    getDocumentWindowHeightAbove,
    getDocumentWindowWidthInRange,
    getDocumentWindowHeightInRange,
+   getAllDividers,
    getAnyDocumentDividerClickFrame,
    getIsTerminalDivider,
    dividerOrientation,
@@ -379,6 +380,17 @@ getDocumentWindowHeightInRange window rowTop rowSpan = do
   return totalHeight
 
 
+getAllDividers :: DocumentWindow -> IO [AnyDocumentDivider]
+getAllDividers window = do
+  horizontalDividerMap <- readMVar $ documentWindowHorizontalDividers window
+  verticalDividerMap <- readMVar $ documentWindowVerticalDividers window
+  return $ (map AnyDocumentHorizontalDivider $ Map.elems horizontalDividerMap)
+            ++ (map AnyDocumentVerticalDivider $ Map.elems verticalDividerMap)
+            ++ [FarTopVirtualDocumentHorizontalDivider,
+                FarLeftVirtualDocumentVerticalDivider,
+                FarRightVirtualDocumentVerticalDivider]
+
+
 getAnyDocumentDividerClickFrame
   :: DocumentWindow
   -> AnyDocumentDivider
@@ -408,7 +420,7 @@ getAnyDocumentDividerClickFrame window anyDivider = do
       (contentWidth, contentHeight) <-
         readMVar $ documentWindowContentSize window
       emWidth <- getEmWidth applicationState
-      let virtualWidth = floor $ emWidth * 2.0
+      let virtualWidth = floor $ emWidth * 4.0
       return ((contentWidth - virtualWidth, 0),
               (virtualWidth, contentHeight))
 

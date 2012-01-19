@@ -2,6 +2,16 @@
 
 typedef uint8_t uuid_t[16];
 
+enum CursorType {
+    ArrowCursorType = 0,
+    ResizeUpCursorType,
+    ResizeDownCursorType,
+    ResizeLeftCursorType,
+    ResizeRightCursorType,
+    ResizeUpDownCursorType,
+    ResizeLeftRightCursorType,
+};
+
 
 extern void *getApplicationState();
 extern void setUUIDNull(uuid_t *destination);

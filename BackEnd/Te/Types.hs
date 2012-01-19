@@ -2,6 +2,7 @@
 module Te.Types
   (ApplicationState(..),
    FrontEndCallbacks(..),
+   CursorType(..),
    DragState(..),
    ConfirmationDialog(..),
    RecentProject(..),
@@ -85,6 +86,17 @@ data FrontEndCallbacks =
         -> IO (),
       frontEndCallbacksCleanupGhostWindow :: IO ()
     }
+
+
+data CursorType
+  = ArrowCursorType
+  | ResizeUpCursorType
+  | ResizeDownCursorType
+  | ResizeLeftCursorType
+  | ResizeRightCursorType
+  | ResizeUpDownCursorType
+  | ResizeLeftRightCursorType
+  deriving (Show)
 
 
 data DragState =

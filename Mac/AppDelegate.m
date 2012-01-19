@@ -710,6 +710,21 @@ void noteNewDocumentPane(uuid_t *documentWindowID,
 }
 
 
+- (void) recomputeCursorRectangles: (uuid_t *) documentWindowID {
+    WindowDocument *windowDocumentObject
+        = [windows objectForKey: (void *) documentWindowID];
+    if(windowDocumentObject) {
+        [windowDocumentObject recomputeCursorRectangles];
+    }
+}
+
+
+void recomputeCursorRectangles(uuid_t *documentWindowID) {
+    [(AppDelegate *) [NSApp delegate]
+        recomputeCursorRectangles: documentWindowID];
+}
+
+
 - (void) newGhostWindowWithHorizontalDivider: (uuid_t *) documentWindowID
                                         left: (int64_t) left
                                          top: (int64_t) top
