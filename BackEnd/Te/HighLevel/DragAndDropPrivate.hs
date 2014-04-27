@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Te.HighLevel.DragAndDropPrivate
   (getDropTargetAndOperation,
    computeSameProject,

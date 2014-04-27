@@ -122,12 +122,12 @@
     valueFunctions = nil;
     windows = [self newMapTable];
     
-    char *versionLabelCString = teVersionString();
+    char *versionLabelCString = teVersionText();
     NSString *versionLabelString = @"";
     if(versionLabelCString) {
         versionLabelString
             = [NSString stringWithUTF8String: versionLabelCString];
-        teStringFree(versionLabelCString);
+        teTextFree(versionLabelCString);
     }
     [metaProjectVersionLabel setStringValue: versionLabelString];
     
@@ -418,11 +418,11 @@ void exception(char *messageCString, char *detailsCString) {
     
     char *messageCString = teConfirmationDialogMessage(confirmationDialog);
     NSString *message = [NSString stringWithUTF8String: messageCString];
-    teStringFree(messageCString);
+    teTextFree(messageCString);
     
     char *detailsCString = teConfirmationDialogDetails(confirmationDialog);
     NSString *details = [NSString stringWithUTF8String: detailsCString];
-    teStringFree(detailsCString);
+    teTextFree(detailsCString);
     
     uint64_t defaultButtonIndex
         = teConfirmationDialogDefaultButtonIndex(confirmationDialog);
@@ -443,7 +443,7 @@ void exception(char *messageCString, char *detailsCString) {
         if(buttonTitleCString) {
             NSString *buttonTitle
                 = [NSString stringWithUTF8String: buttonTitleCString];
-            teStringFree(buttonTitleCString);
+            teTextFree(buttonTitleCString);
             
             NSButton *button = [alert addButtonWithTitle: buttonTitle];
             

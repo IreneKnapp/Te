@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Te.HighLevel.ApplicationPrivate
   (addProjectToApplicationState,
    removeProjectFromApplicationState,
@@ -18,6 +19,8 @@ import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Text (Text)
+import qualified Data.Text as Text
 import System.FilePath
 
 import Data.Timestamp
@@ -96,43 +99,45 @@ projectClose project = do
   removeProjectFromApplicationState (projectApplicationState project) project
 
 
-computeNextNumberedName :: String -> String -> [String] -> Bool -> String
+computeNextNumberedName :: Text -> Text -> [Text] -> Bool -> Text
 computeNextNumberedName prefix suffix siblingNames caseSensitive =
-  let prefix' :: String
+  let prefix' :: Text
       prefix' = caseFoldIfAppropriate prefix
       
-      suffix' :: String
+      suffix' :: Text
       suffix' = caseFoldIfAppropriate suffix
       
-      prefixWithSpace' :: String
-      prefixWithSpace' = prefix' ++ " "
+      prefixWithSpace' :: Text
+      prefixWithSpace' = Text.concat [prefix', " "]
       
-      caseFoldIfAppropriate :: String -> String
+      caseFoldIfAppropriate :: Text -> Text
       caseFoldIfAppropriate string =
         if caseSensitive
           then string
-          else map toUpper string
+          else Text.map toUpper string
       
-      stripPrefixAndSuffix :: String -> String -> String -> Maybe String
+      stripPrefixAndSuffix :: Text -> Text -> Text -> Maybe Text
       stripPrefixAndSuffix prefix suffix name =
-        if isPrefixOf prefix name
-          then let nameWithoutPrefix = drop (length prefix) name
-               in if isSuffixOf suffix nameWithoutPrefix
-                    then Just $ reverse $ drop (length suffix)
-                                               $ reverse nameWithoutPrefix
+        if Text.isPrefixOf prefix name
+          then let nameWithoutPrefix = Text.drop (Text.length prefix) name
+               in if Text.isSuffixOf suffix nameWithoutPrefix
+                    then Just $ Text.reverse
+                              $ Text.drop (Text.length suffix)
+                              $ Text.reverse nameWithoutPrefix
                     else Nothing
           else Nothing
       
-      nameNumber :: String -> Maybe Int
+      nameNumber :: Text -> Maybe Int
       nameNumber name =
         let name' = caseFoldIfAppropriate name
-        in if name' == prefix' ++ suffix'
+        in if name' == Text.concat [prefix', suffix']
              then Just 1
              else case stripPrefixAndSuffix prefixWithSpace' suffix' name' of
                     Nothing -> Nothing
                     Just numberPart ->
-                      if (length numberPart > 0) && (all isDigit numberPart)
-                        then Just $ read numberPart
+                      if (Text.length numberPart > 0)
+                         && (Text.all isDigit numberPart)
+                        then Just $ read $ Text.unpack numberPart
                         else Nothing
       
       number :: Int
@@ -141,14 +146,14 @@ computeNextNumberedName prefix suffix siblingNames caseSensitive =
                                          ++ map nameNumber
                                                 siblingNames)
       
-      name :: String
+      name :: Text
       name = if number == 1
-               then prefix ++ suffix
-               else prefix ++ " " ++ show number ++ suffix
+               then Text.concat [prefix, suffix]
+               else Text.concat [prefix, " ", Text.pack $ show number, suffix]
   in name
 
 
-getNextUntitledProjectName :: MVar ApplicationState -> IO String
+getNextUntitledProjectName :: MVar ApplicationState -> IO Text
 getNextUntitledProjectName applicationStateMVar = do
   applicationState <- readMVar applicationStateMVar
   projectNames <- mapM (\project -> readMVar $ projectName project)
@@ -156,11 +161,12 @@ getNextUntitledProjectName applicationStateMVar = do
   return $ computeNextNumberedName "Untitled" "" projectNames True
 
 
-computeNameForFilePath :: String -> String
+computeNameForFilePath :: Text -> Text
 computeNameForFilePath filePath =
-  let fileName = takeFileName filePath
-      fileNameWithoutExtension = if isSuffixOf ".te" fileName
-                                   then dropExtension fileName
+  let fileName = Text.pack $ takeFileName $ Text.unpack filePath
+      fileNameWithoutExtension = if Text.isSuffixOf ".te" fileName
+                                   then Text.pack $ dropExtension
+                                        $ Text.unpack fileName
                                    else fileName
   in fileNameWithoutExtension
 

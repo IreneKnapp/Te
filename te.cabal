@@ -1,7 +1,7 @@
 name: te
 version: 0.1
 cabal-version: >= 1.18
-build-type: Simple
+build-type: Custom
 license: AllRightsReserved
 license-file: LICENSE
 copyright: Copyright (c) 2012 Irene Knapp
@@ -26,7 +26,6 @@ Flag debug
 Executable Te
   hs-source-dirs: Mac
   include-dirs: Mac
-  c-source-dirs: Mac
   main-is: main.m
   includes:
     AppDelegate.h,
@@ -47,21 +46,21 @@ Executable Te
     Window/Document/VerticalDividerManager.h,
     Window/Document/View.h
   c-sources:
-    AppDelegate.m,
-    FileNameCell.m,
-    FileNameCellFieldEditor.m,
-    TransparentHelperWindow.m,
-    TransparentHelperWindowView.m,
-    Utilities.m,
-    Window/Browser/Item.m,
-    Window/Browser.m,
-    Window/Document/HorizontalDividerManager.m,
-    Window/Document/PaneInformation.m,
-    Window/Document/PaneManager.m,
-    Window/Document/VerticalDividerManager.m,
-    Window/Document/View.m,
-    Window/Document.m,
-    Window.m
+    Mac/AppDelegate.m,
+    Mac/FileNameCell.m,
+    Mac/FileNameCellFieldEditor.m,
+    Mac/TransparentHelperWindow.m,
+    Mac/TransparentHelperWindowView.m,
+    Mac/Utilities.m,
+    Mac/Window/Browser/Item.m,
+    Mac/Window/Browser.m,
+    Mac/Window/Document/HorizontalDividerManager.m,
+    Mac/Window/Document/PaneInformation.m,
+    Mac/Window/Document/PaneManager.m,
+    Mac/Window/Document/VerticalDividerManager.m,
+    Mac/Window/Document/View.m,
+    Mac/Window/Document.m,
+    Mac/Window.m
   hs-source-dirs: BackEnd
   other-modules:
     Data.Bitfield,
@@ -99,7 +98,7 @@ Executable Te
     base >= 4.1,
     binary >= 0.5.0.2,
     bytestring >= 0.9.1.4,
-    cabal-macosx >= 0.2.3,
+    cabal-macosx >= 0.2.2,
     containers >= 0.4.0.0,
     direct-sqlite >= 1.1,
     directory >= 1.1.0.0,
@@ -108,8 +107,8 @@ Executable Te
     old-locale >= 1.0.0.2,
     system-uuid >= 2.1.0,
     template-haskell >= 2.5.0.0,
-    time >= 1.2.0.4,
-    utf8-string >= 0.3.6
+    text >= 1.1.0.1,
+    time >= 1.2.0.4
   default-language: Haskell2010
   frameworks: Cocoa
   objc-gc: Mandatory

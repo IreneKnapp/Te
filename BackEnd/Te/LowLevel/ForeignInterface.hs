@@ -1,13 +1,15 @@
-{-# LANGUAGE ForeignFunctionInterface, TemplateHaskell #-}
+{-# LANGUAGE ForeignFunctionInterface, TemplateHaskell, OverloadedStrings #-}
 module Te.LowLevel.ForeignInterface () where
 
 import Control.Concurrent.MVar
 import Control.Exception
 import Control.Monad
 import qualified Data.ByteString as BS
-import qualified Data.ByteString.UTF8 as UTF8
 import Data.Map (Map)
 import qualified Data.Map as Map
+import qualified Data.Text.Encoding as Text
+import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.UUID
 import Data.Word
 import Foreign
@@ -33,7 +35,7 @@ foreign import ccall "dynamic" mkIntPairCallback
 foreign import ccall "dynamic" mkIntPtrQuadCallback
     :: FunPtr (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
     -> (Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> Ptr Int64 -> IO ())
-foreign import ccall "dynamic" mkVoidStringStringCallback
+foreign import ccall "dynamic" mkVoidTextTextCallback
     :: FunPtr (CString -> CString -> IO ()) -> (CString -> CString -> IO ())
 foreign import ccall "dynamic" mkVoidWindowIDPtrCallback
     :: FunPtr (Ptr WindowID -> IO ()) -> (Ptr WindowID -> IO ())
@@ -86,17 +88,17 @@ foreign import ccall "wrapper" wrapCompletionHandler
 foreign export ccall "teFrontEndInternalFailure"
                       foreignFrontEndInternalFailure
     :: StablePtr (MVar ApplicationState) -> CString -> Word64 -> IO ()
-foreign export ccall "teStringFree"
-                     foreignStringFree
+foreign export ccall "teTextFree"
+                     foreignTextFree
     :: CString -> IO ()
-foreign export ccall "teVersionString"
-                     foreignVersionString
+foreign export ccall "teVersionText"
+                     foreignVersionText
     :: IO CString
 foreign export ccall "teTimestampShow"
                      foreignTimestampShow
     :: Word64 -> IO CString
-foreign export ccall "teByteSizePlaceholderString"
-                     foreignByteSizePlaceholderString
+foreign export ccall "teByteSizePlaceholderText"
+                     foreignByteSizePlaceholderText
     :: IO CString
 foreign export ccall "teByteSizeShow"
                      foreignByteSizeShow
@@ -516,11 +518,11 @@ foreign export ccall "teInodeListKernel"
 foreign export ccall
     "teBrowserWindowDraggingSourceIntraApplicationOperations"
     foreignBrowserWindowDraggingSourceIntraApplicationOperations
-    :: Bitfield DragOperation
+    :: Word64
 foreign export ccall
     "teBrowserWindowDraggingSourceInterApplicationOperations"
     foreignBrowserWindowDraggingSourceInterApplicationOperations
-    :: Bitfield DragOperation
+    :: Word64
 foreign export ccall "teDragOperationCopy"
                      foreignDragOperationCopy
     :: Word64
@@ -539,14 +541,14 @@ foreign export ccall "teDragOperationDelete"
 foreign export ccall "teInodeDragInformationNew"
                      foreignInodeDragInformationNew
     :: StablePtr (MVar ApplicationState)
-    -> Bitfield DragOperation
+    -> Word64
     -> Ptr BrowserWindowID
     -> StablePtr [Inode]
     -> IO (StablePtr DragInformation)
 foreign export ccall "teExternalFileDragInformationNew"
                      foreignExternalFileDragInformationNew
     :: StablePtr (MVar ApplicationState)
-    -> Bitfield DragOperation
+    -> Word64
     -> Word64
     -> Ptr CString
     -> IO (StablePtr DragInformation)
@@ -557,7 +559,7 @@ foreign export ccall "teDragInformationFree"
 foreign export ccall "teDragInformationAllowedDragOperations"
                      foreignDragInformationAllowedDragOperations
     :: StablePtr DragInformation
-    -> IO (Bitfield DragOperation)
+    -> IO Word64
 foreign export ccall "teDragInformationBrowserWindow"
                      foreignDragInformationBrowserWindow
     :: StablePtr DragInformation
@@ -639,13 +641,13 @@ foreignFrontEndInternalFailure applicationStateMVarStablePtr
                                filenameCString
                                lineNumber = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  filename <- peekCString filenameCString
+  filename <- peekCString filenameCString >>= return . Text.pack
   frontEndInternalFailure applicationStateMVar filename lineNumber
 
 
-stringNew :: String -> IO CString
-stringNew string = do
-  let byteString = UTF8.fromString string
+textNew :: Text -> IO CString
+textNew text = do
+  let byteString = Text.encodeUtf8 text
       bufferLength = 1 + BS.length byteString
   cString <- mallocArray bufferLength
   mapM_ (\index -> do
@@ -657,31 +659,31 @@ stringNew string = do
   return $ castPtr cString
 
 
-foreignStringFree :: CString -> IO ()
-foreignStringFree cString = free cString
+foreignTextFree :: CString -> IO ()
+foreignTextFree cString = free cString
 
 
-foreignVersionString :: IO CString
-foreignVersionString = do
-  stringNew versionString
+foreignVersionText :: IO CString
+foreignVersionText = do
+  textNew versionText
 
 
 foreignTimestampShow :: Word64 -> IO CString
 foreignTimestampShow timestamp = do
   result <- timestampShow $ Timestamp timestamp
-  stringNew result
+  textNew result
 
 
-foreignByteSizePlaceholderString :: IO CString
-foreignByteSizePlaceholderString = do
-  result <- byteSizePlaceholderString
-  stringNew result
+foreignByteSizePlaceholderText :: IO CString
+foreignByteSizePlaceholderText = do
+  result <- byteSizePlaceholderText
+  textNew result
 
 
 foreignByteSizeShow :: Word64 -> IO CString
 foreignByteSizeShow byteSize = do
   result <- byteSizeShow $ ByteSize byteSize
-  stringNew result
+  textNew result
 
 
 foreignUUIDHash :: Ptr UUID -> IO Word64
@@ -703,8 +705,8 @@ foreignUUIDEqual uuidPtrA uuidPtrB = do
 foreignUUIDShow :: Ptr UUID -> IO CString
 foreignUUIDShow uuidPtr = do
   uuid <- peek uuidPtr
-  string <- uuidShow uuid
-  stringNew string
+  text <- uuidShow uuid
+  textNew text
 
 
 foreignCompletionHandlerFree :: FunPtr (Word64 -> IO ()) -> IO ()
@@ -789,15 +791,15 @@ wrapRectangleRectangleCallback foreignCallback =
   in highLevelCallback
 
 
-wrapVoidStringStringCallback
+wrapVoidTextTextCallback
     :: FunPtr (CString -> CString -> IO ())
-    -> (String -> String -> IO ())
-wrapVoidStringStringCallback foreignCallback =
-  let lowLevelCallback = mkVoidStringStringCallback foreignCallback
-      highLevelCallback stringA stringB = do
-        withCString stringA
+    -> (Text -> Text -> IO ())
+wrapVoidTextTextCallback foreignCallback =
+  let lowLevelCallback = mkVoidTextTextCallback foreignCallback
+      highLevelCallback textA textB = do
+        withCString (Text.unpack textA)
                     (\cStringA -> do
-                       withCString stringB
+                       withCString (Text.unpack textB)
                                    (\cStringB -> do
                                       lowLevelCallback cStringA cStringB))
   in highLevelCallback
@@ -982,7 +984,7 @@ foreignApplicationInit foreignException
                        foreignCleanupGhostWindow
                        foreignGhostWindowUpdateMouse = do
   let callbackException =
-        wrapVoidStringStringCallback foreignException
+        wrapVoidTextTextCallback foreignException
       callbackConfirm =
         wrapVoidConfirmationDialogCompletionHandlerCallback foreignConfirm
       callbackNoteRecentProjectsChanged =
@@ -1090,7 +1092,7 @@ foreignApplicationRecentProjectName applicationStateMVarStablePtr index = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
   maybeResult <- applicationRecentProjectName applicationStateMVar index
   case maybeResult of
-    Just result -> stringNew result
+    Just result -> textNew result
     Nothing -> return nullPtr
 
 
@@ -1118,7 +1120,7 @@ foreignApplicationOpenProject
 foreignApplicationOpenProject applicationStateMVarStablePtr
                               filePathCString = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  filePath <- peekCString filePathCString
+  filePath <- peekCString filePathCString >>= return . Text.pack
   applicationOpenProject applicationStateMVar filePath
 
 
@@ -1154,8 +1156,8 @@ foreignWindowTitle applicationStateMVarStablePtr
   maybeWindow <- findWindowByID applicationStateMVar windowID
   case maybeWindow of
     Just window -> do
-      string <- getWindowTitle window
-      stringNew string
+      text <- getWindowTitle window
+      textNew text
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
@@ -1170,8 +1172,8 @@ foreignWindowTitleIcon applicationStateMVarStablePtr
   maybeWindow <- findWindowByID applicationStateMVar windowID
   case maybeWindow of
     Just window -> do
-      string <- getWindowTitleIcon window
-      stringNew string
+      text <- getWindowTitleIcon window
+      textNew text
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
@@ -1866,7 +1868,7 @@ foreignDocumentPaneCaption applicationStateMVarStablePtr
   case maybeDocumentPane of
     Just documentPane -> do
       caption <- getDocumentPaneCaption documentPane
-      newCString caption
+      newCString $ Text.unpack caption
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
@@ -1885,7 +1887,7 @@ foreignDocumentPaneSizeReport applicationStateMVarStablePtr
   case maybeDocumentPane of
     Just documentPane -> do
       sizeReport <- getDocumentPaneCaption documentPane
-      newCString sizeReport
+      newCString $ Text.unpack sizeReport
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
@@ -2222,8 +2224,8 @@ foreignInodeName applicationStateMVarStablePtr
                       inodeID = inodeID',
                       inodeProject = project
                     }
-      string <- inodeName inode
-      newCString string
+      text <- inodeName inode
+      newCString $ Text.unpack text
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
@@ -2249,8 +2251,8 @@ foreignInodeKind applicationStateMVarStablePtr
                       inodeID = inodeID',
                       inodeProject = project
                     }
-      string <- inodeKind inode
-      newCString string
+      text <- inodeKind inode
+      newCString $ Text.unpack text
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
@@ -2367,7 +2369,7 @@ foreignInodeIcon applicationStateMVarStablePtr
                       inodeProject = project
                     }
       icon <- inodeIcon inode
-      stringNew icon
+      textNew icon
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
       return nullPtr
@@ -2395,7 +2397,7 @@ foreignInodeRename applicationStateMVarStablePtr
                       inodeID = inodeID',
                       inodeProject = project
                     }
-      newName <- peekCString newNameCString
+      newName <- peekCString newNameCString >>= return . Text.pack
       inodeRename inode newName
     Nothing -> do
       exception applicationStateMVar $(internalFailure)
@@ -2569,15 +2571,17 @@ foreignInodeListKernel inodesStablePtr = do
 
 
 foreignBrowserWindowDraggingSourceIntraApplicationOperations
-    :: Bitfield DragOperation
+    :: Word64
 foreignBrowserWindowDraggingSourceIntraApplicationOperations =
-  setToBitfield browserWindowDraggingSourceIntraApplicationOperations
+  fromIntegral $ setToBitfield
+    browserWindowDraggingSourceIntraApplicationOperations
 
 
 foreignBrowserWindowDraggingSourceInterApplicationOperations
-    :: Bitfield DragOperation
+    :: Word64
 foreignBrowserWindowDraggingSourceInterApplicationOperations =
-  setToBitfield browserWindowDraggingSourceInterApplicationOperations
+  fromIntegral $ setToBitfield
+    browserWindowDraggingSourceInterApplicationOperations
 
 
 foreignDragOperationCopy :: Word64
@@ -2602,7 +2606,7 @@ foreignDragOperationDelete = valueToBit DragOperationDelete
 
 foreignInodeDragInformationNew
     :: StablePtr (MVar ApplicationState)
-    -> Bitfield DragOperation
+    -> Word64
     -> Ptr BrowserWindowID
     -> StablePtr [Inode]
     -> IO (StablePtr DragInformation)
@@ -2616,7 +2620,8 @@ foreignInodeDragInformationNew applicationStateMVarStablePtr
                                               browserWindowID
   case maybeBrowserWindow of
     Just browserWindow -> do
-      let allowedDragOperations = bitfieldToSet allowedDragOperationsBitfield
+      let allowedDragOperations =
+            bitfieldToSet $ fromIntegral allowedDragOperationsBitfield
       inodes <- deRefStablePtr inodesStablePtr
       let dragInformation =
             InodeDragInformation {
@@ -2632,7 +2637,7 @@ foreignInodeDragInformationNew applicationStateMVarStablePtr
 
 foreignExternalFileDragInformationNew
     :: StablePtr (MVar ApplicationState)
-    -> Bitfield DragOperation
+    -> Word64
     -> Word64
     -> Ptr CString
     -> IO (StablePtr DragInformation)
@@ -2641,10 +2646,11 @@ foreignExternalFileDragInformationNew applicationStateMVarStablePtr
                                       filePathCount
                                       filePathCStringPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
-  let allowedDragOperations = bitfieldToSet allowedDragOperationsBitfield
+  let allowedDragOperations =
+        bitfieldToSet $ fromIntegral allowedDragOperationsBitfield
       filePathCount' = fromIntegral filePathCount
   filePathCStrings <- peekArray filePathCount' filePathCStringPtr
-  filePaths <- mapM peekCString filePathCStrings
+  filePaths <- mapM peekCString filePathCStrings >>= return . map Text.pack
   let dragInformation =
         ExternalFileDragInformation {
             dragInformationAllowedDragOperations = allowedDragOperations,
@@ -2662,13 +2668,13 @@ foreignDragInformationFree dragInformationStablePtr = do
 
 foreignDragInformationAllowedDragOperations
     :: StablePtr DragInformation
-    -> IO (Bitfield DragOperation)
+    -> IO Word64
 foreignDragInformationAllowedDragOperations dragInformationStablePtr = do
   dragInformation <- deRefStablePtr dragInformationStablePtr
   let allowedDragOperationsSet =
         dragInformationAllowedDragOperations dragInformation
       allowedDragOperationsBitfield = setToBitfield allowedDragOperationsSet
-  return allowedDragOperationsBitfield
+  return $ fromIntegral allowedDragOperationsBitfield
 
 
 foreignDragInformationBrowserWindow
@@ -2743,7 +2749,7 @@ foreignDragInformationFilePath dragInformationStablePtr index = do
       if index' < length filePaths
         then do
           let filePath = filePaths !! index'
-          stringNew filePath
+          textNew filePath
         else return nullPtr
     _ -> return nullPtr
 
@@ -2768,8 +2774,8 @@ foreignConfirmationDialogNew applicationStateMVarStablePtr
                              buttonCStringsPtr = do
   applicationStateMVar <- deRefStablePtr applicationStateMVarStablePtr
   maybeWindow <- findMaybeWindowFromIDPtr applicationStateMVar windowIDPtr
-  message <- peekCString messageCString
-  details <- peekCString detailsCString
+  message <- peekCString messageCString >>= return . Text.pack
+  details <- peekCString detailsCString >>= return . Text.pack
   let maybeDefaultButtonIndex =
         if defaultButtonIndex == outOfBandWord64
           then Nothing
@@ -2779,7 +2785,7 @@ foreignConfirmationDialogNew applicationStateMVarStablePtr
           then Nothing
           else Just cancelButtonIndex
   buttonCStrings <- peekArray (fromIntegral buttonCount) buttonCStringsPtr
-  buttons <- mapM peekCString buttonCStrings
+  buttons <- mapM peekCString buttonCStrings >>= return . map Text.pack
   newStablePtr $ ConfirmationDialog {
                      confirmationDialogWindow = maybeWindow,
                      confirmationDialogMessage = message,
@@ -2818,7 +2824,7 @@ foreignConfirmationDialogMessage
     -> IO CString
 foreignConfirmationDialogMessage confirmationDialogStablePtr = do
   confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
-  newCString $ confirmationDialogMessage confirmationDialog
+  newCString $ Text.unpack $ confirmationDialogMessage confirmationDialog
 
 
 foreignConfirmationDialogDetails
@@ -2826,7 +2832,7 @@ foreignConfirmationDialogDetails
     -> IO CString
 foreignConfirmationDialogDetails confirmationDialogStablePtr = do
   confirmationDialog <- deRefStablePtr confirmationDialogStablePtr
-  newCString $ confirmationDialogDetails confirmationDialog
+  newCString $ Text.unpack $ confirmationDialogDetails confirmationDialog
 
 
 foreignConfirmationDialogDefaultButtonIndex
@@ -2874,5 +2880,5 @@ foreignConfirmationDialogButton confirmationDialogStablePtr
   let index' = fromIntegral index
       buttons = confirmationDialogButtons confirmationDialog
   if index' < length buttons
-    then newCString $ buttons !! index'
+    then newCString $ Text.unpack $ buttons !! index'
     else return nullPtr

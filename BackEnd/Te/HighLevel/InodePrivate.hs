@@ -9,6 +9,8 @@ import Control.Concurrent.MVar
 import Control.Monad
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Data.ByteSize
 import Te.LowLevel.Database
@@ -18,7 +20,7 @@ import {-# SOURCE #-} Te.HighLevel.Inode
 import Te.Types
 
 
-getChildInodeNames :: Inode -> IO [String]
+getChildInodeNames :: Inode -> IO [Text]
 getChildInodeNames inode = do
   childCount <- inodeChildCount inode
   let getChildInodes resultsSoFar index = do

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Te.HighLevel.Inode
   (Inode,
    InodeID,
@@ -28,6 +28,8 @@ import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Word
 
 import Data.ByteSize
@@ -84,7 +86,7 @@ inodeChild inode index = do
     lookupInodeChild inode index
 
 
-inodeName :: Inode -> IO String
+inodeName :: Inode -> IO Text
 inodeName inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
@@ -93,7 +95,7 @@ inodeName inode = do
     return $ inodeInformationName inodeInformation
 
 
-inodeKind :: Inode -> IO String
+inodeKind :: Inode -> IO Text
 inodeKind inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
@@ -131,7 +133,7 @@ inodeModificationTimestamp inode = do
     return $ inodeInformationModificationTimestamp inodeInformation
 
 
-inodeIcon :: Inode -> IO String
+inodeIcon :: Inode -> IO Text
 inodeIcon inode = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
@@ -142,7 +144,7 @@ inodeIcon inode = do
       HaskellInodeType -> return "File"
 
 
-inodeRename :: Inode -> String -> IO ()
+inodeRename :: Inode -> Text -> IO ()
 inodeRename inode newName = do
   let project = inodeProject inode
       applicationStateMVar = projectApplicationState project
@@ -167,30 +169,32 @@ inodeListDelete maybeWindow inodes = do
         (nFolders, nFiles, totalSize) <- getInodesRecursiveStatistics inodes
         if (nFolders > 0) || (nFiles > 0)
           then do
-            let pluralize :: Int -> String -> String
+            let pluralize :: Int -> Text -> Text
                 pluralize n word =
                   if n == 1
-                    then (show n) ++ " " ++ word
-                    else (show n) ++ " " ++ word ++ "s"
-                omitIfZero :: Int -> String -> Maybe String
+                    then Text.concat [Text.pack $ show n, " ", word]
+                    else Text.concat [Text.pack $ show n, " ", word, "s"]
+                omitIfZero :: Int -> Text -> Maybe Text
                 omitIfZero n word =
                   if n == 0
                     then Nothing
                     else Just $ pluralize n word
-                message = "Do you want to delete "
-                          ++ (if length inodes == 1
-                                then "this item"
-                                else "these items")
-                          ++ "?"
-                details = intercalate " and "
-                                      (catMaybes $ map (uncurry omitIfZero)
-                                                       [(nFolders, "folder"),
-                                                        (nFiles, "file")])
-                          ++ ", totalling "
-                          ++ (show totalSize)
-                          ++ ", will be deleted."
-                          ++ "  "
-                          ++ "This action is irreversible."
+                message = Text.concat
+                  ["Do you want to delete ",
+                   if length inodes == 1
+                     then "this item"
+                     else "these items",
+                   "?"]
+                details = Text.concat
+                   [Text.intercalate " and "
+                      $ catMaybes $ map (uncurry omitIfZero)
+                                        [(nFolders, "folder"),
+                                         (nFiles, "file")],
+                    ", totalling ",
+                    Text.pack $ show totalSize,
+                    ", will be deleted.",
+                    "  ",
+                    "This action is irreversible."]
             confirm applicationStateMVar
                     (ConfirmationDialog {
                          confirmationDialogWindow = maybeWindow,

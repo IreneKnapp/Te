@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Te.HighLevel.Window.Document.Pane
   (getDocumentPaneLeftMarginWidth,
    getDocumentPaneRightMarginWidth,
@@ -17,6 +18,8 @@ import Data.Array.Unboxed
 import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Data.Geometry
 import Te.HighLevel.Window.DocumentPrivate
@@ -140,12 +143,12 @@ getDocumentPaneDesiredSize documentPane = do
   return (desiredWidth, desiredHeight)
 
 
-getDocumentPaneCaption :: DocumentPane -> IO String
+getDocumentPaneCaption :: DocumentPane -> IO Text
 getDocumentPaneCaption _ = do
   return "(12, 13) in 1980"
 
 
-getDocumentPaneSizeReport :: DocumentPane -> IO String
+getDocumentPaneSizeReport :: DocumentPane -> IO Text
 getDocumentPaneSizeReport documentPane = do
   let documentWindow = documentPaneWindow documentPane
       project = documentWindowProject documentWindow
@@ -170,5 +173,6 @@ getDocumentPaneSizeReport documentPane = do
       nColumns = if currentWidth > 0
                    then floor $ realToFrac contentWidth / emWidth
                    else 0
-      sizeReport = (show nColumns) ++ " x " ++ (show nLines)
+      sizeReport = Text.concat
+        [Text.pack $ show nColumns, " x ", Text.pack $ show nLines]
   return sizeReport

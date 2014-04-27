@@ -5,6 +5,8 @@ module Te.HighLevel.UUID
   where
 
 import Data.Digest.Murmur64
+import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.UUID
 import Data.Word
 
@@ -21,7 +23,7 @@ uuidEqual uuidA uuidB = do
   return $ uuidA == uuidB
 
 
-uuidShow :: UUID -> IO String
+uuidShow :: UUID -> IO Text
 uuidShow uuid = do
-  return $ show uuid
+  return $ Text.pack $ show uuid
 

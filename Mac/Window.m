@@ -22,7 +22,7 @@
     NSString *title = @"";
     if(titleCString) {
         title = [NSString stringWithUTF8String: titleCString];
-        teStringFree(titleCString);
+        teTextFree(titleCString);
     }
     
     char *titleIconCString
@@ -30,7 +30,7 @@
     NSString *titleIcon = @"";
     if(titleIconCString) {
         titleIcon = [NSString stringWithUTF8String: titleIconCString];
-        teStringFree(titleIconCString);
+        teTextFree(titleIconCString);
     }
     
     NSWindow *window = [self window];

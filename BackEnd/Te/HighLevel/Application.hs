@@ -1,11 +1,12 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Te.HighLevel.Application
   (ByteSize(..),
    Timestamp(..),
    FrontEndCallbacks(..),
    frontEndInternalFailure,
-   versionString,
+   versionText,
    timestampShow,
-   byteSizePlaceholderString,
+   byteSizePlaceholderText,
    byteSizeShow,
    ApplicationState,
    applicationInit,
@@ -24,6 +25,8 @@ import Data.List
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Version
+import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Word
 import System.Directory
 import System.FilePath
@@ -38,30 +41,30 @@ import Te.Types
 import Paths_te
 
 
-frontEndInternalFailure :: MVar ApplicationState -> String -> Word64 -> IO ()
+frontEndInternalFailure :: MVar ApplicationState -> Text -> Word64 -> IO ()
 frontEndInternalFailure applicationStateMVar filename lineNumber =
   catchTe applicationStateMVar () $ do
     let lineNumber' = fromIntegral lineNumber
     throwIO $ TeExceptionInternal filename lineNumber'
 
 
-versionString :: String
-versionString = showVersion version
+versionText :: Text
+versionText = Text.pack $ showVersion version
 
 
-timestampShow :: Timestamp -> IO String
+timestampShow :: Timestamp -> IO Text
 timestampShow timestamp = do
   describeTimestamp timestamp
 
 
-byteSizePlaceholderString :: IO String
-byteSizePlaceholderString = do
+byteSizePlaceholderText :: IO Text
+byteSizePlaceholderText = do
   return "—"
 
 
-byteSizeShow :: ByteSize -> IO String
+byteSizeShow :: ByteSize -> IO Text
 byteSizeShow byteSize = do
-  return $ show byteSize
+  return $ Text.pack $ show byteSize
 
 
 applicationInit :: FrontEndCallbacks -> IO (MVar ApplicationState)
@@ -89,7 +92,7 @@ applicationRecentProjectCount applicationStateMVar =
 
 
 applicationRecentProjectName
-    :: MVar ApplicationState -> Word64 -> IO (Maybe String)
+    :: MVar ApplicationState -> Word64 -> IO (Maybe Text)
 applicationRecentProjectName applicationStateMVar index =
   catchTe applicationStateMVar Nothing $ do
     applicationState <- readMVar applicationStateMVar
@@ -98,9 +101,10 @@ applicationRecentProjectName applicationStateMVar index =
     if index' < length recentProjects
       then do
         let filePath = recentProjectFilePath $ recentProjects !! index'
-            nameWithExtension = takeFileName filePath
-            name = if isSuffixOf ".te" nameWithExtension
-                     then dropExtension nameWithExtension
+            nameWithExtension = Text.pack $ takeFileName $ Text.unpack filePath
+            name = if Text.isSuffixOf ".te" nameWithExtension
+                     then Text.pack $ dropExtension
+                            $ Text.unpack nameWithExtension
                      else nameWithExtension
         return $ Just name
       else return Nothing
@@ -141,16 +145,16 @@ applicationNewProject applicationStateMVar =
 
 
 applicationOpenProject
-    :: MVar ApplicationState -> FilePath -> IO ()
+    :: MVar ApplicationState -> Text -> IO ()
 applicationOpenProject applicationStateMVar filePath =
   catchTe applicationStateMVar () $ do
     applicationOpenProject' applicationStateMVar filePath
 
 
 applicationOpenProject'
-    :: MVar ApplicationState -> FilePath -> IO ()
+    :: MVar ApplicationState -> Text -> IO ()
 applicationOpenProject' applicationStateMVar filePath = do
-  exists <- doesFileExist filePath
+  exists <- doesFileExist $ Text.unpack filePath
   if not exists
     then throwIO $ TeExceptionFileDoesNotExist filePath
     else do

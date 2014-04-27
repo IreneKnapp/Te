@@ -59,7 +59,7 @@ NSString *uuidDescriptionPointerFunction(const void *item)
 {
     char *cString = teUUIDShow((void *) item);
     NSString *string = [NSString stringWithUTF8String: cString];
-    teStringFree(cString);
+    teTextFree(cString);
     return string;
 }
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TemplateHaskell, OverloadedStrings #-}
 module Te.LowLevel.Database
   (Database,
    newProjectDatabase,
@@ -25,6 +25,8 @@ module Te.LowLevel.Database
   where
 
 import Control.Exception
+import Data.Text (Text)
+import qualified Data.Text as Text
 import Data.Word
 import Database.SQLite3 (Database, StepResult(..), SQLData(..))
 import qualified Database.SQLite3 as SQL
@@ -38,7 +40,7 @@ import Te.LowLevel.Identifiers
 import Te.Types
 
 
-query :: Database -> String -> [SQLData] -> IO [[SQLData]]
+query :: Database -> Text -> [SQLData] -> IO [[SQLData]]
 query database queryText bindings = do
   statement <- SQL.prepare database queryText
   catch (do
@@ -72,11 +74,12 @@ closeProjectDatabase database = do
   SQL.close database
 
 
-attachFileToProjectDatabase :: Database -> FilePath -> IO Bool
+attachFileToProjectDatabase :: Database -> Text -> IO Bool
 attachFileToProjectDatabase database filePath = do
   catch (do
           _ <- query database
-                     "ATTACH DATABASE ? AS FILE"
+                     (Text.intercalate "\n"
+                       ["ATTACH DATABASE ? AS FILE"])
                      [SQLText filePath]
           return True)
         (\e -> do
@@ -87,7 +90,8 @@ attachFileToProjectDatabase database filePath = do
 getProjectDatabaseSchemaVersion :: Database -> IO (Maybe Int)
 getProjectDatabaseSchemaVersion database = do
   rows <- query database
-                "SELECT program, schema_version FROM settings"
+                (Text.intercalate "\n"
+                  ["SELECT program, schema_version FROM settings"])
                 []
   return $ case rows of
              [[SQLText program, SQLInteger schemaVersion]]
@@ -102,134 +106,145 @@ initProjectDatabaseSchema database = do
   let sqlTimestamp = toSQL timestamp
   rootInodeID <- newInodeID
   _ <- query database
-             (  "PRAGMA fullfsync = 1")
+             (Text.intercalate "\n"
+               ["PRAGMA fullfsync = 1"])
              []
   _ <- query database
-             (  "PRAGMA foreign_keys = 1")
+             (Text.intercalate "\n"
+               ["PRAGMA foreign_keys = 1"])
              []
   _ <- query database
-             (  "PRAGMA encoding = 'UTF-8'")
+             (Text.intercalate "\n"
+               ["PRAGMA encoding = 'UTF-8'"])
              []
   _ <- query database
-             (  "CREATE TABLE settings ("
-             ++ "  program TEXT,"
-             ++ "  schema_version INTEGER,"
-             ++ "  creation_timestamp INTEGER,"
-             ++ "  modification_timestamp INTEGER"
-             ++ ");")
+             (Text.intercalate "\n"
+               ["CREATE TABLE settings (",
+                "  program TEXT,",
+                "  schema_version INTEGER,",
+                "  creation_timestamp INTEGER,",
+                "  modification_timestamp INTEGER",
+                ");"])
              []
   _ <- query database
-             (  "CREATE TABLE inodes (\n"
-             ++ "  id BLOB PRIMARY KEY,\n"
-             ++ "  name TEXT,\n"
-             ++ "  cased_name TEXT,\n"
-             ++ "  parent BLOB REFERENCES inodes(id)\n"
-             ++ "              ON DELETE CASCADE\n"
-             ++ "              ON UPDATE CASCADE,\n"
-             ++ "  kind TEXT,\n"
-             ++ "  size INTEGER,\n"
-             ++ "  creation_timestamp INTEGER,"
-             ++ "  modification_timestamp INTEGER,"
-             ++ "  CONSTRAINT inode_name_unique_within_parent\n"
-             ++ "  UNIQUE (parent, name),\n"
-             ++ "  CONSTRAINT inode_id_valid\n"
-             ++ "  CHECK ((typeof(id) = 'blob') AND (length(id) = 16)),\n"
-             ++ "  CONSTRAINT inode_name_valid\n"
-             ++ "  CHECK ((typeof(name) = 'text')\n"
-             ++ "         AND (name NOT LIKE '%/%')),\n"
-             ++ "  CONSTRAINT inode_cased_name_valid\n"
-             ++ "  CHECK (name = upper(cased_name)),\n"
-             ++ "  CONSTRAINT inode_kind_valid\n"
-             ++ "  CHECK ((typeof(kind) = 'text') AND (kind != '')),\n"
-             ++ "  CONSTRAINT inode_creation_timestamp_valid\n"
-             ++ "  CHECK ((typeof(creation_timestamp) = 'integer')\n"
-             ++ "         AND (creation_timestamp > 0)),\n"
-             ++ "  CONSTRAINT inode_modification_timestamp_valid\n"
-             ++ "  CHECK ((typeof(modification_timestamp) = 'integer')\n"
-             ++ "         AND (modification_timestamp > 0)),\n"
-             ++ "  CONSTRAINT inode_root_is_directory\n"
-             ++ "  CHECK ((parent IS NOT NULL)\n"
-             ++ "         OR ((kind = 'directory') AND (name = ''))),\n"
-             ++ "  CONSTRAINT inode_sizes_where_appropriate\n"
-             ++ "  CHECK (((kind = 'directory') AND (size IS NULL))\n"
-             ++ "         OR ((kind != 'directory')\n"
-             ++ "             AND (typeof(size) = 'integer')))\n"
-             ++ ")")
+             (Text.intercalate "\n"
+               ["CREATE TABLE inodes (",
+                "  id BLOB PRIMARY KEY,",
+                "  name TEXT,",
+                "  cased_name TEXT,",
+                "  parent BLOB REFERENCES inodes(id)",
+                "              ON DELETE CASCADE",
+                "              ON UPDATE CASCADE,",
+                "  kind TEXT,",
+                "  size INTEGER,",
+                "  creation_timestamp INTEGER,",
+                "  modification_timestamp INTEGER,",
+                "  CONSTRAINT inode_name_unique_within_parent",
+                "  UNIQUE (parent, name),",
+                "  CONSTRAINT inode_id_valid",
+                "  CHECK ((typeof(id) = 'blob') AND (length(id) = 16)),",
+                "  CONSTRAINT inode_name_valid",
+                "  CHECK ((typeof(name) = 'text')",
+                "         AND (name NOT LIKE '%/%')),",
+                "  CONSTRAINT inode_cased_name_valid",
+                "  CHECK (name = upper(cased_name)),",
+                "  CONSTRAINT inode_kind_valid",
+                "  CHECK ((typeof(kind) = 'text') AND (kind != '')),",
+                "  CONSTRAINT inode_creation_timestamp_valid",
+                "  CHECK ((typeof(creation_timestamp) = 'integer')",
+                "         AND (creation_timestamp > 0)),",
+                "  CONSTRAINT inode_modification_timestamp_valid",
+                "  CHECK ((typeof(modification_timestamp) = 'integer')",
+                "         AND (modification_timestamp > 0)),",
+                "  CONSTRAINT inode_root_is_directory",
+                "  CHECK ((parent IS NOT NULL)",
+                "         OR ((kind = 'directory') AND (name = ''))),",
+                "  CONSTRAINT inode_sizes_where_appropriate",
+                "  CHECK (((kind = 'directory') AND (size IS NULL))",
+                "         OR ((kind != 'directory')",
+                "             AND (typeof(size) = 'integer')))",
+                ")"])
              []
   _ <- query database
-             (  "CREATE TABLE windows (\n"
-             ++ "  id BLOB PRIMARY KEY,\n"
-             ++ "  kind TEXT CHECK ((typeof(kind) = 'text')\n"
-             ++ "                   AND ((kind = 'browser')\n"
-             ++ "                        OR (kind = 'document'))),\n"
-             ++ "  top INTEGER CHECK ((top IS NULL)\n"
-             ++ "                     OR (typeof(top) = 'integer')),\n"
-             ++ "  left INTEGER CHECK ((left IS NULL)\n"
-             ++ "                      OR (typeof(left) = 'integer')),\n"
-             ++ "  height INTEGER CHECK ((height IS NULL)\n"
-             ++ "                        OR ((typeof(height) = 'integer')\n"
-             ++ "                            AND (height > 0))),\n"
-             ++ "  width INTEGER CHECK ((width IS NULL)\n"
-             ++ "                       OR ((typeof(width) = 'integer')\n"
-             ++ "                           AND (width > 0))),\n"
-             ++ "  CONSTRAINT window_id_valid\n"
-             ++ "  CHECK ((typeof(id) = 'blob') AND (length(id) = 16)),\n"
-             ++ "  CONSTRAINT window_frames_all_or_none\n"
-             ++ "  CHECK (((top IS NULL)\n"
-             ++ "          AND (left IS NULL)\n"
-             ++ "          AND (height IS NULL)\n"
-             ++ "          AND (width IS NULL))\n"
-             ++ "         OR\n"
-             ++ "         ((top IS NOT NULL)\n"
-             ++ "          AND (left IS NOT NULL)\n"
-             ++ "          AND (height IS NOT NULL)\n"
-             ++ "          AND (width IS NOT NULL)))\n"
-             ++ ")")
+             (Text.intercalate "\n"
+               ["CREATE TABLE windows (",
+                "  id BLOB PRIMARY KEY,",
+                "  kind TEXT CHECK ((typeof(kind) = 'text')",
+                "                   AND ((kind = 'browser')",
+                "                        OR (kind = 'document'))),",
+                "  top INTEGER CHECK ((top IS NULL)",
+                "                     OR (typeof(top) = 'integer')),",
+                "  left INTEGER CHECK ((left IS NULL)",
+                "                      OR (typeof(left) = 'integer')),",
+                "  height INTEGER CHECK ((height IS NULL)",
+                "                        OR ((typeof(height) = 'integer')",
+                "                            AND (height > 0))),",
+                "  width INTEGER CHECK ((width IS NULL)",
+                "                       OR ((typeof(width) = 'integer')",
+                "                           AND (width > 0))),",
+                "  CONSTRAINT window_id_valid",
+                "  CHECK ((typeof(id) = 'blob') AND (length(id) = 16)),",
+                "  CONSTRAINT window_frames_all_or_none",
+                "  CHECK (((top IS NULL)",
+                "          AND (left IS NULL)",
+                "          AND (height IS NULL)",
+                "          AND (width IS NULL))",
+                "         OR",
+                "         ((top IS NOT NULL)",
+                "          AND (left IS NOT NULL)",
+                "          AND (height IS NOT NULL)",
+                "          AND (width IS NOT NULL)))",
+                ")"])
              []
   _ <- query database
-             (  "CREATE TABLE browser_windows (\n"
-             ++ "  id BLOB PRIMARY KEY REFERENCES windows(id)\n"
-             ++ "                      ON DELETE CASCADE\n"
-             ++ "                      ON UPDATE CASCADE,\n"
-             ++ "  root_inode BLOB REFERENCES inodes(id)\n"
-             ++ "                  ON DELETE SET NULL\n"
-             ++ "                  ON UPDATE CASCADE\n"
-             ++ ")")
+             (Text.intercalate "\n"
+               ["CREATE TABLE browser_windows (",
+                "  id BLOB PRIMARY KEY REFERENCES windows(id)",
+                "                      ON DELETE CASCADE",
+                "                      ON UPDATE CASCADE,",
+                "  root_inode BLOB REFERENCES inodes(id)",
+                "                  ON DELETE SET NULL",
+                "                  ON UPDATE CASCADE",
+                ")"])
              []
   _ <- query database
-             (  "CREATE TABLE browser_items (\n"
-             ++ "  inode BLOB REFERENCES inodes(id)\n"
-             ++ "             ON DELETE CASCADE\n"
-             ++ "             ON UPDATE CASCADE,\n"
-             ++ "  browser_window BLOB REFERENCES browser_windows(id)\n"
-             ++ "                      ON DELETE CASCADE\n"
-             ++ "                      ON UPDATE CASCADE,\n"
-             ++ "  expanded INTEGER CHECK ((typeof(expanded) = 'integer')\n"
-             ++ "                          AND ((expanded = 0)\n"
-             ++ "                               OR (expanded = 1))),\n"
-             ++ "  PRIMARY KEY (inode, browser_window)\n"
-             ++ ")")
+             (Text.intercalate "\n"
+               ["CREATE TABLE browser_items (",
+                "  inode BLOB REFERENCES inodes(id)",
+                "             ON DELETE CASCADE",
+                "             ON UPDATE CASCADE,",
+                "  browser_window BLOB REFERENCES browser_windows(id)",
+                "                      ON DELETE CASCADE",
+                "                      ON UPDATE CASCADE,",
+                "  expanded INTEGER CHECK ((typeof(expanded) = 'integer')",
+                "                          AND ((expanded = 0)",
+                "                               OR (expanded = 1))),",
+                "  PRIMARY KEY (inode, browser_window)",
+                ")"])
              []
   _ <- query database
-             (  "CREATE TABLE document_windows (\n"
-             ++ "  id BLOB PRIMARY KEY REFERENCES windows(id)\n"
-             ++ "                      ON DELETE CASCADE\n"
-             ++ "                      ON UPDATE CASCADE,\n"
-             ++ "  inode BLOB REFERENCES inodes(id)\n"
-             ++ "             ON DELETE SET NULL\n"
-             ++ "             ON UPDATE CASCADE\n"
-             ++ ")")
+             (Text.intercalate "\n"
+               ["CREATE TABLE document_windows (",
+                "  id BLOB PRIMARY KEY REFERENCES windows(id)",
+                "                      ON DELETE CASCADE",
+                "                      ON UPDATE CASCADE,",
+                "  inode BLOB REFERENCES inodes(id)",
+                "             ON DELETE SET NULL",
+                "             ON UPDATE CASCADE",
+                ")"])
              []
   _ <- query database
-             (  "INSERT INTO settings (program, schema_version,\n"
-             ++ "creation_timestamp, modification_timestamp) VALUES\n"
-             ++ "('com.ireneknapp.te', 1, ?, ?);")
+             (Text.intercalate "\n"
+               ["INSERT INTO settings (program, schema_version,",
+                "creation_timestamp, modification_timestamp) VALUES",
+                "('com.ireneknapp.te', 1, ?, ?);"])
              [sqlTimestamp,
               sqlTimestamp]
   _ <- query database
-             (  "INSERT INTO inodes (id, name, cased_name, parent,\n"
-             ++ "kind, size, creation_timestamp, modification_timestamp)\n"
-             ++ "VALUES (?, '', '', NULL, 'directory', NULL, ?, ?);")
+             (Text.intercalate "\n"
+               ["INSERT INTO inodes (id, name, cased_name, parent,",
+                "kind, size, creation_timestamp, modification_timestamp)",
+                "VALUES (?, '', '', NULL, 'directory', NULL, ?, ?);"])
              [toSQL rootInodeID,
               sqlTimestamp,
               sqlTimestamp]
@@ -252,7 +267,7 @@ lookupProjectRoot project = do
 
 
 recordNewInode
-    :: Inode -> Inode -> String -> InodeType -> Maybe ByteSize -> IO ()
+    :: Inode -> Inode -> Text -> InodeType -> Maybe ByteSize -> IO ()
 recordNewInode inode parentInode name inodeKind maybeSize = do
   let project = inodeProject inode
       database = projectDatabase project
@@ -261,9 +276,10 @@ recordNewInode inode parentInode name inodeKind maybeSize = do
       sqlInodeID = toSQL $ inodeID inode
       sqlParentInodeID = toSQL $ inodeID parentInode
   _ <- query database
-             (  "INSERT INTO inodes (id, name, cased_name, parent, kind,\n"
-             ++ "size, creation_timestamp, modification_timestamp) VALUES\n"
-             ++ "(?, upper(?), ?, ?, ?, ?, ?, ?)")
+             (Text.intercalate "\n"
+               ["INSERT INTO inodes (id, name, cased_name, parent, kind,",
+                "size, creation_timestamp, modification_timestamp) VALUES",
+                "(?, upper(?), ?, ?, ?, ?, ?, ?)"])
              [sqlInodeID,
               SQLText name,
               SQLText name,
@@ -277,7 +293,8 @@ recordNewInode inode parentInode name inodeKind maybeSize = do
               sqlTimestamp,
               sqlTimestamp]
   _ <- query database
-             (  "UPDATE inodes SET modification_timestamp = ? WHERE id = ?")
+             (Text.intercalate "\n"
+               ["UPDATE inodes SET modification_timestamp = ? WHERE id = ?"])
              [sqlTimestamp,
               sqlParentInodeID]
   return ()
@@ -295,11 +312,13 @@ recordDeletedInode inode = do
           sqlInodeID = toSQL $ inodeID inode
           sqlParentInodeID = toSQL $ inodeID parentInode
       _ <- query database
-                 (  "DELETE FROM inodes WHERE id = ?")
+                 (Text.intercalate "\n"
+                   ["DELETE FROM inodes WHERE id = ?"])
                  [sqlInodeID]
       _ <- query database
-                 (  "UPDATE inodes SET modification_timestamp = ?"
-                 ++ "WHERE id = ?")
+                 (Text.intercalate "\n"
+                   ["UPDATE inodes SET modification_timestamp = ?",
+                    "WHERE id = ?"])
                  [sqlTimestamp,
                   sqlParentInodeID]
       return ()
@@ -312,13 +331,14 @@ recordModifiedInode inode = do
       database = projectDatabase project
   timestamp <- getTimestamp
   _ <- query database
-             (  "UPDATE inodes SET modification_timestamp = ? WHERE id = ?")
+             (Text.intercalate "\n"
+               ["UPDATE inodes SET modification_timestamp = ? WHERE id = ?"])
              [toSQL timestamp,
               toSQL $ inodeID inode]
   return ()
 
 
-recordMovedInode :: Inode -> String -> Inode -> IO ()
+recordMovedInode :: Inode -> Text -> Inode -> IO ()
 recordMovedInode inode newName newParentInode = do
   let project = inodeProject inode
       database = projectDatabase project
@@ -332,18 +352,23 @@ recordMovedInode inode newName newParentInode = do
           sqlOldParentInodeID = toSQL $ inodeID oldParentInode
           sqlNewParentInodeID = toSQL $ inodeID newParentInode
       _ <- query database
-                 "UPDATE inodes SET modification_timestamp = ? WHERE id = ?"
+                 (Text.intercalate "\n"
+                   ["UPDATE inodes SET modification_timestamp = ?",
+                    "WHERE id = ?"])
                  [sqlTimestamp,
                   sqlOldParentInodeID]
       _ <- query database
-                 (  "UPDATE inodes SET name = upper(?), cased_name = ?,\n"
-                 ++ " parent = ? WHERE id = ?")
+                 (Text.intercalate "\n"
+                   ["UPDATE inodes SET name = upper(?), cased_name = ?,",
+                    " parent = ? WHERE id = ?"])
                  [sqlNewName,
                   sqlNewName,
                   sqlNewParentInodeID,
                   sqlInodeID]
       _ <- query database
-                 "UPDATE inodes SET modification_timestamp = ? WHERE id = ?"
+                 (Text.intercalate "\n"
+                   ["UPDATE inodes SET modification_timestamp = ?",
+                    "WHERE id = ?"])
                  [sqlTimestamp,
                   sqlNewParentInodeID]
       return ()
@@ -354,7 +379,8 @@ lookupInodeParent inode = do
   let project = inodeProject inode
       database = projectDatabase project
   rows <- query database
-                "SELECT parent FROM inodes WHERE id = ?"
+                (Text.intercalate "\n"
+                  ["SELECT parent FROM inodes WHERE id = ?"])
                 [toSQL $ inodeID inode]
   case rows of
     [[sqlInodeParentID]] ->
@@ -372,8 +398,9 @@ lookupInodeChildren inode = do
   let project = inodeProject inode
       database = projectDatabase project
   rows <- query database
-                (  "SELECT id FROM inodes WHERE parent = ?\n"
-                ++ "ORDER BY cased_name ASC")
+                (Text.intercalate "\n"
+                  ["SELECT id FROM inodes WHERE parent = ?",
+                   "ORDER BY cased_name ASC"])
                 [toSQL $ inodeID inode]
   mapM (\row -> do
           case row of
@@ -393,7 +420,8 @@ lookupInodeChildCount inode = do
   let project = inodeProject inode
       database = projectDatabase project
   rows <- query database
-                "SELECT count(*) FROM inodes WHERE parent = ?"
+                (Text.intercalate "\n"
+                  ["SELECT count(*) FROM inodes WHERE parent = ?"])
                 [toSQL $ inodeID inode]
   case rows of
     [[SQLInteger count]] -> return $ fromIntegral count
@@ -405,8 +433,9 @@ lookupInodeChild inode index = do
   let project = inodeProject inode
       database = projectDatabase project
   rows <- query database
-                (  "SELECT id FROM inodes WHERE parent = ?\n"
-                ++ "ORDER BY cased_name ASC LIMIT 1 OFFSET ?")
+                (Text.intercalate "\n"
+                  ["SELECT id FROM inodes WHERE parent = ?",
+                   "ORDER BY cased_name ASC LIMIT 1 OFFSET ?"])
                 [toSQL $ inodeID inode,
                  SQLInteger $ fromIntegral index]
   case rows of
@@ -425,8 +454,9 @@ lookupInodeInformation inode = do
   let project = inodeProject inode
       database = projectDatabase project
   rows <- query database
-                (  "SELECT cased_name, kind, size, creation_timestamp,\n"
-                ++ "modification_timestamp FROM inodes WHERE id = ?")
+                (Text.intercalate "\n"
+                  ["SELECT cased_name, kind, size, creation_timestamp,",
+                   "modification_timestamp FROM inodes WHERE id = ?"])
                 [toSQL $ inodeID inode]
   case rows of
     [[SQLText name, SQLText kindString, sqlMaybeSize,
@@ -454,12 +484,14 @@ recordNewBrowserWindow browserWindow browserWindowRootInode = do
   let project = browserWindowProject browserWindow
       database = projectDatabase project
   _ <- query database
-             (  "INSERT INTO windows (id, kind, top, left, height, width)\n"
-             ++ "VALUES (?, 'browser', NULL, NULL, NULL, NULL)")
+             (Text.intercalate "\n"
+               ["INSERT INTO windows (id, kind, top, left, height, width)",
+                "VALUES (?, 'browser', NULL, NULL, NULL, NULL)"])
              [toSQL $ browserWindowID browserWindow]
   _ <- query database
-             (  "INSERT INTO browser_windows (id, root_inode)\n"
-             ++ "VALUES (?, ?)")
+             (Text.intercalate "\n"
+               ["INSERT INTO browser_windows (id, root_inode)",
+                "VALUES (?, ?)"])
              [toSQL $ browserWindowID browserWindow,
               toSQL $ inodeID browserWindowRootInode]
   return ()
@@ -470,8 +502,9 @@ lookupBrowserWindowRoot browserWindow = do
   let project = browserWindowProject browserWindow
       database = projectDatabase project
   rows <- query database
-                (  "SELECT root_inode FROM browser_windows\n"
-                ++ "WHERE id = ?")
+                (Text.intercalate "\n"
+                  ["SELECT root_inode FROM browser_windows",
+                   "WHERE id = ?"])
                 [toSQL $ browserWindowID browserWindow]
   case rows of
     [[sqlRootInodeID]] ->
@@ -491,8 +524,9 @@ recordBrowserItemExpanded browserItem expanded = do
       project = browserWindowProject browserWindow
       database = projectDatabase project
   _ <- query database
-             (  "INSERT OR REPLACE INTO browser_items\n"
-             ++ "(inode, browser_window, expanded) VALUES (?, ?, ?)")
+             (Text.intercalate "\n"
+               ["INSERT OR REPLACE INTO browser_items",
+                "(inode, browser_window, expanded) VALUES (?, ?, ?)"])
              [toSQL $ inodeID inode,
               toSQL $ browserWindowID browserWindow,
               SQLInteger $ if expanded
@@ -508,8 +542,9 @@ lookupBrowserItemExpanded browserItem = do
       project = browserWindowProject browserWindow
       database = projectDatabase project
   rows <- query database
-                (  "SELECT expanded FROM browser_items\n"
-                ++ "WHERE (inode = ?) AND (browser_window = ?)")
+                (Text.intercalate "\n"
+                  ["SELECT expanded FROM browser_items",
+                   "WHERE (inode = ?) AND (browser_window = ?)"])
                 [toSQL $ inodeID inode,
                  toSQL $ browserWindowID browserWindow]
   case rows of
@@ -524,12 +559,14 @@ recordNewDocumentWindow documentWindow documentWindowInode = do
   let project = documentWindowProject documentWindow
       database = projectDatabase project
   _ <- query database
-             (  "INSERT INTO windows (id, kind, top, left, height, width)\n"
-             ++ "VALUES (?, 'document', NULL, NULL, NULL, NULL)")
+             (Text.intercalate "\n"
+               ["INSERT INTO windows (id, kind, top, left, height, width)",
+                "VALUES (?, 'document', NULL, NULL, NULL, NULL)"])
              [toSQL $ documentWindowID documentWindow]
   _ <- query database
-             (  "INSERT INTO document_windows (id, inode)\n"
-             ++ "VALUES (?, ?)")
+             (Text.intercalate "\n"
+               ["INSERT INTO document_windows (id, inode)",
+                "VALUES (?, ?)"])
              [toSQL $ documentWindowID documentWindow,
               toSQL $ inodeID documentWindowInode]
   return ()
@@ -540,8 +577,9 @@ lookupDocumentWindowInode documentWindow = do
   let project = documentWindowProject documentWindow
       database = projectDatabase project
   rows <- query database
-                (  "SELECT inode FROM document_windows\n"
-                ++ "WHERE id = ?")
+                (Text.intercalate "\n"
+                  ["SELECT inode FROM document_windows",
+                   "WHERE id = ?"])
                 [toSQL $ documentWindowID documentWindow]
   case rows of
     [[sqlInodeID]] ->

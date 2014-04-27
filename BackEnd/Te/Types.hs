@@ -29,6 +29,7 @@ import Data.Array.Unboxed
 import Data.Int
 import Data.Map (Map)
 import Data.Set (Set)
+import Data.Text (Text)
 import Data.Word
 import Database.SQLite3 (Database)
 
@@ -50,7 +51,7 @@ data ApplicationState =
 
 data FrontEndCallbacks =
   FrontEndCallbacks {
-      frontEndCallbacksException :: String -> String -> IO (),
+      frontEndCallbacksException :: Text -> Text -> IO (),
       frontEndCallbacksConfirm
           :: ConfirmationDialog -> (Word64 -> IO ()) -> IO (),
       frontEndCallbacksNoteRecentProjectsChanged :: IO (),
@@ -114,18 +115,18 @@ data DragState =
 data ConfirmationDialog =
   ConfirmationDialog {
       confirmationDialogWindow :: Maybe AnyWindow,
-      confirmationDialogMessage :: String,
-      confirmationDialogDetails :: String,
+      confirmationDialogMessage :: Text,
+      confirmationDialogDetails :: Text,
       confirmationDialogDefaultButtonIndex :: Maybe Word64,
       confirmationDialogCancelButtonIndex :: Maybe Word64,
-      confirmationDialogButtons :: [String]
+      confirmationDialogButtons :: [Text]
     }
 
 
 data RecentProject =
   RecentProject {
       recentProjectID :: ProjectID,
-      recentProjectFilePath :: String,
+      recentProjectFilePath :: Text,
       recentProjectTimestamp :: Timestamp
     }
 
@@ -135,8 +136,8 @@ data Project =
       projectID :: ProjectID,
       projectApplicationState :: MVar ApplicationState,
       projectDatabase :: Database,
-      projectName :: MVar String,
-      projectFilePath :: MVar (Maybe FilePath),
+      projectName :: MVar Text,
+      projectFilePath :: MVar (Maybe Text),
       projectWindows :: MVar (Map WindowID AnyWindow)
     }
 
@@ -150,7 +151,7 @@ data Inode =
 
 data InodeInformation =
   InodeInformation {
-      inodeInformationName :: String,
+      inodeInformationName :: Text,
       inodeInformationType :: InodeType,
       inodeInformationSize :: Maybe ByteSize,
       inodeInformationCreationTimestamp :: Timestamp,
@@ -167,8 +168,8 @@ data InodeType
 class Window window where
   windowID :: window -> WindowID
   windowProject :: window -> Project
-  getWindowTitle :: window -> IO String
-  getWindowTitleIcon :: window -> IO String
+  getWindowTitle :: window -> IO Text
+  getWindowTitleIcon :: window -> IO Text
   browserWindowDo :: window -> a -> (BrowserWindow -> IO a) -> IO a
   documentWindowDo :: window -> a -> (DocumentWindow -> IO a) -> IO a
 data AnyWindow = forall window . Window window => AnyWindow window
@@ -272,7 +273,7 @@ data DragInformation
       }
   | ExternalFileDragInformation {
         dragInformationAllowedDragOperations :: Set DragOperation,
-        externalFileDragInformationFilePaths :: [FilePath]
+        externalFileDragInformationFilePaths :: [Text]
       }
 
 

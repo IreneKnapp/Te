@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Te.HighLevel.Window.Document
   (DocumentWindow,
    DocumentWindowID,
@@ -23,6 +24,8 @@ import Data.Int
 import Data.Map (Map)
 import qualified Data.Map as Map
 import Data.Maybe
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Data.Geometry
 import Te.HighLevel.ApplicationPrivate
@@ -55,7 +58,7 @@ getDocumentWindowDesiredSize documentWindow = do
   getWindowSizeFromPaneSizes documentWindow getDocumentPaneDesiredSize
 
 
-getDocumentWindowTitle :: DocumentWindow -> IO String
+getDocumentWindowTitle :: DocumentWindow -> IO Text
 getDocumentWindowTitle documentWindow = do
   let project = documentWindowProject documentWindow
       applicationStateMVar = projectApplicationState project
@@ -66,7 +69,7 @@ getDocumentWindowTitle documentWindow = do
     return documentName
 
 
-getDocumentWindowTitleIcon :: DocumentWindow -> IO String
+getDocumentWindowTitleIcon :: DocumentWindow -> IO Text
 getDocumentWindowTitleIcon documentWindow = do
   let project = documentWindowProject documentWindow
       applicationStateMVar = projectApplicationState project

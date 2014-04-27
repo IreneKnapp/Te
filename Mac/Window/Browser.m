@@ -302,7 +302,7 @@
                 NSString *name = nil;
                 if(nameCString) {
                     name = [NSString stringWithUTF8String: nameCString];
-                    teStringFree(nameCString);
+                    teTextFree(nameCString);
                 }
                 return name;
             } else if([tableColumn isEqual:
@@ -317,7 +317,7 @@
                 if(timestampCString) {
                     timestampString
                         = [NSString stringWithUTF8String: timestampCString];
-                    teStringFree(timestampCString);
+                    teTextFree(timestampCString);
                 }
                 return timestampString;
             } else if([tableColumn isEqual: filesOutlineViewSizeColumn]) {
@@ -331,12 +331,12 @@
                 {
                     sizeCString = teByteSizeShow(size);
                 } else {
-                    sizeCString = teByteSizePlaceholderString();
+                    sizeCString = teByteSizePlaceholderText();
                 }
                 NSString *sizeString = nil;
                 if(sizeCString) {
                     sizeString = [NSString stringWithUTF8String: sizeCString];
-                    teStringFree(sizeCString);
+                    teTextFree(sizeCString);
                 }
                 return sizeString;
             } else if([tableColumn isEqual: filesOutlineViewKindColumn]) {
@@ -346,7 +346,7 @@
                 NSString *kind = nil;
                 if(kindCString) {
                     kind = [NSString stringWithUTF8String: kindCString];
-                    teStringFree(kindCString);
+                    teTextFree(kindCString);
                 }
                 return kind;
             } else {
@@ -393,7 +393,7 @@
                 if(fileNameCString) {
                     fileName
                         = [NSString stringWithUTF8String: fileNameCString];
-                    teStringFree(fileNameCString);
+                    teTextFree(fileNameCString);
                 }
                 if(!fileName)
                     fileName = @"";
@@ -405,7 +405,7 @@
                 NSString *iconName = nil;
                 if(iconNameCString) {
                     iconName = [NSString stringWithUTF8String: iconNameCString];
-                    teStringFree(iconNameCString);
+                    teTextFree(iconNameCString);
                 }
                 if(iconName) {
                     [fileNameCell setIcon: [NSImage imageNamed: iconName]];

@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Te.HighLevel.Window.Browser
   (BrowserWindow,
    BrowserWindowID,
@@ -8,6 +9,8 @@ module Te.HighLevel.Window.Browser
   where
 
 import Control.Concurrent.MVar
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Te.HighLevel.Window
 import Te.LowLevel.Database
@@ -25,7 +28,7 @@ instance Window BrowserWindow where
   documentWindowDo _ default' _ = return default'
 
 
-getBrowserWindowTitle :: BrowserWindow -> IO String
+getBrowserWindowTitle :: BrowserWindow -> IO Text
 getBrowserWindowTitle browserWindow = do
   let project = browserWindowProject browserWindow
       applicationStateMVar = projectApplicationState project
@@ -38,10 +41,10 @@ getBrowserWindowTitle browserWindow = do
       else do
         folderInodeInformation <- lookupInodeInformation folderInode
         let folderName = inodeInformationName folderInodeInformation
-        return $ projectName ++ " - " ++ folderName
+        return $ Text.concat [projectName, " - ", folderName]
 
 
-getBrowserWindowTitleIcon :: BrowserWindow -> IO String
+getBrowserWindowTitleIcon :: BrowserWindow -> IO Text
 getBrowserWindowTitleIcon browserWindow = do
   let project = browserWindowProject browserWindow
       applicationStateMVar = projectApplicationState project

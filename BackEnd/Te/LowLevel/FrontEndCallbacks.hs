@@ -23,6 +23,7 @@ module Te.LowLevel.FrontEndCallbacks
 
 import Control.Concurrent.MVar
 import Data.Int
+import qualified Data.Text as Text
 import Data.Word
 
 import Data.Geometry
@@ -35,9 +36,9 @@ exception applicationStateMVar exception = do
   applicationState <- readMVar applicationStateMVar
   let callbacks = applicationStateFrontEndCallbacks applicationState
       callback = frontEndCallbacksException callbacks
-      messageString = show exception
-      detailsString = exceptionDetails exception
-  callback messageString detailsString
+      messageText = Text.pack $ show exception
+      detailsText = exceptionDetails exception
+  callback messageText detailsText
 
 
 confirm

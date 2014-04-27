@@ -2,8 +2,8 @@ import Distribution.Simple
 import Distribution.MacOSX
 
 main = defaultMainWithHooks $ simpleUserHooks {
-    buildHook = appBundleBuildHook apps,
-    installHook = appBundleInstallHook apps
+    postBuild = appBundleBuildHook apps,
+    postInst = appBundleInstallHook apps
   }
 
 
@@ -21,8 +21,9 @@ apps =
           "Mac/Resources/Folder.png",
           "Mac/Resources/BadgeNew.png",
           "Mac/Resources/BadgeChanged.png",
-          "Mac/Resources/BadgeMoved.png",
-          "Mac/Resources/MainMenu.xib",
+          "Mac/Resources/BadgeMoved.png"],
+       nibs =
+         ["Mac/Resources/MainMenu.xib",
           "Mac/Resources/BrowserWindow.xib"],
        otherBins = [],
        appDeps = ChaseWithDefaults

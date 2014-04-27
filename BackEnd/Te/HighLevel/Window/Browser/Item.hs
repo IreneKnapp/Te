@@ -1,3 +1,4 @@
+{-# LANGUAGE OverloadedStrings #-}
 module Te.HighLevel.Window.Browser.Item
   (BrowserItem(..),
    browserItemNewFolderInside,
@@ -5,6 +6,9 @@ module Te.HighLevel.Window.Browser.Item
    browserItemExpanded,
    browserItemSetExpanded)
   where
+
+import Data.Text (Text)
+import qualified Data.Text as Text
 
 import Te.LowLevel.Database
 import Te.LowLevel.Exceptions
