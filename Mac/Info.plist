@@ -15,7 +15,7 @@
 			<string>Project</string>
 			<key>LSItemContentTypes</key>
 			<array>
-				<string>com.dankna.te.project</string>
+				<string>com.ireneknapp.te.project</string>
 			</array>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
@@ -28,7 +28,7 @@
 	<key>CFBundleIconFile</key>
 	<string>Application</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.dankna.te</string>
+	<string>com.ireneknapp.te</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
@@ -61,7 +61,7 @@
 			<key>UTTypeIconFile</key>
 			<string>Project.icns</string>
 			<key>UTTypeIdentifier</key>
-			<string>com.dankna.te.project</string>
+			<string>com.ireneknapp.te.project</string>
 			<key>UTTypeReferenceURL</key>
 			<string></string>
 			<key>UTTypeTagSpecification</key>

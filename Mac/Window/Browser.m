@@ -22,7 +22,7 @@
         ignoreItemExpansionDueToNesting = nil;
                 
         NSMutableArray *draggedTypes = [NSMutableArray arrayWithCapacity: 1];
-        [draggedTypes addObject: @"com.dankna.te.datatypes.inodes"];
+        [draggedTypes addObject: @"com.ireneknapp.te.datatypes.inodes"];
         [filesOutlineView registerForDraggedTypes: draggedTypes];
         
         uint64_t localOperations
@@ -650,7 +650,7 @@
         uuid_t *browserWindowID = [self windowID];
         
         NSMutableArray *declaredTypes = [NSMutableArray arrayWithCapacity: 1];
-        [declaredTypes addObject: @"com.dankna.te.datatypes.inodes"];
+        [declaredTypes addObject: @"com.ireneknapp.te.datatypes.inodes"];
         [pasteboard declareTypes: declaredTypes owner: self];
         
         BOOL result = YES;
@@ -668,7 +668,7 @@
             
             result = [pasteboard
                        setData: data
-                       forType: @"com.dankna.te.datatypes.inodes"];
+                       forType: @"com.ireneknapp.te.datatypes.inodes"];
         }
         
         return result;
@@ -710,7 +710,8 @@
         
         NSString *usedType = nil;
         for(NSString *foundType in [pasteboard types]) {
-            if([foundType isEqualToString: @"com.dankna.te.datatypes.inodes"])
+            if([foundType isEqualToString:
+                  @"com.ireneknapp.te.datatypes.inodes"])
             {
                 usedType = foundType;
                 break;
@@ -725,10 +726,11 @@
             = dragOperationMaskToOperations(allowedDragOperationMask);
         
         void *dragInformation = NULL;
-        if([usedType isEqualToString: @"com.dankna.te.datatypes.inodes"])
+        if([usedType isEqualToString: @"com.ireneknapp.te.datatypes.inodes"])
         {
             NSData *data
-                = [pasteboard dataForType: @"com.dankna.te.datatypes.inodes"];
+                = [pasteboard dataForType:
+                     @"com.ireneknapp.te.datatypes.inodes"];
             dragInformation
                 = extractInodesDragInformation(data, allowedDragOperations);
         }
@@ -809,7 +811,8 @@
         
         NSString *usedType = nil;
         for(NSString *foundType in [pasteboard types]) {
-            if([foundType isEqualToString: @"com.dankna.te.datatypes.inodes"])
+            if([foundType isEqualToString:
+                  @"com.ireneknapp.te.datatypes.inodes"])
             {
                 usedType = foundType;
                 break;
@@ -824,10 +827,11 @@
             = dragOperationMaskToOperations(allowedDragOperationMask);
         
         void *dragInformation = NULL;
-        if([usedType isEqualToString: @"com.dankna.te.datatypes.inodes"])
+        if([usedType isEqualToString: @"com.ireneknapp.te.datatypes.inodes"])
         {
             NSData *data
-                = [pasteboard dataForType: @"com.dankna.te.datatypes.inodes"];
+                = [pasteboard dataForType:
+                     @"com.ireneknapp.te.datatypes.inodes"];
             dragInformation
                 = extractInodesDragInformation(data, allowedDragOperations);
         }

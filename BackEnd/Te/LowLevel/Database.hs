@@ -91,7 +91,7 @@ getProjectDatabaseSchemaVersion database = do
                 []
   return $ case rows of
              [[SQLText program, SQLInteger schemaVersion]]
-               | program == "com.dankna.te" ->
+               | program == "com.ireneknapp.te" ->
                 Just $ fromIntegral schemaVersion
              _ -> Nothing
 
@@ -223,7 +223,7 @@ initProjectDatabaseSchema database = do
   _ <- query database
              (  "INSERT INTO settings (program, schema_version,\n"
              ++ "creation_timestamp, modification_timestamp) VALUES\n"
-             ++ "('com.dankna.te', 1, ?, ?);")
+             ++ "('com.ireneknapp.te', 1, ?, ?);")
              [sqlTimestamp,
               sqlTimestamp]
   _ <- query database

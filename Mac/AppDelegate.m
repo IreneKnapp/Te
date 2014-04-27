@@ -137,7 +137,7 @@
     
     openPanel = [NSOpenPanel openPanel];
     NSMutableArray *fileTypes = [NSMutableArray arrayWithCapacity: 1];
-    [fileTypes addObject: @"com.dankna.te.project"];
+    [fileTypes addObject: @"com.ireneknapp.te.project"];
     [openPanel setAllowedFileTypes: fileTypes];
     [openPanel setCanChooseFiles: YES];
     [openPanel setCanChooseDirectories: NO];

@@ -101,7 +101,7 @@ CREATE TABLE document_windows (
 );
 INSERT INTO settings (program, schema_version,
 creation_timestamp, modification_timestamp) VALUES
-('com.dankna.te', 1, ?, ?);
+('com.ireneknapp.te', 1, ?, ?);
 INSERT INTO inodes (id, name, cased_name, parent,
 kind, size, creation_timestamp, modification_timestamp)
 VALUES (?, '', '', NULL, 'directory', NULL, ?, ?);
