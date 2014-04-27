@@ -1,0 +1,120 @@
+name: te
+version: 0.1
+cabal-version: >= 1.18
+build-type: Simple
+license: AllRightsReserved
+license-file: LICENSE
+copyright: Copyright (c) 2012 Irene Knapp
+author: Irene Knapp <irene.knapp@icloud.com>
+maintainer: Irene Knapp <irene.knapp@icloud.com>
+homepage: http://github.com/IreneKnapp/Te
+bug-reports: https://github.com/IreneKnapp/Te/issues/new
+category: Network
+synopsis: Structure editor for source code
+description:
+  This package is a structure editor for source code, in particular Haskell
+  source code.
+
+Source-Repository head
+  type: git
+  location: http://github.com/IreneKnapp/Te.git
+
+Flag debug
+  manual: True
+  default: False
+
+Executable Te
+  hs-source-dirs: Mac
+  include-dirs: Mac
+  c-source-dirs: Mac
+  main-is: main.m
+  includes:
+    AppDelegate.h,
+    FileNameCell.h,
+    FileNameCellFieldEditor.h,
+    HasCurrentFolder.h,
+    HasSelectedInodes.h,
+    TransparentHelperWindow.h,
+    TransparentHelperWindowView.h,
+    Utilities.h,
+    Window.h,
+    Window/Browser.h,
+    Window/Browser/Item.h,
+    Window/Document.h,
+    Window/Document/HorizontalDividerManager.h,
+    Window/Document/PaneInformation.h,
+    Window/Document/PaneManager.h,
+    Window/Document/VerticalDividerManager.h,
+    Window/Document/View.h
+  c-sources:
+    AppDelegate.m,
+    FileNameCell.m,
+    FileNameCellFieldEditor.m,
+    TransparentHelperWindow.m,
+    TransparentHelperWindowView.m,
+    Utilities.m,
+    Window/Browser/Item.m,
+    Window/Browser.m,
+    Window/Document/HorizontalDividerManager.m,
+    Window/Document/PaneInformation.m,
+    Window/Document/PaneManager.m,
+    Window/Document/VerticalDividerManager.m,
+    Window/Document/View.m,
+    Window/Document.m,
+    Window.m
+  hs-source-dirs: BackEnd
+  other-modules:
+    Data.Bitfield,
+    Data.ByteSize,
+    Data.Geometry,
+    Data.SQLable,
+    Data.Timestamp,
+    Te,
+    Te.LowLevel.Database,
+    Te.LowLevel.Exceptions,
+    Te.LowLevel.ForeignInterface,
+    Te.LowLevel.FrontEndCallbacks,
+    Te.LowLevel.Identifiers,
+    Te.HighLevel.Application,
+    Te.HighLevel.ApplicationPrivate,
+    Te.HighLevel.ConfirmationDialog,
+    Te.HighLevel.DragAndDrop,
+    Te.HighLevel.DragAndDropPrivate
+    Te.HighLevel.Inode,
+    Te.HighLevel.InodePrivate,
+    Te.HighLevel.UUID,
+    Te.HighLevel.Window,
+    Te.HighLevel.Window.Browser,
+    Te.HighLevel.Window.Browser.Item,
+    Te.HighLevel.Window.Document,
+    Te.HighLevel.Window.Document.Pane,
+    Te.HighLevel.Window.Document.PanePrivate,
+    Te.HighLevel.Window.Document.HorizontalDivider,
+    Te.HighLevel.Window.Document.HorizontalDividerPrivate,
+    Te.HighLevel.Window.Document.VerticalDivider,
+    Te.HighLevel.Window.Document.VerticalDividerPrivate,
+    Te.Types
+  build-depends:
+    array >= 0.3.0.3,
+    base >= 4.1,
+    binary >= 0.5.0.2,
+    bytestring >= 0.9.1.4,
+    cabal-macosx >= 0.2.3,
+    containers >= 0.4.0.0,
+    direct-sqlite >= 1.1,
+    directory >= 1.1.0.0,
+    filepath >= 1.2.0.0,
+    murmur-hash >= 0.1.0.2,
+    old-locale >= 1.0.0.2,
+    system-uuid >= 2.1.0,
+    template-haskell >= 2.5.0.0,
+    time >= 1.2.0.4,
+    utf8-string >= 0.3.6
+  default-language: Haskell2010
+  frameworks: Cocoa
+  objc-gc: Mandatory
+  if flag(debug)
+    ghc-options: -debug
+    cc-options: -g3
+  cc-options: -std=c99
+  ghc-options: -threaded
