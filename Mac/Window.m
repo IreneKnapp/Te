@@ -7,6 +7,7 @@
 
 @implementation Window
 @synthesize alreadyClosing;
+@synthesize fileNameCellFieldEditor;
 
 
 - (void) initHelper: (uuid_t *) newWindowID {
@@ -17,6 +18,7 @@
     copyUUID(&windowID, newWindowID);
     
     alreadyClosing = NO;
+    fileNameCellFieldEditor = nil;
     
     char *titleCString = teWindowTitle(applicationState, &windowID);
     NSString *title = @"";

@@ -16,7 +16,7 @@
     
     self = [super initWithWindowID: newWindowID nibName: @"BrowserWindow"];
     if(self) {
-        browserItems = [(AppDelegate *) [NSApp delegate] newMapTable];
+        browserItems = [NSMutableDictionary dictionaryWithCapacity: 64];
         
         ignoreItemExpansionDueToFixing = NO;
         ignoreItemExpansionDueToNesting = nil;
@@ -128,14 +128,16 @@
 
 
 - (WindowBrowserItem *) getBrowserItemWithInodeID: (uuid_t *) inodeID {
-    WindowBrowserItem *browserItem
-        = [browserItems objectForKey: (void *) inodeID];
+    NSUUID *inodeIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) inodeID];
+    WindowBrowserItem *browserItem =
+        [browserItems objectForKey: inodeIDNSUUID];
     if(!browserItem) {
         browserItem
             = [[WindowBrowserItem alloc] initWithWindowBrowserObject: self
                                          inodeID: inodeID];
-        [browserItems setObject: browserItem
-                      forKey: (void *) inodeID];
+        [browserItems setObject: browserItem forKey: inodeIDNSUUID];
     }
     return browserItem;
 }

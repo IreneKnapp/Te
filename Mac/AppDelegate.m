@@ -21,34 +21,6 @@
 @synthesize captionEmWidth;
 @synthesize captionLineHeight;
 
-- (NSMapTable *) newMapTable {
-    if(!keyFunctions) {
-        keyFunctions
-            = [NSPointerFunctions
-                pointerFunctionsWithOptions: NSMapTableCopyIn
-                                             | NSMapTableStrongMemory];
-        [keyFunctions setHashFunction: uuidHashPointerFunction];
-        [keyFunctions setIsEqualFunction: uuidIsEqualPointerFunction];
-        [keyFunctions setSizeFunction: uuidSizePointerFunction];
-        [keyFunctions setDescriptionFunction: uuidDescriptionPointerFunction];
-        [keyFunctions setAcquireFunction: opaqueAcquirePointerFunction];
-        [keyFunctions setRelinquishFunction: opaqueRelinquishPointerFunction];
-    }
-    
-    if(!valueFunctions) {
-        valueFunctions
-            = [NSPointerFunctions
-                pointerFunctionsWithOptions:
-                 NSMapTableStrongMemory
-                 | NSMapTableObjectPointerPersonality];
-    }
-    
-    return [[NSMapTable alloc]
-            initWithKeyPointerFunctions: keyFunctions
-            valuePointerFunctions: valueFunctions
-            capacity: 1024];
-}
-
 
 - (CGFloat) measureEmWidth: (NSFont *) font {
     NSTextStorage *textStorage = [[NSTextStorage alloc] init];
@@ -120,7 +92,8 @@
     
     keyFunctions = nil;
     valueFunctions = nil;
-    windows = [self newMapTable];
+    [self setWindows: [NSMutableDictionary dictionaryWithCapacity: 64]];
+    NSLog(@"windows %016llx", (unsigned long long) _windows);
     
     char *versionLabelCString = teVersionText();
     NSString *versionLabelString = @"";
@@ -406,14 +379,18 @@ void exception(char *messageCString, char *detailsCString) {
 }
 
 
-- (uint64_t) confirm: (void *) confirmationDialog
-   completionHandler: (void (*)(uint64_t result)) completionHandler
+- (void)      confirm: (void *) confirmationDialog
+    completionHandler: (void (*)(uint64_t result)) completionHandler
 {
     Window *windowObject = nil;
     uuid_t windowID;
     teConfirmationDialogWindow(confirmationDialog, &windowID);
     if(!uuidIsNull(&windowID)) {
-        windowObject = [windows objectForKey: (void *) windowID];
+        NSUUID *windowIDNSUUID =
+            [[NSUUID alloc] initWithUUIDBytes:
+                (const unsigned char *) &windowID];
+        windowObject = [[self windows] objectForKey: windowIDNSUUID];
+        NSLog(@"confirm %@", windowObject);
     }
     
     char *messageCString = teConfirmationDialogMessage(confirmationDialog);
@@ -554,11 +531,15 @@ void getDocumentContentFromFrame
 
 
 - (void) noteDeletedWindow: (uuid_t *) windowID {
+    NSUUID *windowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) windowID];
     Window *windowObject
-        = [windows objectForKey: (void *) windowID];
+        = [[self windows] objectForKey: windowIDNSUUID];
+    NSLog(@"note deleted window %@", windowObject);
     if(windowObject) {
         [windowObject forceClose];
-        [windows removeObjectForKey: (void *) windowID];
+        [[self windows] removeObjectForKey: windowIDNSUUID];
     }
 }
 
@@ -569,8 +550,12 @@ void noteDeletedWindow(uuid_t *windowID) {
 
 
 - (void) activateWindow: (uuid_t *) windowID {
+    NSUUID *windowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) windowID];
     Window *windowObject
-        = [windows objectForKey: (void *) windowID];
+        = [[self windows] objectForKey: windowIDNSUUID];
+    NSLog(@"activate window %@", windowObject);
     if(windowObject) {
         [windowObject showWindow: self];
     }
@@ -583,11 +568,16 @@ void activateWindow(uuid_t *windowID) {
 
 
 - (void) noteNewBrowserWindow: (uuid_t *) browserWindowID {
+    NSUUID *browserWindowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) browserWindowID];
     WindowBrowser *browserWindowObject
         = [[WindowBrowser alloc] initWithWindowID: browserWindowID];
+    NSLog(@"windows %016llx", (unsigned long long) _windows);
+    NSLog(@"note new browser window %@ %@", browserWindowObject, browserWindowIDNSUUID);
     if(browserWindowObject)
-        [windows setObject: browserWindowObject
-                 forKey: (void *) browserWindowID];
+        [[self windows] setObject: browserWindowObject
+                        forKey: browserWindowIDNSUUID];
 }
 
 
@@ -597,7 +587,11 @@ void noteNewBrowserWindow(uuid_t *browserWindowID) {
 
 
 - (void) noteBrowserItemsChangedInBrowserWindow: (uuid_t *) browserWindowID {
-    Window *windowObject = [windows objectForKey: (void *) browserWindowID];
+    NSUUID *browserWindowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) browserWindowID];
+    Window *windowObject = [[self windows] objectForKey: browserWindowIDNSUUID];
+    NSLog(@"note browser items changed %@", windowObject);
     if(windowObject && [windowObject isKindOfClass: [WindowBrowser class]]) {
         WindowBrowser *browserWindowObject = (WindowBrowser *) windowObject;
         [browserWindowObject noteItemsChanged];
@@ -614,7 +608,11 @@ void noteBrowserItemsChanged(uuid_t *browserWindowID) {
 - (void) editBrowserItemNameInBrowserWindow: (uuid_t *) browserWindowID
                                       inode: (uuid_t *) inodeID
 {
-    Window *windowObject = [windows objectForKey: (void *) browserWindowID];
+    NSUUID *browserWindowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) browserWindowID];
+    Window *windowObject = [[self windows] objectForKey: browserWindowIDNSUUID];
+    NSLog(@"edit browser item name %@", windowObject);
     if(windowObject && [windowObject isKindOfClass: [WindowBrowser class]]) {
         WindowBrowser *browserWindowObject = (WindowBrowser *) windowObject;
         [browserWindowObject editItemName: inodeID];
@@ -648,8 +646,11 @@ void editBrowserItemName(uuid_t *browserWindowID, uuid_t *inodeID) {
              initWithWindowID: documentWindowID
              contentRectangle: contentRectangle];
     if(windowDocumentObject) {
-        [windows setObject: windowDocumentObject
-                 forKey: (void *) documentWindowID];
+        NSUUID *documentWindowIDNSUUID =
+            [[NSUUID alloc] initWithUUIDBytes:
+                (const unsigned char *) documentWindowID];
+        [[self windows] setObject: windowDocumentObject
+                        forKey: documentWindowIDNSUUID];
     }
 }
 
@@ -677,8 +678,11 @@ void noteNewDocumentWindow
                        width: (int64_t) width
                       height: (int64_t) height
 {
+    NSUUID *documentWindowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) documentWindowID];
     WindowDocument *windowDocumentObject
-        = [windows objectForKey: (void *) documentWindowID];
+        = [[self windows] objectForKey: documentWindowIDNSUUID];
     if(windowDocumentObject) {
         NSRect frame;
         frame.origin.x = left;
@@ -712,8 +716,11 @@ void noteNewDocumentPane(uuid_t *documentWindowID,
 
 
 - (void) recomputeCursorRectangles: (uuid_t *) documentWindowID {
+    NSUUID *documentWindowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) documentWindowID];
     WindowDocument *windowDocumentObject
-        = [windows objectForKey: (void *) documentWindowID];
+        = [[self windows] objectForKey: documentWindowIDNSUUID];
     if(windowDocumentObject) {
         [windowDocumentObject recomputeCursorRectangles];
     }
@@ -736,8 +743,11 @@ void recomputeCursorRectangles(uuid_t *documentWindowID) {
 {
     [self cleanupGhostWindow];
     
+    NSUUID *documentWindowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) documentWindowID];
     WindowDocument *windowDocumentObject
-        = [windows objectForKey: (void *) documentWindowID];
+        = [[self windows] objectForKey: documentWindowIDNSUUID];
     if(windowDocumentObject) {
         NSWindow *window = [windowDocumentObject window];
         NSView *contentView = [window contentView];
@@ -810,8 +820,11 @@ void newGhostWindowWithHorizontalDivider(uuid_t *documentWindowID,
 {
    [self cleanupGhostWindow];
     
+    NSUUID *documentWindowIDNSUUID =
+        [[NSUUID alloc] initWithUUIDBytes:
+            (const unsigned char *) documentWindowID];
     WindowDocument *windowDocumentObject
-        = [windows objectForKey: (void *) documentWindowID];
+        = [[self windows] objectForKey: documentWindowIDNSUUID];
     if(windowDocumentObject) {
         NSWindow *window = [windowDocumentObject window];
         NSView *contentView = [window contentView];

@@ -326,7 +326,7 @@ static WindowDocumentPaneManager *sharedManager = nil;
                            atPoint: NSMakePoint(textLeft, lineTop)];
             
             NSString *lineNumberString
-                = [NSString stringWithFormat: @"%4u", i + 1];
+                = [NSString stringWithFormat: @"%4lu", i + 1];
             attributedString
                 = [[NSAttributedString alloc] initWithString: lineNumberString
                                               attributes: lineNumberAttributes];

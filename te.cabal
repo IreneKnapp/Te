@@ -111,9 +111,8 @@ Executable Te
     time >= 1.2.0.4
   default-language: Haskell2010
   frameworks: Cocoa
-  objc-gc: Mandatory
   if flag(debug)
     ghc-options: -debug
     cc-options: -g3
-  cc-options: -std=c99
+  cc-options: -std=c99 -fobjc-arc
   ghc-options: -threaded

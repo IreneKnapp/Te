@@ -2,13 +2,10 @@
 
 @interface FileNameCell : NSCell
 {
-    NSImage *icon;
-    NSString *text;
-    NSMapTable *windowFieldEditors;
     NSMutableDictionary *textAttributes;
 }
-@property (assign) NSImage *icon;
-@property (assign) NSString *text;
+@property (retain) NSImage *icon;
+@property (retain) NSString *text;
 
 - (void) initHelper;
 - (id) initWithCoder: (NSCoder *) coder;

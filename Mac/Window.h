@@ -1,12 +1,14 @@
 #import <Cocoa/Cocoa.h>
 #import "Utilities.h"
 
+@class FileNameCellFieldEditor;
 @interface Window : NSWindowController <NSWindowDelegate>
 {
     BOOL alreadyClosing;
     uuid_t windowID;
 }
 @property (assign) BOOL alreadyClosing;
+@property (retain) FileNameCellFieldEditor *fileNameCellFieldEditor;
 
 - (void) initHelper: (uuid_t *) newWindowID;
 - (id) initWithWindowID: (uuid_t *) newWindowID

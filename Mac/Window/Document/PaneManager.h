@@ -3,16 +3,10 @@
 
 @class TransparentHelperWindow;
 @interface WindowDocumentPaneManager : NSObject
-{
-    NSMutableArray *panesInformation;
-    NSTextStorage *textStorage;
-    NSLayoutManager *layoutManager;
-    NSTextContainer *textContainer;
-}
-@property (assign) NSMutableArray *panesInformation;
-@property (assign) NSTextStorage *textStorage;
-@property (assign) NSLayoutManager *layoutManager;
-@property (assign) NSTextContainer *textContainer;
+@property (retain) NSMutableArray *panesInformation;
+@property (retain) NSTextStorage *textStorage;
+@property (retain) NSLayoutManager *layoutManager;
+@property (retain) NSTextContainer *textContainer;
 
 + (id) sharedManager;
 + (id) allocWithZone: (NSZone *) zone;

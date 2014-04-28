@@ -16,19 +16,6 @@
     void *applicationState;
     NSPointerFunctions *keyFunctions;
     NSPointerFunctions *valueFunctions;
-    NSMapTable *windows;
-    
-    NSFont *baseFont;
-    CGFloat emWidth;
-    CGFloat lineHeight;
-    
-    NSFont *lineNumberFont;
-    CGFloat lineNumberEmWidth;
-    CGFloat lineNumberLineHeight;
-    
-    NSFont *captionFont;
-    CGFloat captionEmWidth;
-    CGFloat captionLineHeight;
     
     TransparentHelperWindow *ghostWindow;
     
@@ -36,17 +23,17 @@
     char **hsArgv;
 }
 @property (assign) void *applicationState;
-@property (assign) NSFont *baseFont;
+@property (retain) NSMutableDictionary *windows;
+@property (retain) NSFont *baseFont;
 @property (assign) CGFloat emWidth;
 @property (assign) CGFloat lineHeight;
-@property (assign) NSFont *lineNumberFont;
+@property (retain) NSFont *lineNumberFont;
 @property (assign) CGFloat lineNumberEmWidth;
 @property (assign) CGFloat lineNumberLineHeight;
-@property (assign) NSFont *captionFont;
+@property (retain) NSFont *captionFont;
 @property (assign) CGFloat captionEmWidth;
 @property (assign) CGFloat captionLineHeight;
 
-- (NSMapTable *) newMapTable;
 - (CGFloat) measureEmWidth: (NSFont *) font;
 - (CGFloat) measureLineHeight: (NSFont *) font;
 - (void) applicationWillFinishLaunching: (NSNotification *) notification;
@@ -68,8 +55,8 @@
 - (void) exceptionWithMessage: (NSString *) messageString
                       details: (NSString *) detailsString;
 void exception(char *messageCString, char *detailsCString);
-- (uint64_t) confirm: (void *) confirmationDialog
-   completionHandler: (void (*)(uint64_t result)) completionHandler;
+- (void)      confirm: (void *) confirmationDialog
+    completionHandler: (void (*)(uint64_t result)) completionHandler;
 void confirm(void *confirmationDialog,
              void (*completionHandler)(uint64_t result));
 - (void) noteRecentProjectsChanged;

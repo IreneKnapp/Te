@@ -5,17 +5,12 @@
 @interface WindowDocumentPaneInformation : NSObject
 {
     uuid_t uuid;
-    NSWindow *window;
-    NSRect frame;
-    NSScroller *verticalScroller;
-    NSScroller *horizontalScroller;
-    NSTimer *scrollerHidingTimer;
 }
-@property (assign) NSWindow *window;
+@property (retain) NSWindow *window;
 @property (assign) NSRect frame;
-@property (assign) NSScroller *verticalScroller;
-@property (assign) NSScroller *horizontalScroller;
-@property (assign) NSTimer *scrollerHidingTimer;
+@property (retain) NSScroller *verticalScroller;
+@property (retain) NSScroller *horizontalScroller;
+@property (retain) NSTimer *scrollerHidingTimer;
 
 - (id)  initWithUUID: (uuid_t *) newUUID
               window: (NSWindow *) newWindow

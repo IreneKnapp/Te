@@ -18,7 +18,7 @@
     BOOL ignoreItemExpansionDueToFixing;
     id ignoreItemExpansionDueToNesting;
     
-    NSMapTable *browserItems;
+    NSMutableDictionary *browserItems;
 }
 
 - (id) initWithWindowID: (uuid_t *) newWindowID;

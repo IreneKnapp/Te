@@ -1,5 +1,6 @@
 #import "FileNameCell.h"
 #import "FileNameCellFieldEditor.h"
+#import "Window.h"
 
 @implementation FileNameCell
 @synthesize icon;
@@ -7,8 +8,6 @@
 
 
 - (void) initHelper {
-    windowFieldEditors = [NSMapTable mapTableWithWeakToStrongObjects];
-    
     textAttributes = [NSMutableDictionary dictionaryWithCapacity: 2];
     [textAttributes setObject: [NSFont controlContentFontOfSize: 0.0]
                     forKey: NSFontAttributeName];
@@ -84,13 +83,17 @@
     if(!window)
         return nil;
     
-    FileNameCellFieldEditor *fieldEditor
-        = [windowFieldEditors objectForKey: window];
-    if(!fieldEditor) {
-        fieldEditor = [[FileNameCellFieldEditor alloc] init];
-        [windowFieldEditors setObject: fieldEditor forKey: window];
+    if([window isKindOfClass: [Window class]]) {
+        FileNameCellFieldEditor *fieldEditor =
+            [(Window *) window fileNameCellFieldEditor];
+        if(!fieldEditor) {
+            fieldEditor = [[FileNameCellFieldEditor alloc] init];
+            [(Window *) window setFileNameCellFieldEditor: fieldEditor];
+        }
+        return fieldEditor;
+    } else {
+        return [[FileNameCellFieldEditor alloc] init];
     }
-    return fieldEditor;
 }
 
 
@@ -137,6 +140,8 @@
         [paragraphStyle setTailIndent: 0.0];
         [textView setDefaultParagraphStyle: paragraphStyle];
     }
+    
+    return fieldEditor;
 }
 
 
